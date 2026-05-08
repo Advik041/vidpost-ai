@@ -465,7 +465,7 @@ footer{
 // ── Config ────────────────────────────────────────────────────────────────────
 const CFG = {
   get apiKey()    { return localStorage.getItem('vp_api_key') || '' },
-  get backendUrl(){ return (localStorage.getItem('vp_backend') || '').replace(/\/$/, '') },
+  get backendUrl(){ return (localStorage.getItem('vp_backend') || 'https://vidpost-ai-production.up.railway.app').replace(/\/$/, '') },
   set apiKey(v)   { localStorage.setItem('vp_api_key', v) },
   set backendUrl(v){ localStorage.setItem('vp_backend', v.replace(/\/$/, '')) }
 };
