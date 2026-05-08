@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VidPost AI — YouTube → Social Posts in 10 seconds</title>
+<meta name="description" content="Turn any YouTube video into LinkedIn posts, Twitter threads, Instagram captions, TikTok scripts and YouTube Shorts automatically with AI.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Mono:wght@400;500&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<style>
+/* ── Reset & tokens ──────────────────────────────────────────────────────── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --ink:#0d0d0d;
+  --paper:#f4f1eb;
+  --paper2:#ece8e0;
+  --cream:#e8e2d6;
+  --lime:#c5f135;
+  --lime2:#a8d020;
+  --muted:#8a867c;
+  --border:#ccc8bf;
+  --white:#ffffff;
+  --red:#e03030;
+  --amber:#e08800;
+  --card:#ffffff;
+  --shadow:0 2px 16px rgba(0,0,0,.07);
+  --r:6px;
+}
+html{scroll-behavior:smooth}
+body{font-family:'DM Sans',sans-serif;background:var(--paper);color:var(--ink);min-height:100vh;overflow-x:hidden}
+
+/* ── Grain texture overlay ───────────────────────────────────────────────── */
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+  background-size:200px;opacity:.5}
+
+/* ── Typography helpers ──────────────────────────────────────────────────── */
+.serif{font-family:'Instrument Serif',serif}
+.mono{font-family:'DM Mono',monospace}
+
+/* ── Header ──────────────────────────────────────────────────────────────── */
+header{
+  position:sticky;top:0;z-index:100;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:16px 40px;
+  background:rgba(244,241,235,.92);
+  backdrop-filter:blur(12px);
+  border-bottom:1.5px solid var(--ink);
+}
+.logo{display:flex;align-items:baseline;gap:6px}
+.logo-name{font-family:'Instrument Serif',serif;font-size:21px;letter-spacing:-.3px}
+.logo-badge{font-family:'DM Mono',monospace;font-size:10px;background:var(--lime);color:var(--ink);
+  padding:3px 7px;border-radius:2px;letter-spacing:.08em;font-weight:500;border:1px solid var(--ink)}
+.header-right{display:flex;align-items:center;gap:14px}
+.pill{font-family:'DM Mono',monospace;font-size:11px;padding:5px 12px;border-radius:20px;
+  border:1px solid var(--border);color:var(--muted);background:transparent;cursor:pointer;transition:all .15s}
+.pill:hover,.pill.active{background:var(--ink);color:var(--lime);border-color:var(--ink)}
+
+/* ── Hero ────────────────────────────────────────────────────────────────── */
+.hero{
+  padding:72px 40px 52px;
+  max-width:860px;
+  position:relative;z-index:1;
+}
+.hero-eyebrow{
+  font-family:'DM Mono',monospace;font-size:11px;letter-spacing:.12em;
+  color:var(--muted);text-transform:uppercase;margin-bottom:20px;
+  display:flex;align-items:center;gap:10px;
+}
+.hero-eyebrow::before{content:'';width:32px;height:1px;background:var(--muted)}
+h1{
+  font-family:'Instrument Serif',serif;
+  font-size:clamp(40px,6vw,68px);
+  line-height:1.05;
+  letter-spacing:-2px;
+  margin-bottom:22px;
+}
+h1 em{font-style:italic;color:var(--muted)}
+h1 mark{background:var(--lime);color:var(--ink);padding:0 6px;font-style:normal;border-radius:2px}
+.hero-sub{font-size:16px;color:var(--muted);font-weight:300;line-height:1.65;max-width:480px}
+.hero-stats{display:flex;gap:32px;margin-top:36px;padding-top:28px;border-top:1px solid var(--border)}
+.stat-n{font-family:'Instrument Serif',serif;font-size:28px;letter-spacing:-1px}
+.stat-l{font-size:12px;color:var(--muted);margin-top:2px}
+
+/* ── App container ───────────────────────────────────────────────────────── */
+.app{padding:0 40px 100px;position:relative;z-index:1;max-width:1160px}
+
+/* ── Section label ───────────────────────────────────────────────────────── */
+.sl{font-family:'DM Mono',monospace;font-size:11px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--muted);margin-bottom:12px}
+
+/* ── Card ────────────────────────────────────────────────────────────────── */
+.card{
+  background:var(--card);border:1.5px solid var(--ink);border-radius:var(--r);
+  padding:28px;margin-bottom:16px;
+  box-shadow:4px 4px 0 var(--ink);
+}
+.card-flat{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:24px;margin-bottom:14px}
+
+/* ── Input row ───────────────────────────────────────────────────────────── */
+.input-wrap{display:flex;gap:10px;align-items:stretch;margin-bottom:14px}
+input[type=text],input[type=password],textarea{
+  font-family:'DM Mono',monospace;font-size:13px;
+  padding:13px 16px;
+  border:1.5px solid var(--border);border-radius:4px;
+  background:var(--paper);color:var(--ink);
+  outline:none;transition:border-color .18s;width:100%;
+}
+input[type=text]:focus,input[type=password]:focus,textarea:focus{border-color:var(--ink)}
+input::placeholder,textarea::placeholder{color:var(--muted);font-style:italic}
+
+/* ── Big generate button ─────────────────────────────────────────────────── */
+.btn-gen{
+  padding:13px 26px;background:var(--lime);color:var(--ink);
+  border:1.5px solid var(--ink);border-radius:4px;
+  font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;
+  cursor:pointer;white-space:nowrap;
+  box-shadow:3px 3px 0 var(--ink);
+  transition:all .15s;display:flex;align-items:center;gap:8px;
+}
+.btn-gen:hover{transform:translate(-1px,-1px);box-shadow:4px 4px 0 var(--ink)}
+.btn-gen:active{transform:translate(1px,1px);box-shadow:1px 1px 0 var(--ink)}
+.btn-gen:disabled{opacity:.45;cursor:not-allowed;transform:none;box-shadow:3px 3px 0 var(--ink)}
+
+/* ── Tone chips ──────────────────────────────────────────────────────────── */
+.tone-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.tone-chip{
+  padding:5px 15px;border:1px solid var(--border);border-radius:20px;
+  background:transparent;font-size:12px;color:var(--muted);cursor:pointer;
+  font-family:'DM Sans',sans-serif;transition:all .15s;
+}
+.tone-chip.active,.tone-chip:hover{
+  background:var(--ink);color:var(--lime);border-color:var(--ink);
+}
+
+/* ── Platform toggle row ─────────────────────────────────────────────────── */
+.platform-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.plat-chip{
+  display:flex;align-items:center;gap:6px;padding:6px 14px;
+  border:1px solid var(--border);border-radius:20px;background:var(--paper);
+  font-size:12px;color:var(--muted);cursor:pointer;transition:all .15s;
+  font-family:'DM Sans',sans-serif;
+}
+.plat-chip.on{border-color:var(--ink);background:var(--ink);color:var(--lime)}
+.plat-icon{font-size:14px}
+
+/* ── Status bar ──────────────────────────────────────────────────────────── */
+#status-bar{
+  display:none;align-items:center;gap:12px;
+  padding:13px 18px;background:var(--ink);color:var(--lime);
+  border-radius:4px;font-family:'DM Mono',monospace;font-size:12px;
+  margin-bottom:16px;letter-spacing:.03em;
+}
+.spinner{width:14px;height:14px;border:2px solid rgba(197,241,53,.3);
+  border-top-color:var(--lime);border-radius:50%;
+  animation:spin .65s linear infinite;flex-shrink:0}
+@keyframes spin{to{transform:rotate(360deg)}}
+.status-steps{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.step-dot{width:8px;height:8px;border-radius:50%;border:1.5px solid rgba(197,241,53,.3);transition:all .3s}
+.step-dot.done{background:var(--lime);border-color:var(--lime)}
+.step-dot.active{background:transparent;border-color:var(--lime);box-shadow:0 0 6px var(--lime)}
+
+/* ── Error / warning ─────────────────────────────────────────────────────── */
+.alert{display:none;padding:13px 18px;border-radius:4px;font-size:13px;margin-bottom:14px;font-family:'DM Mono',monospace;line-height:1.6}
+.alert-err{background:#fff0f0;border:1.5px solid var(--red);color:var(--red)}
+.alert-warn{background:#fff8e0;border:1.5px solid var(--amber);color:var(--amber)}
+
+/* ── Manual fallback ─────────────────────────────────────────────────────── */
+#manual-box{display:none}
+#manual-box .card-flat{border-color:var(--amber);background:#fffcf0}
+#manual-box textarea{height:140px;resize:vertical;line-height:1.65}
+.btn-sm{
+  padding:9px 18px;border:1.5px solid var(--ink);border-radius:4px;
+  font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;
+  cursor:pointer;transition:all .15s;background:var(--lime);color:var(--ink);
+}
+.btn-sm:hover{background:var(--lime2)}
+
+/* ── Meta strip ──────────────────────────────────────────────────────────── */
+#meta-strip{
+  display:none;gap:20px;flex-wrap:wrap;
+  padding:12px 16px;background:var(--cream);border-radius:4px;
+  border:1px solid var(--border);font-size:12px;
+  font-family:'DM Mono',monospace;color:var(--muted);margin-bottom:20px;
+}
+#meta-strip strong{color:var(--ink)}
+
+/* ── Output grid ─────────────────────────────────────────────────────────── */
+#output-section{display:none}
+.output-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:18px;margin-bottom:18px}
+@media(max-width:700px){.output-grid{grid-template-columns:1fr}}
+.out-card{
+  background:var(--card);border:1.5px solid var(--ink);border-radius:var(--r);
+  overflow:hidden;box-shadow:3px 3px 0 var(--ink);
+  animation:slideUp .35s ease both;
+}
+@keyframes slideUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.out-card:nth-child(2){animation-delay:.08s}
+.out-card:nth-child(3){animation-delay:.16s}
+.out-card:nth-child(4){animation-delay:.24s}
+
+.out-header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:13px 16px;border-bottom:1px solid var(--border);background:var(--cream);
+}
+.out-platform{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:500}
+.plat-dot{width:8px;height:8px;border-radius:50%}
+.out-actions{display:flex;gap:6px;align-items:center}
+.btn-copy,.btn-regen{
+  font-family:'DM Mono',monospace;font-size:11px;padding:4px 11px;
+  border-radius:3px;border:1px solid var(--border);
+  background:var(--white);color:var(--muted);cursor:pointer;transition:all .15s;
+  letter-spacing:.03em;
+}
+.btn-copy:hover,.btn-regen:hover{background:var(--ink);color:var(--lime);border-color:var(--ink)}
+.btn-copy.copied{background:var(--lime);color:var(--ink);border-color:var(--lime2)}
+
+.out-body{padding:18px 16px}
+.post-text{
+  font-size:13.5px;line-height:1.8;color:var(--ink);
+  white-space:pre-wrap;font-family:'DM Sans',sans-serif;font-weight:300;
+  min-height:60px;outline:none;
+}
+.post-text:focus{background:rgba(197,241,53,.06);border-radius:3px;padding:4px;margin:-4px}
+.char-count{margin-top:10px;font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);text-align:right}
+.char-count.over{color:var(--red)}
+
+/* tweet thread */
+.tweet-list{display:flex;flex-direction:column;gap:10px}
+.tweet-item{
+  padding:11px 13px;background:var(--paper);border:1px solid var(--border);border-radius:4px;
+  font-size:13px;line-height:1.65;font-weight:300;
+}
+.tweet-meta{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:5px}
+.tweet-body{outline:none}
+.tweet-body:focus{background:rgba(197,241,53,.06);border-radius:2px}
+
+/* script view (tiktok/shorts) */
+.script-block{
+  padding:11px 13px;background:var(--paper);border:1px solid var(--border);
+  border-radius:4px;font-size:13px;line-height:1.7;font-weight:300;white-space:pre-wrap;
+}
+
+/* ── Upgrade nudge ───────────────────────────────────────────────────────── */
+.nudge{
+  margin-top:28px;padding:22px 26px;
+  border:1.5px dashed var(--border);border-radius:var(--r);
+  display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap;
+  background:var(--paper2);
+}
+.nudge-text{font-size:13px;color:var(--muted);line-height:1.6}
+.nudge-text strong{color:var(--ink);font-weight:500}
+.btn-nudge{
+  padding:11px 22px;background:var(--ink);color:var(--lime);border:none;
+  border-radius:4px;font-size:13px;font-family:'DM Sans',sans-serif;
+  cursor:pointer;white-space:nowrap;font-weight:500;
+  box-shadow:3px 3px 0 rgba(0,0,0,.15);
+}
+
+/* ── Config modal ────────────────────────────────────────────────────────── */
+#cfg-overlay{
+  display:none;position:fixed;inset:0;background:rgba(13,13,13,.6);
+  z-index:200;align-items:center;justify-content:center;
+  backdrop-filter:blur(4px);
+}
+#cfg-overlay.open{display:flex}
+.cfg-modal{
+  background:var(--card);border:1.5px solid var(--ink);border-radius:var(--r);
+  padding:32px;width:100%;max-width:480px;margin:20px;
+  box-shadow:6px 6px 0 var(--ink);
+}
+.cfg-title{font-family:'Instrument Serif',serif;font-size:22px;margin-bottom:6px}
+.cfg-sub{font-size:13px;color:var(--muted);margin-bottom:22px;line-height:1.5}
+.cfg-label{font-size:11px;font-family:'DM Mono',monospace;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--muted);margin-bottom:7px;display:block}
+.cfg-actions{display:flex;gap:10px;margin-top:20px}
+.btn-save{
+  flex:1;padding:12px;background:var(--lime);color:var(--ink);
+  border:1.5px solid var(--ink);border-radius:4px;font-size:14px;
+  font-weight:500;font-family:'DM Sans',sans-serif;cursor:pointer;
+  box-shadow:3px 3px 0 var(--ink);
+}
+.btn-cancel{
+  padding:12px 18px;border:1px solid var(--border);border-radius:4px;
+  font-size:13px;font-family:'DM Sans',sans-serif;cursor:pointer;background:transparent;
+}
+
+/* ── Backend config banner ───────────────────────────────────────────────── */
+#backend-banner{
+  background:var(--ink);color:var(--lime);padding:10px 40px;
+  font-family:'DM Mono',monospace;font-size:11px;letter-spacing:.05em;
+  display:flex;align-items:center;justify-content:space-between;gap:20px;
+  position:relative;z-index:1;
+}
+#backend-banner a{color:var(--lime);text-decoration:underline;cursor:pointer}
+
+/* ── Footer ──────────────────────────────────────────────────────────────── */
+footer{
+  padding:28px 40px;border-top:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;
+  font-size:12px;color:var(--muted);font-family:'DM Mono',monospace;
+  position:relative;z-index:1;
+}
+
+/* ── Responsive ──────────────────────────────────────────────────────────── */
+@media(max-width:600px){
+  header,main,.app,.hero{padding-left:20px;padding-right:20px}
+  #backend-banner{padding-left:20px;padding-right:20px}
+  footer{padding-left:20px;padding-right:20px}
+  .card,.card-flat{padding:18px}
+  h1{letter-spacing:-1px}
+  .hero-stats{gap:20px}
+}
+</style>
+</head>
+<body>
+
+<!-- Backend config banner -->
+<div id="backend-banner">
+  <span>⚙ BACKEND URL NOT SET — <a onclick="openConfig()">click here to configure</a> after deploying the backend</span>
+  <span id="backend-status-label">●&nbsp;disconnected</span>
+</div>
+
+<!-- Header -->
+<header>
+  <div class="logo">
+    <span class="logo-name">VidPost</span>
+    <span class="logo-badge">AI</span>
+  </div>
+  <div class="header-right">
+    <button class="pill active" onclick="openConfig()">⚙ Settings</button>
+    <button class="pill" onclick="document.getElementById('output-section').scrollIntoView({behavior:'smooth'})">Results ↓</button>
+  </div>
+</header>
+
+<!-- Hero -->
+<div class="hero">
+  <div class="hero-eyebrow">Built for creators</div>
+  <h1>One video.<br><mark>Every platform.</mark><br><em>Ten seconds.</em></h1>
+  <p class="hero-sub">Paste any YouTube URL — AI reads the transcript and generates platform-native posts for LinkedIn, Twitter, Instagram, TikTok and YouTube Shorts.</p>
+  <div class="hero-stats">
+    <div><div class="stat-n serif">5</div><div class="stat-l">platforms</div></div>
+    <div><div class="stat-n serif">&lt;10s</div><div class="stat-l">per video</div></div>
+    <div><div class="stat-n serif">4</div><div class="stat-l">tone modes</div></div>
+  </div>
+</div>
+
+<!-- App -->
+<div class="app">
+
+  <!-- Step 1: URL input -->
+  <div class="sl">Step 1 — Paste YouTube URL</div>
+  <div class="card">
+    <div class="input-wrap">
+      <input type="text" id="yt-url" placeholder="https://www.youtube.com/watch?v=... or youtu.be/..." autocomplete="off" spellcheck="false"/>
+      <button class="btn-gen" id="gen-btn" onclick="generate()">
+        <span id="btn-label">Generate</span>
+        <span>→</span>
+      </button>
+    </div>
+
+    <!-- Tone -->
+    <div class="sl" style="margin-top:16px">Tone</div>
+    <div class="tone-row" id="tone-row">
+      <button class="tone-chip active" data-tone="professional">Professional</button>
+      <button class="tone-chip" data-tone="casual">Casual</button>
+      <button class="tone-chip" data-tone="bold">Bold & punchy</button>
+      <button class="tone-chip" data-tone="storytelling">Storytelling</button>
+    </div>
+
+    <!-- Platform toggles -->
+    <div class="sl" style="margin-top:16px">Platforms to generate</div>
+    <div class="platform-row" id="platform-row">
+      <div class="plat-chip on" data-plat="linkedin"><span class="plat-icon">💼</span>LinkedIn</div>
+      <div class="plat-chip on" data-plat="twitter"><span class="plat-icon">𝕏</span>Twitter / X</div>
+      <div class="plat-chip on" data-plat="instagram"><span class="plat-icon">📸</span>Instagram</div>
+      <div class="plat-chip on" data-plat="tiktok"><span class="plat-icon">🎵</span>TikTok</div>
+      <div class="plat-chip on" data-plat="youtube_short"><span class="plat-icon">▶</span>YT Shorts</div>
+    </div>
+  </div>
+
+  <!-- Status bar -->
+  <div id="status-bar">
+    <div class="spinner"></div>
+    <span id="status-text">Working...</span>
+    <div class="status-steps">
+      <div class="step-dot" id="dot-0" title="Fetch transcript"></div>
+      <div class="step-dot" id="dot-1" title="Generate LinkedIn"></div>
+      <div class="step-dot" id="dot-2" title="Generate Twitter"></div>
+      <div class="step-dot" id="dot-3" title="Generate Instagram"></div>
+      <div class="step-dot" id="dot-4" title="Generate TikTok"></div>
+      <div class="step-dot" id="dot-5" title="Generate Shorts"></div>
+    </div>
+  </div>
+
+  <!-- Error -->
+  <div class="alert alert-err" id="err-box"></div>
+
+  <!-- Manual fallback -->
+  <div id="manual-box">
+    <div class="card-flat">
+      <div class="sl" style="color:var(--amber)">Auto-fetch blocked — paste transcript manually</div>
+      <p style="font-size:13px;color:#7a5800;margin-bottom:14px;line-height:1.65">
+        Auto-fetch failed (usually CORS or no captions).<br>
+        <strong>Fix:</strong> Open the video on YouTube → click <strong>⋯ More</strong> → <strong>Show transcript</strong> → select all → copy → paste below.
+      </p>
+      <textarea id="manual-transcript" placeholder="Paste the full transcript text here..."></textarea>
+      <div style="margin-top:12px;display:flex;gap:10px;align-items:center">
+        <button class="btn-sm" onclick="generateFromManual()">Generate from transcript →</button>
+        <span style="font-size:12px;color:var(--muted);font-family:'DM Mono',monospace" id="manual-wc"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Meta strip -->
+  <div id="meta-strip"></div>
+
+  <!-- Outputs -->
+  <div id="output-section">
+    <div class="sl">Step 2 — Your posts (click to edit)</div>
+    <div class="output-grid" id="output-grid"></div>
+    <div class="nudge">
+      <div class="nudge-text">
+        <strong>Auto-posting, scheduling & team workspaces coming soon.</strong><br>
+        Join the waitlist for early access at $9/month — lock in founder pricing.
+      </div>
+      <button class="btn-nudge" onclick="alert('Replace with your Stripe / waitlist link!')">Join early access →</button>
+    </div>
+  </div>
+
+</div><!-- /app -->
+
+<!-- Config Modal -->
+<div id="cfg-overlay" onclick="handleOverlayClick(event)">
+  <div class="cfg-modal">
+    <div class="cfg-title serif">Settings</div>
+    <div class="cfg-sub">Configure your Claude API key and backend URL. Both are saved in your browser only.</div>
+
+    <label class="cfg-label" for="cfg-api">Claude API key</label>
+    <input type="password" id="cfg-api" placeholder="sk-ant-api03-..." style="margin-bottom:18px" autocomplete="off"/>
+    <div style="font-size:11px;font-family:'DM Mono',monospace;color:var(--muted);margin-top:-12px;margin-bottom:18px">
+      Get free key → <a href="https://console.anthropic.com" target="_blank" style="color:var(--ink)">console.anthropic.com</a>
+    </div>
+
+    <label class="cfg-label" for="cfg-backend">Backend URL</label>
+    <input type="text" id="cfg-backend" placeholder="https://your-backend.railway.app" autocomplete="off"/>
+    <div style="font-size:11px;font-family:'DM Mono',monospace;color:var(--muted);margin-top:8px;margin-bottom:4px">
+      Deploy the <code>/backend</code> folder to Railway or Render (free tier). Paste the URL here.
+    </div>
+
+    <div class="cfg-actions">
+      <button class="btn-save" onclick="saveConfig()">Save settings</button>
+      <button class="btn-cancel" onclick="closeConfig()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Footer -->
+<footer>
+  <span>VidPost AI · built by a 15-year-old founder 🚀</span>
+  <span id="footer-ver">v1.0.0 · open source</span>
+</footer>
+
+<script>
+// ── Config ────────────────────────────────────────────────────────────────────
+const CFG = {
+  get apiKey()    { return localStorage.getItem('vp_api_key') || '' },
+  get backendUrl(){ return (localStorage.getItem('vp_backend') || '').replace(/\/$/, '') },
+  set apiKey(v)   { localStorage.setItem('vp_api_key', v) },
+  set backendUrl(v){ localStorage.setItem('vp_backend', v.replace(/\/$/, '')) }
+};
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let selectedTone      = 'professional';
+let selectedPlatforms = ['linkedin','twitter','instagram','tiktok','youtube_short'];
+let lastTranscript    = '';
+let lastTitle         = '';
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  updateBannerStatus();
+  if (!CFG.apiKey || !CFG.backendUrl) openConfig();
+
+  // Tone chips
+  document.querySelectorAll('.tone-chip').forEach(c => {
+    c.addEventListener('click', () => {
+      document.querySelectorAll('.tone-chip').forEach(x => x.classList.remove('active'));
+      c.classList.add('active');
+      selectedTone = c.dataset.tone;
+    });
+  });
+
+  // Platform chips
+  document.querySelectorAll('.plat-chip').forEach(c => {
+    c.addEventListener('click', () => {
+      c.classList.toggle('on');
+      selectedPlatforms = [...document.querySelectorAll('.plat-chip.on')].map(x => x.dataset.plat);
+    });
+  });
+
+  // Enter key
+  document.getElementById('yt-url').addEventListener('keydown', e => {
+    if (e.key === 'Enter') generate();
+  });
+
+  // Word count on manual textarea
+  document.getElementById('manual-transcript').addEventListener('input', () => {
+    const wc = document.getElementById('manual-transcript').value.trim().split(/\s+/).filter(Boolean).length;
+    document.getElementById('manual-wc').textContent = wc ? `${wc} words` : '';
+  });
+});
+
+function updateBannerStatus() {
+  const ok = CFG.apiKey && CFG.backendUrl;
+  const el = document.getElementById('backend-status-label');
+  const banner = document.getElementById('backend-banner');
+  if (ok) {
+    el.textContent = '● connected';
+    el.style.color = '#c5f135';
+    banner.querySelector('span:first-child').innerHTML =
+      `⚙ Backend: <strong style="color:#c5f135">${CFG.backendUrl}</strong> &nbsp;·&nbsp; <a onclick="openConfig()">edit</a>`;
+  } else {
+    el.textContent = '● disconnected';
+  }
+}
+
+// ── Config modal ──────────────────────────────────────────────────────────────
+function openConfig() {
+  document.getElementById('cfg-api').value     = CFG.apiKey;
+  document.getElementById('cfg-backend').value = CFG.backendUrl;
+  document.getElementById('cfg-overlay').classList.add('open');
+}
+function closeConfig() {
+  document.getElementById('cfg-overlay').classList.remove('open');
+}
+function handleOverlayClick(e) {
+  if (e.target === document.getElementById('cfg-overlay')) closeConfig();
+}
+function saveConfig() {
+  CFG.apiKey     = document.getElementById('cfg-api').value.trim();
+  CFG.backendUrl = document.getElementById('cfg-backend').value.trim();
+  closeConfig();
+  updateBannerStatus();
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+const $  = id => document.getElementById(id);
+const esc = s  => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+function showErr(msg) { const e=$('err-box'); e.innerHTML='⚠ '+msg; e.style.display='block'; }
+function hideErr()    { $('err-box').style.display='none'; }
+function setStatus(msg, dotIdx) {
+  $('status-bar').style.display='flex';
+  $('status-text').textContent=msg;
+  if (dotIdx !== undefined) {
+    for (let i=0;i<6;i++) {
+      const d = $(`dot-${i}`);
+      d.classList.toggle('done', i < dotIdx);
+      d.classList.toggle('active', i === dotIdx);
+    }
+  }
+}
+function hideStatus() {
+  $('status-bar').style.display='none';
+  for(let i=0;i<6;i++) { const d=$(`dot-${i}`); d.classList.remove('done','active'); }
+}
+function setBusy(on) {
+  $('gen-btn').disabled = on;
+  $('btn-label').textContent = on ? 'Generating...' : 'Generate';
+}
+
+function extractVideoId(url) {
+  const m = url.match(/(?:v=|\/embed\/|youtu\.be\/|\/v\/|\/shorts\/)([A-Za-z0-9_-]{11})/);
+  return m ? m[1] : null;
+}
+
+// ── API calls ─────────────────────────────────────────────────────────────────
+async function apiFetch(path, body) {
+  if (!CFG.backendUrl) throw new Error('No backend URL set. Click ⚙ Settings to configure.');
+  const res = await fetch(CFG.backendUrl + path, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || `Server error ${res.status}`);
+  return data;
+}
+
+// ── Main generate ─────────────────────────────────────────────────────────────
+async function generate() {
+  hideErr();
+  $('manual-box').style.display = 'none';
+  $('output-section').style.display = 'none';
+  $('meta-strip').style.display = 'none';
+
+  if (!CFG.apiKey || !CFG.backendUrl) { openConfig(); return; }
+
+  const url = $('yt-url').value.trim();
+  if (!url) { showErr('Please paste a YouTube URL.'); return; }
+  const videoId = extractVideoId(url);
+  if (!videoId) { showErr('Could not find a valid YouTube video ID in that URL.'); return; }
+  if (selectedPlatforms.length === 0) { showErr('Select at least one platform.'); return; }
+
+  setBusy(true);
+  try {
+    // Step 1: get transcript
+    setStatus('Fetching transcript...', 0);
+    let transcriptData;
+    try {
+      transcriptData = await apiFetch('/transcript', { videoId });
+    } catch(e) {
+      // Show manual fallback
+      hideStatus();
+      setBusy(false);
+      $('manual-box').style.display = 'block';
+      $('manual-box').scrollIntoView({ behavior:'smooth', block:'nearest' });
+      lastTitle = `YouTube video (${videoId})`;
+      return;
+    }
+    lastTranscript = transcriptData.transcript;
+    lastTitle      = transcriptData.title;
+
+    await runGeneration();
+  } catch(e) {
+    hideStatus();
+    showErr(e.message || 'Something went wrong.');
+  } finally {
+    setBusy(false);
+  }
+}
+
+async function generateFromManual() {
+  const text = $('manual-transcript').value.trim();
+  if (text.length < 80) { showErr('Paste more transcript text (at least a few sentences).'); return; }
+  lastTranscript = text.slice(0, 10000);
+  if (!lastTitle) lastTitle = 'YouTube Video';
+  $('manual-box').style.display = 'none';
+  hideErr();
+  setBusy(true);
+  try { await runGeneration(); }
+  catch(e) { hideStatus(); showErr(e.message); }
+  finally { setBusy(false); }
+}
+
+async function runGeneration() {
+  const platforms = selectedPlatforms;
+  const dotMap = ['linkedin','twitter','instagram','tiktok','youtube_short'];
+
+  setStatus(`Generating ${platforms.length} posts...`, 0);
+
+  // Mark first dot active
+  for (let i=0; i<platforms.length; i++) {
+    const di = dotMap.indexOf(platforms[i]);
+    if (di >= 0) { setStatus(`Generating ${platforms[i]}...`, di+1); }
+
+    // We'll send all at once for speed, but we can show progress via polling
+  }
+  setStatus(`Sending to AI... (${platforms.length} platforms)`, 0);
+
+  const data = await apiFetch('/generate', {
+    transcript: lastTranscript,
+    title:      lastTitle,
+    tone:       selectedTone,
+    platforms,
+    apiKey:     CFG.apiKey
+  });
+
+  // All done
+  for(let i=0;i<6;i++) { const d=$(`dot-${i}`); d.classList.add('done'); d.classList.remove('active'); }
+  setStatus('Done!', 6);
+  setTimeout(hideStatus, 1200);
+
+  // Meta strip
+  const ms = $('meta-strip');
+  ms.style.display = 'flex';
+  ms.innerHTML = `
+    <span><strong>Video:</strong> ${esc(lastTitle)}</span>
+    <span><strong>Words:</strong> ${lastTranscript.split(' ').length}</span>
+    <span><strong>Tone:</strong> ${selectedTone}</span>
+    <span><strong>Platforms:</strong> ${platforms.length}</span>
+  `;
+
+  renderOutputs(data.results);
+  $('output-section').style.display = 'block';
+  $('output-section').scrollIntoView({ behavior:'smooth', block:'start' });
+}
+
+// ── Render ────────────────────────────────────────────────────────────────────
+const PLAT_META = {
+  linkedin:      { label:'LinkedIn',       color:'#0a66c2', limit:3000 },
+  twitter:       { label:'Twitter / X',    color:'#000000', limit:null  },
+  instagram:     { label:'Instagram',      color:'#e1306c', limit:2200 },
+  tiktok:        { label:'TikTok script',  color:'#ff0050', limit:null  },
+  youtube_short: { label:'YouTube Shorts', color:'#ff0000', limit:null  },
+};
+
+function renderOutputs(results) {
+  const grid = $('output-grid');
+  grid.innerHTML = '';
+  Object.entries(results).forEach(([plat, text], idx) => {
+    const meta   = PLAT_META[plat] || { label: plat, color:'#888', limit:null };
+    const isThread = plat === 'twitter';
+    const isScript = plat === 'tiktok' || plat === 'youtube_short';
+    const delay    = idx * 80;
+
+    const card = document.createElement('div');
+    card.className = 'out-card';
+    card.style.animationDelay = delay + 'ms';
+    card.dataset.plat = plat;
+
+    card.innerHTML = `
+      <div class="out-header">
+        <div class="out-platform">
+          <div class="plat-dot" style="background:${meta.color}"></div>
+          ${meta.label}
+        </div>
+        <div class="out-actions">
+          <button class="btn-regen" onclick="regenerate('${plat}', this)">↺</button>
+          <button class="btn-copy" onclick="copyCard('${plat}', this)">Copy</button>
+        </div>
+      </div>
+      <div class="out-body" id="body-${plat}">
+        ${isThread ? renderThread(text) : isScript ? renderScript(text) : renderText(plat, text, meta.limit)}
+      </div>
+    `;
+    grid.appendChild(card);
+  });
+}
+
+function renderText(plat, text, limit) {
+  const chars = text.length;
+  const over  = limit && chars > limit;
+  return `
+    <div class="post-text" id="post-${plat}" contenteditable="true"
+      oninput="updateCount('${plat}',${limit})">${esc(text)}</div>
+    ${limit ? `<div class="char-count ${over?'over':''}" id="count-${plat}">${chars} / ${limit}</div>` : ''}
+  `;
+}
+
+function renderThread(text) {
+  const tweets = text.split('\n').map(t=>t.trim()).filter(Boolean);
+  return `<div class="tweet-list">${tweets.map((t,i)=>`
+    <div class="tweet-item">
+      <div class="tweet-meta">Tweet ${i+1} / ${tweets.length} · ${t.length}/280</div>
+      <div class="tweet-body" contenteditable="true">${esc(t)}</div>
+    </div>
+  `).join('')}</div>`;
+}
+
+function renderScript(text) {
+  return `<div class="script-block" contenteditable="true">${esc(text)}</div>`;
+}
+
+function updateCount(plat, limit) {
+  if (!limit) return;
+  const text = $(`post-${plat}`)?.textContent || '';
+  const el   = $(`count-${plat}`);
+  if (!el) return;
+  el.textContent = `${text.length} / ${limit}`;
+  el.classList.toggle('over', text.length > limit);
+}
+
+// ── Copy ──────────────────────────────────────────────────────────────────────
+async function copyCard(plat, btn) {
+  const body  = $(`body-${plat}`);
+  if (!body) return;
+  const isThread = body.querySelector('.tweet-list');
+  let text;
+  if (isThread) {
+    text = [...body.querySelectorAll('.tweet-body')].map(e=>e.textContent).join('\n\n');
+  } else {
+    const el = body.querySelector('.post-text, .script-block');
+    text = el ? el.textContent : '';
+  }
+  await navigator.clipboard.writeText(text.trim());
+  btn.textContent = 'Copied!';
+  btn.classList.add('copied');
+  setTimeout(()=>{ btn.textContent='Copy'; btn.classList.remove('copied'); }, 2000);
+}
+
+// ── Regenerate single platform ────────────────────────────────────────────────
+async function regenerate(plat, btn) {
+  if (!lastTranscript) return;
+  btn.textContent = '...';
+  btn.disabled = true;
+  try {
+    const data = await apiFetch('/generate', {
+      transcript: lastTranscript,
+      title:      lastTitle,
+      tone:       selectedTone,
+      platforms:  [plat],
+      apiKey:     CFG.apiKey
+    });
+    if (data.results[plat]) {
+      const meta     = PLAT_META[plat] || {};
+      const isThread = plat === 'twitter';
+      const isScript = plat === 'tiktok' || plat === 'youtube_short';
+      $(`body-${plat}`).innerHTML = isThread
+        ? renderThread(data.results[plat])
+        : isScript
+        ? renderScript(data.results[plat])
+        : renderText(plat, data.results[plat], meta.limit||null);
+    }
+  } catch(e) { showErr(e.message); }
+  finally { btn.textContent='↺'; btn.disabled=false; }
+}
+</script>
+</body>
+</html>
