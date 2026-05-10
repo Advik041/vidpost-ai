@@ -7,7 +7,8 @@ import requests
 
 app = Flask(__name__)
 CORS(app)
-
+# ADD THESE TWO LINES:
+app.config['SERVER_NAME'] = None
 @app.route("/health", methods=["GET"])
 def health():
     return jsonify({"status": "ok", "service": "VidPost AI backend"})
