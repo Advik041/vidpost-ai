@@ -1,7 +1,5 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-from youtube_transcript_api import YouTubeTranscriptApi
-from youtube_transcript_api._errors import TranscriptsDisabled, NoTranscriptFound, VideoUnavailable
 import anthropic
 import re
 import os
@@ -10,13 +8,11 @@ import requests
 app = Flask(__name__)
 CORS(app)
 
-# ─── Health check ─────────────────────────────────────────────────────────────
 @app.route("/health", methods=["GET"])
 def health():
     return jsonify({"status": "ok", "service": "VidPost AI backend"})
 
 
-# ─── Get transcript ───────────────────────────────────────────────────────────
 @app.route("/transcript", methods=["POST"])
 def get_transcript():
     data = request.get_json()
@@ -24,61 +20,80 @@ def get_transcript():
 
     if not video_id:
         return jsonify({"error": "Missing videoId"}), 400
-
-    # Validate video ID format
     if not re.match(r'^[A-Za-z0-9_-]{11}$', video_id):
         return jsonify({"error": "Invalid YouTube video ID"}), 400
 
+    title = "YouTube Video"
     try:
-        # Try English first, then any available language
-        try:
-            transcript_list = YouTubeTranscriptApi.get_transcript(video_id, languages=["en", "en-US", "en-GB"])
-        except NoTranscriptFound:
-            # Fall back to any available transcript
-            transcripts = YouTubeTranscriptApi.list_transcripts(video_id)
-            transcript_obj = next(iter(transcripts))
-            transcript_list = transcript_obj.fetch()
+        oembed = requests.get(
+            f"https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v={video_id}&format=json",
+            timeout=5
+        )
+        if oembed.ok:
+            title = oembed.json().get("title", "YouTube Video")
+    except Exception:
+        pass
 
-        # Join all transcript pieces into clean text
-        text = " ".join([t["text"] for t in transcript_list])
-        # Clean up common artifacts
-        text = re.sub(r'\[.*?\]', '', text)   # remove [Music], [Applause] etc
-        text = re.sub(r'\s+', ' ', text).strip()
-        word_count = len(text.split())
+    try:
+        from youtube_transcript_api import YouTubeTranscriptApi
 
-        # Get video title via oEmbed (no API key needed)
-        title = "YouTube Video"
+        text = ""
+        # Try v1.0+ new instance-based API first
         try:
-            oembed = requests.get(
-                f"https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v={video_id}&format=json",
-                timeout=5
-            )
-            if oembed.ok:
-                title = oembed.json().get("title", "YouTube Video")
+            ytt = YouTubeTranscriptApi()
+            fetched = ytt.fetch(video_id)
+            text = " ".join([
+                (s.text if hasattr(s, 'text') else s.get('text', ''))
+                for s in fetched
+            ])
         except Exception:
             pass
 
+        # Fallback to v0.x static method
+        if not text:
+            try:
+                lst = YouTubeTranscriptApi.get_transcript(
+                    video_id, languages=["en", "en-US", "en-GB", "en-IN"]
+                )
+                text = " ".join([t.get("text", "") for t in lst])
+            except Exception:
+                pass
+
+        # Last resort: any language
+        if not text:
+            transcripts = YouTubeTranscriptApi.list_transcripts(video_id)
+            first = next(iter(transcripts))
+            lst = first.fetch()
+            text = " ".join([
+                (s.text if hasattr(s, 'text') else s.get('text', ''))
+                for s in lst
+            ])
+
+        text = re.sub(r'\[.*?\]', '', text)
+        text = re.sub(r'\s+', ' ', text).strip()
+
+        if len(text) < 50:
+            return jsonify({"error": "Transcript too short. Try another video."}), 422
+
         return jsonify({
-            "transcript": text[:10000],  # cap at 10k chars for Claude
-            "wordCount": word_count,
+            "transcript": text[:10000],
+            "wordCount": len(text.split()),
             "title": title,
             "videoId": video_id
         })
 
-    except TranscriptsDisabled:
-        return jsonify({"error": "This video has disabled captions. Try pasting the transcript manually."}), 422
-    except VideoUnavailable:
-        return jsonify({"error": "Video not found or unavailable. Check the URL and try again."}), 422
-    except NoTranscriptFound:
-        return jsonify({"error": "No transcript available for this video."}), 422
     except Exception as e:
-        return jsonify({"error": f"Failed to fetch transcript: {str(e)}"}), 500
+        err = str(e).lower()
+        if "disabled" in err or "no transcript" in err:
+            return jsonify({"error": "No captions on this video. Paste transcript manually."}), 422
+        if "unavailable" in err or "private" in err:
+            return jsonify({"error": "Video unavailable or private."}), 422
+        return jsonify({"error": f"Transcript error: {str(e)}"}), 500
 
 
-# ─── Generate posts via Claude ────────────────────────────────────────────────
 @app.route("/generate", methods=["POST"])
 def generate_posts():
-    data = request.get_json()
+    data       = request.get_json()
     transcript = data.get("transcript", "").strip()
     title      = data.get("title", "YouTube Video")
     tone       = data.get("tone", "professional")
@@ -91,102 +106,41 @@ def generate_posts():
         return jsonify({"error": "Invalid or missing Claude API key"}), 400
 
     tone_guide = {
-        "professional": "professional, credible, and insightful — suitable for senior business professionals",
-        "casual":       "conversational, warm, and approachable — like a smart friend sharing a key takeaway",
-        "bold":         "punchy, bold, and direct — short sentences, strong opinions, zero fluff",
-        "storytelling": "narrative-driven — open with a vivid moment or anecdote, build to the insight"
+        "professional": "professional, credible, and insightful",
+        "casual":       "conversational and approachable, like a smart friend",
+        "bold":         "punchy, bold, and direct — short sentences, strong opinions",
+        "storytelling": "narrative-driven — open with an anecdote, build to the insight"
     }
     tone_desc = tone_guide.get(tone, tone_guide["professional"])
 
     prompts = {
-        "linkedin": f"""You are an expert LinkedIn content writer. Turn this YouTube video transcript into a scroll-stopping LinkedIn post.
+        "linkedin": f"""Turn this YouTube transcript into a LinkedIn post.
+TITLE: "{title}" | TONE: {tone_desc}
+TRANSCRIPT: {transcript}
+RULES: Strong hook first line. 3 insights. CTA at end. 150-280 words. Max 3 hashtags at end. Output ONLY the post.""",
 
-VIDEO TITLE: "{title}"
-TONE: {tone_desc}
+        "twitter": f"""Turn this transcript into a 6-tweet Twitter thread.
+TITLE: "{title}" | TONE: {tone_desc}
+TRANSCRIPT: {transcript}
+RULES: Each tweet under 280 chars. Number them 1/ 2/ etc. No hashtags. Output ONLY the 6 tweets, one per line.""",
 
-TRANSCRIPT:
-{transcript}
+        "instagram": f"""Turn this transcript into an Instagram caption.
+TITLE: "{title}" | TONE: {tone_desc}
+TRANSCRIPT: {transcript}
+RULES: Hook first (under 125 chars). 3-4 short paragraphs. End with question. 10 hashtags at end. Output ONLY the caption.""",
 
-STRICT RULES:
-- First line must be a powerful hook (makes someone stop scrolling instantly)
-- 3 clear, specific insights or takeaways from the video
-- End with a question or CTA that invites comments
-- 150–280 words maximum
-- Short paragraphs, generous line breaks
-- NEVER use filler like "In today's fast-paced world" or "Game-changer"
-- Max 3 hashtags at the very end only
-- Output ONLY the post text, no preamble or explanation""",
+        "tiktok": f"""Turn this transcript into a TikTok script (~130 words, spoken in 45-60 seconds).
+TITLE: "{title}" | TONE: {tone_desc}
+TRANSCRIPT: {transcript}
+RULES: Ultra-strong hook first 3 seconds. 3 insights. CTA at end. Written to be spoken. Output ONLY the script.""",
 
-        "twitter": f"""You are an expert Twitter/X content writer. Turn this YouTube video transcript into a high-performing thread.
-
-VIDEO TITLE: "{title}"
-TONE: {tone_desc}
-
-TRANSCRIPT:
-{transcript}
-
-STRICT RULES:
-- Exactly 6 tweets
-- Each tweet MUST be under 280 characters
-- Tweet 1: bold hook that works standalone and makes people want to read on
-- Tweets 2-5: one sharp insight each — specific, surprising, or counterintuitive
-- Tweet 6: punchy conclusion with a question or CTA
-- Number like "1/" "2/" etc.
-- NO hashtags
-- Output ONLY the 6 tweets separated by newlines, nothing else""",
-
-        "instagram": f"""You are an expert Instagram content writer. Turn this YouTube video transcript into an Instagram caption.
-
-VIDEO TITLE: "{title}"
-TONE: {tone_desc}
-
-TRANSCRIPT:
-{transcript}
-
-STRICT RULES:
-- Hook in first line (visible before 'more' cutoff — under 125 chars)
-- 3-4 short punchy paragraphs with key insights
-- Emojis used sparingly and purposefully (max 1 per paragraph)
-- End with a question to drive comments
-- 10-15 relevant hashtags at the very end, separated by spaces
-- 150-300 words total
-- Output ONLY the caption text, nothing else""",
-
-        "tiktok": f"""You are an expert TikTok scriptwriter. Turn this YouTube video transcript into a punchy TikTok video script.
-
-VIDEO TITLE: "{title}"
-TONE: {tone_desc}
-
-TRANSCRIPT:
-{transcript}
-
-STRICT RULES:
-- Target length: 45-60 seconds when spoken aloud (≈120-150 words)
-- First 3 seconds: ultra-strong hook (a question, shocking stat, or bold claim)
-- Middle: 3 rapid-fire insights or story beats
-- End: clear CTA (follow, comment, share)
-- Written exactly as it should be SPOKEN — short sentences, natural rhythm
-- Format as: [HOOK], then numbered beats, then [CTA]
-- Output ONLY the script, nothing else""",
-
-        "youtube_short": f"""You are an expert YouTube Shorts scriptwriter. Turn this YouTube video transcript into a Shorts script.
-
-VIDEO TITLE: "{title}"
-TONE: {tone_desc}
-
-TRANSCRIPT:
-{transcript}
-
-STRICT RULES:
-- Target: 50-60 seconds spoken aloud (≈130-160 words)
-- Open with a question or bold statement that creates instant curiosity
-- Deliver 3 rapid insights from the original video
-- End: "Watch the full video [link in bio]" CTA
-- Conversational, direct address ("you", "your")
-- Output ONLY the script with clear [INTRO], [POINT 1], [POINT 2], [POINT 3], [CTA] labels"""
+        "youtube_short": f"""Turn this transcript into a YouTube Shorts script (~140 words).
+TITLE: "{title}" | TONE: {tone_desc}
+TRANSCRIPT: {transcript}
+RULES: Label [INTRO][POINT 1][POINT 2][POINT 3][CTA]. End with 'Watch the full video'. Output ONLY the script."""
     }
 
-    client = anthropic.Anthropic(api_key=api_key)
+    client  = anthropic.Anthropic(api_key=api_key)
     results = {}
     errors  = {}
 
@@ -201,19 +155,18 @@ STRICT RULES:
             )
             results[platform] = message.content[0].text.strip()
         except anthropic.AuthenticationError:
-            return jsonify({"error": "Invalid Claude API key. Check it at console.anthropic.com"}), 401
+            return jsonify({"error": "Invalid Claude API key"}), 401
         except anthropic.RateLimitError:
-            return jsonify({"error": "Claude API rate limit hit. Wait a moment and try again."}), 429
+            return jsonify({"error": "Rate limit hit. Wait a moment."}), 429
         except Exception as e:
             errors[platform] = str(e)
 
     if not results:
-        return jsonify({"error": "All platforms failed to generate.", "details": errors}), 500
+        return jsonify({"error": "Generation failed.", "details": errors}), 500
 
     return jsonify({"results": results, "errors": errors, "title": title})
 
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
-    debug = os.environ.get("FLASK_ENV", "production") == "development"
-    app.run(host="0.0.0.0", port=port, debug=debug)
+    app.run(host="0.0.0.0", port=port)
