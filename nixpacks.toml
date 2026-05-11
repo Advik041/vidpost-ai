@@ -1,12 +1,10 @@
 [phases.setup]
-nixPkgs = ["python313", "ffmpeg"]
+nixPkgs = ["python313", "ffmpeg", "yt-dlp"]
 
 [phases.install]
 cmds = [
   "python -m venv /opt/venv",
-  "/opt/venv/bin/pip install -r requirements.txt",
-  "curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp",
-  "chmod a+rx /usr/local/bin/yt-dlp"
+  "/opt/venv/bin/pip install -r requirements.txt"
 ]
 
 [start]
