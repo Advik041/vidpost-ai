@@ -28,7 +28,13 @@ print(f"yt-dlp: {YTDLP} | ffmpeg: {bool(shutil.which('ffmpeg'))}")
 # ── Health ────────────────────────────────────────────────────────────────────
 @app.route("/health", methods=["GET"])
 def health():
-    return jsonify({"status":"ok","ytdlp":YTDLP,"ffmpeg":bool(shutil.which("ffmpeg"))})
+    return jsonify({
+        "status": "ok",
+        "ytdlp": YTDLP,
+        "ffmpeg": bool(shutil.which("ffmpeg")),
+        "proxy": "configured" if os.environ.get("PROXY_URL") else "not set",
+        "supadata": "configured" if os.environ.get("SUPADATA_API_KEY") else "not set"
+    })
 
 # ── Analyse video (URL mode) ──────────────────────────────────────────────────
 @app.route("/analyse", methods=["POST","OPTIONS"])
