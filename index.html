@@ -7,42 +7,26 @@
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Mono:wght@400;500&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{
-  --ink:#0d0d0d;--paper:#f4f1eb;--paper2:#ece8e0;--cream:#e8e2d6;
-  --lime:#c5f135;--lime2:#a8d020;--muted:#8a867c;--border:#ccc8bf;
-  --white:#fff;--red:#e03030;--amber:#e08800;--blue:#2563eb;
-  --r:6px;
-}
+:root{--ink:#0d0d0d;--paper:#f4f1eb;--paper2:#ece8e0;--cream:#e8e2d6;--lime:#c5f135;--lime2:#a8d020;--muted:#8a867c;--border:#ccc8bf;--white:#fff;--red:#e03030;--r:6px}
 body{font-family:'DM Sans',sans-serif;background:var(--paper);color:var(--ink);min-height:100vh}
-.serif{font-family:'Instrument Serif',serif}
-.mono{font-family:'DM Mono',monospace}
-
 header{position:sticky;top:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:14px 36px;background:rgba(244,241,235,.92);backdrop-filter:blur(12px);border-bottom:1.5px solid var(--ink)}
 .logo{display:flex;align-items:baseline;gap:6px}
 .logo-name{font-family:'Instrument Serif',serif;font-size:20px}
 .logo-tag{font-family:'DM Mono',monospace;font-size:10px;background:var(--lime);color:var(--ink);padding:2px 7px;border-radius:2px;font-weight:500;border:1px solid var(--ink)}
-.v2-tag{font-family:'DM Mono',monospace;font-size:10px;background:var(--ink);color:var(--lime);padding:2px 7px;border-radius:2px;margin-left:4px}
-.btn-cfg{font-size:12px;padding:6px 14px;border-radius:var(--r);border:1px solid var(--border);background:transparent;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s}
+.v2-tag{font-family:'DM Mono',monospace;font-size:10px;background:var(--ink);color:var(--lime);padding:2px 7px;border-radius:2px}
+.btn-cfg{font-size:12px;padding:6px 14px;border-radius:var(--r);border:1px solid var(--border);background:transparent;cursor:pointer;transition:all .15s}
 .btn-cfg:hover{background:var(--ink);color:var(--lime);border-color:var(--ink)}
-
 .hero{padding:52px 36px 36px;max-width:800px}
 .hero h1{font-family:'Instrument Serif',serif;font-size:clamp(36px,5vw,58px);line-height:1.08;letter-spacing:-1.5px;margin-bottom:14px}
 .hero h1 em{font-style:italic;color:var(--muted)}
 .hero h1 mark{background:var(--lime);padding:0 6px;font-style:normal;border-radius:2px}
 .hero-sub{font-size:15px;color:var(--muted);line-height:1.65;max-width:500px}
-
 .app{padding:0 36px 80px;max-width:1200px}
 .sl{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
-
-/* Cards */
 .card{background:var(--white);border:1.5px solid var(--ink);border-radius:var(--r);padding:24px;margin-bottom:14px;box-shadow:3px 3px 0 var(--ink)}
-
-/* Input */
 input[type=text],input[type=password],input[type=number]{font-family:'DM Mono',monospace;font-size:13px;padding:12px 14px;border:1.5px solid var(--border);border-radius:4px;background:var(--paper);color:var(--ink);outline:none;transition:border-color .18s;width:100%}
 input:focus{border-color:var(--ink)}
 input::placeholder{color:var(--muted);font-style:italic}
-
-/* Buttons */
 .btn-primary{padding:12px 24px;background:var(--lime);color:var(--ink);border:1.5px solid var(--ink);border-radius:4px;font-size:14px;font-weight:500;cursor:pointer;box-shadow:3px 3px 0 var(--ink);transition:all .15s;display:flex;align-items:center;gap:8px;font-family:'DM Sans',sans-serif;white-space:nowrap}
 .btn-primary:hover{transform:translate(-1px,-1px);box-shadow:4px 4px 0 var(--ink)}
 .btn-primary:active{transform:translate(1px,1px);box-shadow:1px 1px 0 var(--ink)}
@@ -50,34 +34,23 @@ input::placeholder{color:var(--muted);font-style:italic}
 .btn-secondary{padding:8px 16px;background:transparent;color:var(--ink);border:1px solid var(--border);border-radius:4px;font-size:12px;cursor:pointer;transition:all .15s;font-family:'DM Sans',sans-serif}
 .btn-secondary:hover{border-color:var(--ink);background:var(--ink);color:var(--lime)}
 .btn-sm{padding:6px 12px;font-size:11px;border:1px solid var(--border);border-radius:3px;background:var(--white);cursor:pointer;font-family:'DM Mono',monospace;transition:all .12s;color:var(--muted)}
-.btn-sm:hover{background:var(--ink);color:var(--lime);border-color:var(--ink)}
-.btn-download{padding:10px 18px;background:var(--ink);color:var(--lime);border:none;border-radius:4px;font-size:12px;cursor:pointer;font-family:'DM Mono',monospace;display:flex;align-items:center;gap:6px;transition:opacity .15s}
-.btn-download:hover{opacity:.8}
-
-/* URL row */
+.btn-sm:hover,.btn-sm.on{background:var(--ink);color:var(--lime);border-color:var(--ink)}
 .url-row{display:flex;gap:10px;align-items:stretch;margin-bottom:14px}
-
-/* Status */
 #status-bar{display:none;align-items:center;gap:12px;padding:12px 16px;background:var(--ink);color:var(--lime);border-radius:4px;font-family:'DM Mono',monospace;font-size:12px;margin-bottom:14px}
 .spinner{width:14px;height:14px;border:2px solid rgba(197,241,53,.3);border-top-color:var(--lime);border-radius:50%;animation:spin .65s linear infinite;flex-shrink:0}
 @keyframes spin{to{transform:rotate(360deg)}}
-.alert{display:none;padding:12px 16px;border-radius:4px;font-size:12px;margin-bottom:12px;font-family:'DM Mono',monospace;line-height:1.6}
+.alert{display:none;padding:12px 16px;border-radius:4px;font-size:12px;margin-bottom:12px;font-family:'DM Mono',monospace;line-height:1.7;white-space:pre-line}
 .alert-err{background:#fff0f0;border:1.5px solid var(--red);color:var(--red)}
-
-/* Clips grid */
 #clips-section{display:none}
 .video-meta{display:flex;gap:20px;flex-wrap:wrap;padding:12px 16px;background:var(--cream);border-radius:4px;font-size:12px;font-family:'DM Mono',monospace;color:var(--muted);margin-bottom:16px}
 .video-meta strong{color:var(--ink)}
-.clips-grid{display:flex;flex-direction:column;gap:12px;margin-bottom:16px}
-.clip-card{background:var(--white);border:1.5px solid var(--border);border-radius:var(--r);overflow:hidden;transition:border-color .15s}
+.clip-card{background:var(--white);border:1.5px solid var(--border);border-radius:var(--r);overflow:hidden;transition:border-color .15s;margin-bottom:10px}
 .clip-card.selected{border-color:var(--ink);box-shadow:3px 3px 0 var(--ink)}
 .clip-header{display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;background:var(--cream)}
 .clip-num{width:28px;height:28px;border-radius:50%;background:var(--ink);color:var(--lime);font-size:12px;font-weight:500;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:'DM Mono',monospace}
 .clip-info{flex:1}
 .clip-title{font-size:13px;font-weight:500;margin-bottom:3px}
 .clip-meta{font-size:11px;color:var(--muted);font-family:'DM Mono',monospace}
-.score-bar{display:flex;align-items:center;gap:8px;flex-shrink:0}
-.score{font-size:11px;font-family:'DM Mono',monospace;color:var(--muted)}
 .score-dots{display:flex;gap:3px}
 .score-dot{width:6px;height:6px;border-radius:50%;background:var(--border)}
 .score-dot.on{background:var(--lime);border:1px solid var(--lime2)}
@@ -86,38 +59,49 @@ input::placeholder{color:var(--muted);font-style:italic}
 .clip-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px}
 .clip-field label{font-size:10px;font-family:'DM Mono',monospace;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:5px}
 .clip-field input{font-size:13px;padding:8px 10px}
-.clip-reason{font-size:12px;color:var(--muted);font-style:italic;margin-bottom:12px;line-height:1.5}
-.clip-hook{font-size:13px;background:var(--paper);padding:10px 12px;border-radius:4px;border-left:3px solid var(--lime);margin-bottom:12px;font-style:italic}
+.clip-hook{font-size:13px;background:var(--paper);padding:10px 12px;border-radius:4px;border-left:3px solid var(--lime);margin-bottom:10px;font-style:italic}
+.clip-reason{font-size:12px;color:var(--muted);font-style:italic;margin-bottom:12px}
 .format-row{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
 .fmt-chip{display:flex;align-items:center;gap:6px;padding:6px 12px;border:1px solid var(--border);border-radius:20px;font-size:12px;cursor:pointer;transition:all .15s;font-family:'DM Sans',sans-serif;color:var(--muted)}
 .fmt-chip.on{background:var(--ink);color:var(--lime);border-color:var(--ink)}
-.process-btn{width:100%}
-
-/* Job progress */
+.process-btn{width:100%;padding:12px;background:var(--lime);color:var(--ink);border:1.5px solid var(--ink);border-radius:4px;font-size:14px;font-weight:500;cursor:pointer;box-shadow:3px 3px 0 var(--ink);transition:all .15s;font-family:'DM Sans',sans-serif}
+.process-btn:hover{transform:translate(-1px,-1px);box-shadow:4px 4px 0 var(--ink)}
 .job-row{background:var(--paper);border:1px solid var(--border);border-radius:4px;padding:12px 14px;margin-top:10px}
-.job-title{font-size:12px;font-family:'DM Mono',monospace;margin-bottom:8px;color:var(--muted)}
 .prog-track{height:4px;background:var(--cream);border-radius:2px;overflow:hidden;margin-bottom:6px}
 .prog-fill{height:100%;background:var(--lime);border-radius:2px;transition:width .4s}
-.job-msg{font-size:11px;font-family:'DM Mono',monospace;color:var(--muted)}
 .download-row{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
-
-/* Tabs */
+.btn-download{padding:10px 18px;background:var(--ink);color:var(--lime);border:none;border-radius:4px;font-size:12px;cursor:pointer;font-family:'DM Mono',monospace;display:flex;align-items:center;gap:6px;text-decoration:none}
 .mode-tabs{display:flex;gap:8px;margin-bottom:16px}
 .mtab{padding:8px 16px;border-radius:4px;border:1.5px solid var(--border);font-size:13px;cursor:pointer;background:transparent;font-family:'DM Sans',sans-serif;font-weight:500;color:var(--muted);transition:all .15s}
 .mtab.on{background:var(--ink);color:var(--lime);border-color:var(--ink)}
 .mode-panel{display:none}.mode-panel.on{display:block}
 
-/* Config modal */
+/* Source tabs */
+.source-tabs{display:flex;gap:6px;margin-bottom:14px}
+.stab{padding:6px 14px;border-radius:20px;border:1px solid var(--border);font-size:12px;cursor:pointer;background:transparent;color:var(--muted);transition:all .15s;font-family:'DM Sans',sans-serif}
+.stab.on{background:var(--ink);color:var(--lime);border-color:var(--ink)}
+
+/* Upload drop zone */
+.drop-zone{border:2px dashed var(--border);border-radius:var(--r);padding:32px;text-align:center;cursor:pointer;transition:all .2s;margin-bottom:14px}
+.drop-zone:hover,.drop-zone.dragover{border-color:var(--ink);background:var(--cream)}
+.drop-zone input[type=file]{display:none}
+.drop-icon{font-size:32px;margin-bottom:8px}
+.drop-title{font-size:14px;font-weight:500;margin-bottom:4px}
+.drop-sub{font-size:12px;color:var(--muted)}
+.file-selected{background:var(--cream);border-color:var(--lime2);border-style:solid}
+.proxy-box{background:var(--paper2);border:1px solid var(--border);border-radius:4px;padding:12px 14px;margin-top:10px;font-size:12px;color:var(--muted);line-height:1.7}
+.proxy-box a{color:var(--ink)}
+.proxy-box strong{color:var(--ink)}
+
 #cfg-overlay{display:none;position:fixed;inset:0;background:rgba(13,13,13,.6);z-index:200;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
 #cfg-overlay.open{display:flex}
 .cfg-modal{background:var(--white);border:1.5px solid var(--ink);border-radius:var(--r);padding:28px;width:100%;max-width:460px;margin:20px;box-shadow:6px 6px 0 var(--ink)}
 .cfg-title{font-family:'Instrument Serif',serif;font-size:20px;margin-bottom:4px}
 .cfg-sub{font-size:12px;color:var(--muted);margin-bottom:20px;line-height:1.5}
-.cfg-label{font-size:10px;font-family:'DM Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;display:block}
+.cfg-label{font-size:10px;font-family:'DM Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;display:block;margin-top:14px}
 .cfg-actions{display:flex;gap:10px;margin-top:18px}
 .btn-save{flex:1;padding:11px;background:var(--lime);color:var(--ink);border:1.5px solid var(--ink);border-radius:4px;font-size:14px;font-weight:500;cursor:pointer;font-family:'DM Sans',sans-serif;box-shadow:3px 3px 0 var(--ink)}
 .btn-cancel{padding:11px 16px;border:1px solid var(--border);border-radius:4px;font-size:13px;cursor:pointer;background:transparent;font-family:'DM Sans',sans-serif}
-
 @media(max-width:600px){.hero,.app{padding-left:18px;padding-right:18px}header{padding:12px 18px}.clip-row{grid-template-columns:1fr}}
 </style>
 </head>
@@ -134,28 +118,53 @@ input::placeholder{color:var(--muted);font-style:italic}
 
 <div class="hero">
   <h1>One video.<br><mark>Viral clips.</mark><br><em>Every platform.</em></h1>
-  <p class="hero-sub">AI finds the best moments, cuts the clips, converts to 9:16 and 16:9, and writes posts for every platform. The Opus Clip killer.</p>
+  <p class="hero-sub">AI finds the best moments, cuts clips to 9:16 and 16:9, and writes posts for every platform. Paste a YouTube URL or upload your video directly.</p>
 </div>
 
 <div class="app">
-
-  <!-- Mode tabs -->
   <div class="mode-tabs">
     <button class="mtab on" onclick="switchMode('clips')">✂ AI Video Clips</button>
     <button class="mtab" onclick="switchMode('posts')">✍ Text Posts</button>
   </div>
 
-  <!-- ── CLIPS MODE ── -->
+  <!-- CLIPS MODE -->
   <div id="mode-clips" class="mode-panel on">
-    <div class="sl">Step 1 — Paste YouTube URL</div>
+    <div class="sl">Step 1 — Choose video source</div>
     <div class="card">
-      <div class="url-row">
-        <input type="text" id="clip-url" placeholder="https://www.youtube.com/watch?v=..." spellcheck="false"/>
-        <button class="btn-primary" id="analyse-btn" onclick="analyseVideo()">
-          <span id="analyse-label">Analyse video</span><span>→</span>
-        </button>
+      <div class="source-tabs">
+        <button class="stab on" onclick="switchSource('url')">🔗 YouTube URL</button>
+        <button class="stab" onclick="switchSource('upload')">📁 Upload video file</button>
       </div>
-      <div style="font-size:12px;color:var(--muted)">AI will watch your video and find the 5 best moments to clip.</div>
+
+      <!-- URL source -->
+      <div id="src-url">
+        <div class="url-row">
+          <input type="text" id="clip-url" placeholder="https://www.youtube.com/watch?v=..."/>
+          <button class="btn-primary" id="analyse-btn" onclick="analyseVideo()">
+            <span id="analyse-label">Analyse video</span><span>→</span>
+          </button>
+        </div>
+        <div style="font-size:12px;color:var(--muted)">AI detects the 5 best moments to clip automatically.</div>
+        <div class="proxy-box" id="proxy-hint" style="display:none">
+          <strong>YouTube blocking downloads?</strong> Add a proxy in Railway Variables:<br>
+          <code>PROXY_URL = socks5://user:pass@host:port</code><br>
+          Get residential proxies at <a href="https://webshare.io" target="_blank">webshare.io</a> (~$3/mo for 1GB) or <a href="https://proxy-cheap.com" target="_blank">proxy-cheap.com</a>
+        </div>
+      </div>
+
+      <!-- Upload source -->
+      <div id="src-upload" style="display:none">
+        <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()" ondragover="handleDrag(event,true)" ondragleave="handleDrag(event,false)" ondrop="handleDrop(event)">
+          <input type="file" id="file-input" accept="video/*,.mp4,.mov,.avi,.mkv,.webm" onchange="handleFile(this.files[0])"/>
+          <div class="drop-icon">🎬</div>
+          <div class="drop-title" id="drop-title">Drop your video here or click to browse</div>
+          <div class="drop-sub" id="drop-sub">MP4, MOV, AVI, MKV — up to 500MB</div>
+        </div>
+        <button class="btn-primary" id="upload-btn" onclick="analyseUpload()" style="display:none">
+          <span id="upload-label">Analyse uploaded video</span><span>→</span>
+        </button>
+        <div style="font-size:12px;color:var(--muted);margin-top:8px">No YouTube IP blocks — works 100% of the time with uploaded files.</div>
+      </div>
     </div>
 
     <div id="status-bar">
@@ -164,38 +173,37 @@ input::placeholder{color:var(--muted);font-style:italic}
     </div>
     <div class="alert alert-err" id="err-box"></div>
 
-    <!-- Clips results -->
     <div id="clips-section">
       <div class="sl">Step 2 — AI-detected clips (click to adjust & process)</div>
       <div class="video-meta" id="video-meta"></div>
-      <div class="clips-grid" id="clips-grid"></div>
+      <div id="clips-grid"></div>
     </div>
   </div>
 
-  <!-- ── POSTS MODE ── -->
+  <!-- POSTS MODE -->
   <div id="mode-posts" class="mode-panel">
-    <div class="sl">Paste YouTube URL for text posts</div>
+    <div class="sl">Generate text posts from a YouTube video</div>
     <div class="card">
       <div class="url-row">
-        <input type="text" id="post-url" placeholder="https://www.youtube.com/watch?v=..." spellcheck="false"/>
+        <input type="text" id="post-url" placeholder="https://www.youtube.com/watch?v=..."/>
         <button class="btn-primary" id="post-btn" onclick="generatePosts()">
           <span id="post-label">Generate posts</span><span>→</span>
         </button>
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px" id="tone-row">
         <span style="font-size:12px;color:var(--muted);align-self:center">Tone:</span>
-        <button class="btn-sm on" data-tone="professional" style="background:var(--ink);color:var(--lime);border-color:var(--ink)">Professional</button>
+        <button class="btn-sm on" data-tone="professional">Professional</button>
         <button class="btn-sm" data-tone="casual">Casual</button>
         <button class="btn-sm" data-tone="bold">Bold</button>
         <button class="btn-sm" data-tone="storytelling">Storytelling</button>
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px" id="plat-row">
         <span style="font-size:12px;color:var(--muted);align-self:center">Platforms:</span>
-        <button class="btn-sm on" data-plat="linkedin" style="background:var(--ink);color:var(--lime);border-color:var(--ink)">LinkedIn</button>
-        <button class="btn-sm on" data-plat="twitter" style="background:var(--ink);color:var(--lime);border-color:var(--ink)">Twitter</button>
-        <button class="btn-sm on" data-plat="instagram" style="background:var(--ink);color:var(--lime);border-color:var(--ink)">Instagram</button>
-        <button class="btn-sm on" data-plat="tiktok" style="background:var(--ink);color:var(--lime);border-color:var(--ink)">TikTok</button>
-        <button class="btn-sm on" data-plat="youtube_short" style="background:var(--ink);color:var(--lime);border-color:var(--ink)">YT Shorts</button>
+        <button class="btn-sm on" data-plat="linkedin">LinkedIn</button>
+        <button class="btn-sm on" data-plat="twitter">Twitter</button>
+        <button class="btn-sm on" data-plat="instagram">Instagram</button>
+        <button class="btn-sm on" data-plat="tiktok">TikTok</button>
+        <button class="btn-sm on" data-plat="youtube_short">YT Shorts</button>
       </div>
     </div>
     <div id="post-status" style="display:none;align-items:center;gap:10px;padding:10px 14px;background:var(--ink);color:var(--lime);border-radius:4px;font-family:'DM Mono',monospace;font-size:12px;margin-bottom:12px">
@@ -204,19 +212,18 @@ input::placeholder{color:var(--muted);font-style:italic}
     <div class="alert alert-err" id="post-err-box"></div>
     <div id="posts-grid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:14px"></div>
   </div>
-
 </div>
 
 <!-- Config modal -->
 <div id="cfg-overlay" onclick="handleOverlay(event)">
   <div class="cfg-modal">
-    <div class="cfg-title serif">Settings</div>
-    <div class="cfg-sub">Enter your backend URL and API key. Stored in your browser only.</div>
+    <div class="cfg-title" style="font-family:'Instrument Serif',serif">Settings</div>
+    <div class="cfg-sub">Stored in your browser only.</div>
     <label class="cfg-label">Backend URL (Railway)</label>
-    <input type="text" id="cfg-backend" placeholder="https://your-app.up.railway.app" style="margin-bottom:14px"/>
+    <input type="text" id="cfg-backend" placeholder="https://your-app.up.railway.app"/>
     <label class="cfg-label">Groq API key (free at console.groq.com)</label>
-    <input type="password" id="cfg-key" placeholder="gsk_..." autocomplete="off" style="margin-bottom:6px"/>
-    <div style="font-size:11px;color:var(--muted);font-family:'DM Mono',monospace">Get free key → <a href="https://console.groq.com" target="_blank" style="color:var(--ink)">console.groq.com</a></div>
+    <input type="password" id="cfg-key" placeholder="gsk_..." autocomplete="off"/>
+    <div style="font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;margin-top:6px">Free key → <a href="https://console.groq.com" target="_blank" style="color:var(--ink)">console.groq.com</a></div>
     <div class="cfg-actions">
       <button class="btn-save" onclick="saveCfg()">Save</button>
       <button class="btn-cancel" onclick="closeCfg()">Cancel</button>
@@ -225,7 +232,6 @@ input::placeholder{color:var(--muted);font-style:italic}
 </div>
 
 <script>
-// ── Config ────────────────────────────────────────────────────────────────────
 const CFG = {
   get backend(){ return (localStorage.getItem('vp2_backend')||'').replace(/\/$/,'') },
   get key(){     return localStorage.getItem('vp2_key')||'' },
@@ -233,41 +239,28 @@ const CFG = {
   set key(v){     localStorage.setItem('vp2_key', v) }
 };
 
-// ── State ─────────────────────────────────────────────────────────────────────
-let currentClips  = [];
-let currentVideoId= '';
-let currentTitle  = '';
 let selectedTone  = 'professional';
 let selectedPlats = ['linkedin','twitter','instagram','tiktok','youtube_short'];
-let activeJobs    = {};
+let currentVideoId= '';
+let currentUploadPath = '';
+let currentTitle  = '';
+let currentMode   = 'url';
+let selectedFile  = null;
 
 window.addEventListener('DOMContentLoaded', () => {
   if (!CFG.backend || !CFG.key) openCfg();
 
-  // Tone chips
   document.querySelectorAll('#tone-row .btn-sm').forEach(b => {
     b.addEventListener('click', () => {
-      document.querySelectorAll('#tone-row .btn-sm').forEach(x => {
-        x.classList.remove('on');
-        x.style.cssText = '';
-      });
+      document.querySelectorAll('#tone-row .btn-sm').forEach(x => x.classList.remove('on'));
       b.classList.add('on');
-      b.style.background = 'var(--ink)';
-      b.style.color = 'var(--lime)';
-      b.style.borderColor = 'var(--ink)';
       selectedTone = b.dataset.tone;
     });
   });
 
-  // Platform chips
   document.querySelectorAll('#plat-row .btn-sm').forEach(b => {
     b.addEventListener('click', () => {
       b.classList.toggle('on');
-      if (b.classList.contains('on')) {
-        b.style.background='var(--ink)'; b.style.color='var(--lime)'; b.style.borderColor='var(--ink)';
-      } else {
-        b.style.cssText='';
-      }
       selectedPlats = [...document.querySelectorAll('#plat-row .btn-sm.on')].map(x=>x.dataset.plat);
     });
   });
@@ -276,311 +269,290 @@ window.addEventListener('DOMContentLoaded', () => {
   document.getElementById('post-url').addEventListener('keydown', e => { if(e.key==='Enter') generatePosts(); });
 });
 
-// ── Mode switch ───────────────────────────────────────────────────────────────
-function switchMode(m) {
-  document.querySelectorAll('.mtab').forEach((t,i) => {
-    const modes=['clips','posts'];
-    t.classList.toggle('on', modes[i]===m);
-  });
-  document.querySelectorAll('.mode-panel').forEach(p => p.classList.remove('on'));
-  document.getElementById('mode-'+m).classList.add('on');
-}
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
 const $ = id => document.getElementById(id);
-const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+function fmtTime(s){ const m=Math.floor(s/60); return `${m}:${String(Math.round(s%60)).padStart(2,'0')}`; }
 function showStatus(msg){ $('status-bar').style.display='flex'; $('status-text').textContent=msg; }
 function hideStatus(){ $('status-bar').style.display='none'; }
-function showErr(msg){ const e=$('err-box'); e.innerHTML='⚠ '+msg; e.style.display='block'; }
+function showErr(msg){ const e=$('err-box'); e.innerHTML=msg; e.style.display='block'; }
 function hideErr(){ $('err-box').style.display='none'; }
-function fmtTime(s){ const m=Math.floor(s/60); return `${m}:${String(Math.round(s%60)).padStart(2,'0')}`; }
 
-async function apiFetch(path, body) {
-  if (!CFG.backend) throw new Error('No backend URL. Click ⚙ Settings.');
-  const res = await fetch(CFG.backend + path, {
-    method: 'POST',
-    headers: {'Content-Type':'application/json'},
-    body: JSON.stringify(body)
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || `Server error ${res.status}`);
-  return data;
+function switchMode(m){
+  document.querySelectorAll('.mtab').forEach((t,i)=>t.classList.toggle('on',['clips','posts'][i]===m));
+  document.querySelectorAll('.mode-panel').forEach(p=>p.classList.remove('on'));
+  $('mode-'+m).classList.add('on');
 }
 
-// ── Analyse video ─────────────────────────────────────────────────────────────
-async function analyseVideo() {
+function switchSource(s){
+  currentMode = s;
+  document.querySelectorAll('.stab').forEach((t,i)=>t.classList.toggle('on',['url','upload'][i]===s));
+  $('src-url').style.display = s==='url'?'block':'none';
+  $('src-upload').style.display = s==='upload'?'block':'none';
   hideErr();
-  $('clips-section').style.display = 'none';
-  const url = $('clip-url').value.trim();
-  if (!url) { showErr('Paste a YouTube URL first.'); return; }
-  if (!CFG.backend) { openCfg(); return; }
+}
 
-  $('analyse-btn').disabled = true;
-  $('analyse-label').textContent = 'Analysing...';
-  showStatus('Fetching video info and transcript...');
+// ── File upload ───────────────────────────────────────────────────────────────
+function handleDrag(e, over){
+  e.preventDefault();
+  $('drop-zone').classList.toggle('dragover', over);
+}
+function handleDrop(e){
+  e.preventDefault();
+  $('drop-zone').classList.remove('dragover');
+  const file = e.dataTransfer.files[0];
+  if(file) handleFile(file);
+}
+function handleFile(file){
+  if(!file) return;
+  if(file.size > 500*1024*1024){ showErr('File too large. Max 500MB.'); return; }
+  selectedFile = file;
+  const dz = $('drop-zone');
+  dz.classList.add('file-selected');
+  $('drop-title').textContent = file.name;
+  $('drop-sub').textContent = (file.size/(1024*1024)).toFixed(1)+'MB — ready to analyse';
+  $('upload-btn').style.display = 'flex';
+}
+
+async function analyseUpload(){
+  if(!selectedFile){ showErr('Please select a video file first.'); return; }
+  if(!CFG.backend){ openCfg(); return; }
+  hideErr();
+  $('clips-section').style.display='none';
+  $('upload-btn').disabled=true;
+  $('upload-label').textContent='Uploading...';
+  showStatus('Uploading video file...');
 
   try {
-    const data = await apiFetch('/analyse', { url, apiKey: CFG.key });
-    currentVideoId = data.videoId;
-    currentTitle   = data.title;
-    currentClips   = data.clips;
+    const formData = new FormData();
+    formData.append('video', selectedFile);
+    formData.append('apiKey', CFG.key);
 
-    $('video-meta').innerHTML = `
-      <span><strong>${esc(data.title)}</strong></span>
-      <span>Duration: <strong>${fmtTime(data.duration)}</strong></span>
-      <span>Transcript: <strong>${data.transcriptLength} words</strong></span>
-      <span>AI clips found: <strong>${data.clips.length}</strong></span>
-    `;
+    const res = await fetch(CFG.backend+'/analyse-upload', {method:'POST', body: formData});
+    const data = await res.json();
+    if(!res.ok) throw new Error(data.error || 'Upload failed');
 
+    currentUploadPath = data.uploadPath;
+    currentVideoId    = '';
+    currentTitle      = data.title;
+
+    $('video-meta').innerHTML = `<span><strong>${esc(data.title)}</strong></span><span>Duration: <strong>${fmtTime(data.duration)}</strong></span><span>Clips found: <strong>${data.clips.length}</strong></span><span style="color:green">✓ Uploaded file</span>`;
     renderClips(data.clips, data.duration);
-    $('clips-section').style.display = 'block';
-    $('clips-section').scrollIntoView({behavior:'smooth', block:'start'});
+    $('clips-section').style.display='block';
+    $('clips-section').scrollIntoView({behavior:'smooth',block:'start'});
     hideStatus();
-
-  } catch(e) {
+  } catch(e){
     hideStatus();
-    showErr(e.message);
+    showErr('⚠ '+e.message);
   } finally {
-    $('analyse-btn').disabled = false;
-    $('analyse-label').textContent = 'Analyse video';
+    $('upload-btn').disabled=false;
+    $('upload-label').textContent='Analyse uploaded video';
+  }
+}
+
+// ── URL analyse ───────────────────────────────────────────────────────────────
+async function analyseVideo(){
+  hideErr();
+  $('clips-section').style.display='none';
+  const url = $('clip-url').value.trim();
+  if(!url){ showErr('⚠ Paste a YouTube URL first.'); return; }
+  if(!CFG.backend){ openCfg(); return; }
+
+  $('analyse-btn').disabled=true;
+  $('analyse-label').textContent='Analysing...';
+  showStatus('Fetching video info and detecting clips...');
+
+  try {
+    const res = await fetch(CFG.backend+'/analyse', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({url, apiKey: CFG.key})
+    });
+    const data = await res.json();
+    if(!res.ok) throw new Error(data.error || 'Analysis failed');
+
+    currentVideoId    = data.videoId;
+    currentUploadPath = '';
+    currentTitle      = data.title;
+
+    $('video-meta').innerHTML = `<span><strong>${esc(data.title)}</strong></span><span>Duration: <strong>${fmtTime(data.duration)}</strong></span><span>Transcript: <strong>${data.transcriptLength} words</strong></span><span>Clips: <strong>${data.clips.length}</strong></span>`;
+    renderClips(data.clips, data.duration);
+    $('clips-section').style.display='block';
+    $('clips-section').scrollIntoView({behavior:'smooth',block:'start'});
+    hideStatus();
+  } catch(e){
+    hideStatus();
+    const msg = e.message || 'Analysis failed';
+    if(msg.includes('block') || msg.includes('download')){
+      $('proxy-hint').style.display='block';
+    }
+    showErr('⚠ '+msg);
+  } finally {
+    $('analyse-btn').disabled=false;
+    $('analyse-label').textContent='Analyse video';
   }
 }
 
 // ── Render clips ──────────────────────────────────────────────────────────────
-function renderClips(clips, duration) {
+function renderClips(clips, duration){
   const grid = $('clips-grid');
-  grid.innerHTML = '';
-  clips.forEach((clip, i) => {
+  grid.innerHTML='';
+  clips.forEach((clip,i)=>{
     const card = document.createElement('div');
-    card.className = 'clip-card';
-    card.id = `clip-${i}`;
+    card.className='clip-card'; card.id=`clip-${i}`;
     const dots = Array.from({length:10},(_,d)=>`<div class="score-dot${d<clip.virality_score?' on':''}"></div>`).join('');
-    card.innerHTML = `
+    card.innerHTML=`
       <div class="clip-header" onclick="toggleClip(${i})">
         <div class="clip-num">${i+1}</div>
         <div class="clip-info">
           <div class="clip-title">${esc(clip.title)}</div>
-          <div class="clip-meta">${fmtTime(clip.start)} → ${fmtTime(clip.end)} &nbsp;·&nbsp; ${Math.round(clip.end-clip.start)}s</div>
+          <div class="clip-meta">${fmtTime(clip.start)} → ${fmtTime(clip.end)} · ${Math.round(clip.end-clip.start)}s</div>
         </div>
-        <div class="score-bar">
+        <div style="display:flex;align-items:center;gap:8px">
           <div class="score-dots">${dots}</div>
-          <div class="score">${clip.virality_score}/10</div>
+          <span style="font-size:11px;font-family:'DM Mono',monospace;color:var(--muted)">${clip.virality_score}/10</span>
         </div>
       </div>
       <div class="clip-body">
         <div class="clip-hook">"${esc(clip.hook)}"</div>
         <div class="clip-reason">${esc(clip.reason)}</div>
         <div class="clip-row">
-          <div class="clip-field">
-            <label>Start (seconds)</label>
-            <input type="number" id="start-${i}" value="${clip.start}" min="0" max="${duration}" step="1"/>
-          </div>
-          <div class="clip-field">
-            <label>End (seconds)</label>
-            <input type="number" id="end-${i}" value="${clip.end}" min="0" max="${duration}" step="1"/>
-          </div>
-          <div class="clip-field">
-            <label>Clip name</label>
-            <input type="text" id="ctitle-${i}" value="${esc(clip.title)}"/>
-          </div>
+          <div class="clip-field"><label>Start (seconds)</label><input type="number" id="start-${i}" value="${clip.start}" min="0" max="${duration}" step="1"/></div>
+          <div class="clip-field"><label>End (seconds)</label><input type="number" id="end-${i}" value="${clip.end}" min="0" max="${duration}" step="1"/></div>
+          <div class="clip-field"><label>Clip name</label><input type="text" id="ctitle-${i}" value="${esc(clip.title)}"/></div>
         </div>
         <div class="sl">Output formats</div>
         <div class="format-row">
-          <div class="fmt-chip on" data-clip="${i}" data-fmt="vertical" onclick="toggleFmt(this)">📱 9:16 Vertical (TikTok/Reels/Shorts)</div>
-          <div class="fmt-chip on" data-clip="${i}" data-fmt="horizontal" onclick="toggleFmt(this)">🖥 16:9 Horizontal (YouTube)</div>
+          <div class="fmt-chip on" data-clip="${i}" data-fmt="vertical" onclick="toggleFmt(this)">📱 9:16 Vertical</div>
+          <div class="fmt-chip on" data-clip="${i}" data-fmt="horizontal" onclick="toggleFmt(this)">🖥 16:9 Horizontal</div>
         </div>
-        <button class="btn-primary process-btn" onclick="processClip(${i})">
-          ✂ Process this clip
-        </button>
+        <button class="process-btn" onclick="processClip(${i})">✂ Process this clip</button>
         <div id="job-${i}"></div>
-      </div>
-    `;
+      </div>`;
     grid.appendChild(card);
   });
 }
 
-function toggleClip(i) {
-  const card = $(`clip-${i}`);
-  const wasSelected = card.classList.contains('selected');
-  document.querySelectorAll('.clip-card').forEach(c => c.classList.remove('selected'));
-  if (!wasSelected) card.classList.add('selected');
+function toggleClip(i){
+  const card=$(`clip-${i}`);
+  const was=card.classList.contains('selected');
+  document.querySelectorAll('.clip-card').forEach(c=>c.classList.remove('selected'));
+  if(!was) card.classList.add('selected');
 }
+function toggleFmt(el){ el.classList.toggle('on'); }
 
-function toggleFmt(el) {
-  el.classList.toggle('on');
-}
-
-// ── Process clip ──────────────────────────────────────────────────────────────
-async function processClip(i) {
-  const start   = parseFloat($(`start-${i}`).value);
-  const end     = parseFloat($(`end-${i}`).value);
-  const title   = $(`ctitle-${i}`).value;
-  const fmts    = [...document.querySelectorAll(`.fmt-chip.on[data-clip="${i}"]`)].map(f=>f.dataset.fmt);
-
-  if (!fmts.length) { alert('Select at least one format.'); return; }
-  if (end - start < 10) { alert('Clip must be at least 10 seconds.'); return; }
-  if (!CFG.backend) { openCfg(); return; }
+async function processClip(i){
+  const start  = parseFloat($(`start-${i}`).value);
+  const end    = parseFloat($(`end-${i}`).value);
+  const fmts   = [...document.querySelectorAll(`.fmt-chip.on[data-clip="${i}"]`)].map(f=>f.dataset.fmt);
+  if(!fmts.length){ alert('Select at least one format.'); return; }
+  if(end-start<10){ alert('Clip must be at least 10 seconds.'); return; }
+  if(!CFG.backend){ openCfg(); return; }
 
   const jobDiv = $(`job-${i}`);
-  jobDiv.innerHTML = `
-    <div class="job-row">
-      <div class="job-title">Processing clip...</div>
-      <div class="prog-track"><div class="prog-fill" id="pf-${i}" style="width:5%"></div></div>
-      <div class="job-msg" id="pm-${i}">Starting...</div>
-    </div>
-  `;
+  jobDiv.innerHTML=`<div class="job-row"><div style="font-size:12px;font-family:'DM Mono',monospace;margin-bottom:8px;color:var(--muted)">Processing clip...</div><div class="prog-track"><div class="prog-fill" id="pf-${i}" style="width:5%"></div></div><div style="font-size:11px;font-family:'DM Mono',monospace;color:var(--muted)" id="pm-${i}">Starting...</div></div>`;
 
   try {
-    const data = await apiFetch('/clip', {
-      videoId: currentVideoId,
-      start, end, title,
-      formats: fmts,
-      captions: true
+    const body = {start, end, formats: fmts};
+    if(currentUploadPath) body.uploadPath = currentUploadPath;
+    else body.videoId = currentVideoId;
+
+    const res = await fetch(CFG.backend+'/clip', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(body)
     });
-
-    const jobId = data.jobId;
-    pollJob(jobId, i);
-
-  } catch(e) {
-    jobDiv.innerHTML = `<div class="alert alert-err" style="display:block;margin-top:10px">⚠ ${esc(e.message)}</div>`;
+    const data = await res.json();
+    if(!res.ok) throw new Error(data.error||'Clip failed');
+    pollJob(data.jobId, i);
+  } catch(e){
+    jobDiv.innerHTML=`<div class="alert alert-err" style="display:block;margin-top:10px">⚠ ${esc(e.message)}</div>`;
   }
 }
 
-// ── Poll job ──────────────────────────────────────────────────────────────────
-function pollJob(jobId, clipIdx) {
-  const interval = setInterval(async () => {
+function pollJob(jobId, clipIdx){
+  const iv = setInterval(async()=>{
     try {
-      const res  = await fetch(`${CFG.backend}/job/${jobId}`);
-      const job  = await res.json();
-      const fill = $(`pf-${clipIdx}`);
-      const msg  = $(`pm-${clipIdx}`);
-      if (fill) fill.style.width = job.progress + '%';
-      if (msg)  msg.textContent  = job.message;
-
-      if (job.status === 'done') {
-        clearInterval(interval);
+      const res = await fetch(`${CFG.backend}/job/${jobId}`);
+      const job = await res.json();
+      const fill=$(`pf-${clipIdx}`), msg=$(`pm-${clipIdx}`);
+      if(fill) fill.style.width=job.progress+'%';
+      if(msg)  msg.textContent=job.message;
+      if(job.status==='done'){
+        clearInterval(iv);
         renderDownloads(jobId, clipIdx, job.files);
-      } else if (job.status === 'error') {
-        clearInterval(interval);
-        const jobDiv = $(`job-${clipIdx}`);
-        jobDiv.innerHTML = `<div class="alert alert-err" style="display:block;margin-top:10px">⚠ ${esc(job.message)}</div>`;
+      } else if(job.status==='error'){
+        clearInterval(iv);
+        $(`job-${clipIdx}`).innerHTML=`<div class="alert alert-err" style="display:block;margin-top:10px">⚠ ${esc(job.message)}\n\nTip: Try uploading the video file directly instead of using a YouTube URL.</div>`;
+        switchSource('upload');
       }
-    } catch(e) {
-      clearInterval(interval);
-    }
+    } catch(e){ clearInterval(iv); }
   }, 2000);
 }
 
-function renderDownloads(jobId, clipIdx, files) {
-  const jobDiv = $(`job-${clipIdx}`);
-  const btns = Object.entries(files).map(([fmt, info]) => `
-    <a href="${CFG.backend}${info.downloadUrl}" download class="btn-download">
-      ⬇ Download ${fmt === 'vertical' ? '9:16 Vertical' : '16:9 Horizontal'}
-      <span style="font-size:10px;opacity:.7">${info.sizeMb}MB</span>
-    </a>
-  `).join('');
-
-  jobDiv.innerHTML = `
-    <div class="job-row" style="background:#f0fff4;border-color:#22c55e">
-      <div class="job-title" style="color:#16a34a">✅ Clip ready!</div>
-      <div class="download-row">${btns}</div>
-    </div>
-  `;
+function renderDownloads(jobId, clipIdx, files){
+  const btns=Object.entries(files).map(([fmt,info])=>`<a href="${CFG.backend}${info.downloadUrl}" download class="btn-download">⬇ ${fmt==='vertical'?'9:16 Vertical':'16:9 Horizontal'} <span style="opacity:.7;font-size:10px">${info.sizeMb}MB</span></a>`).join('');
+  $(`job-${clipIdx}`).innerHTML=`<div class="job-row" style="background:#f0fff4;border-color:#22c55e"><div style="font-size:12px;font-family:'DM Mono',monospace;color:#16a34a;margin-bottom:8px">✅ Clip ready!</div><div class="download-row">${btns}</div></div>`;
 }
 
-// ── Generate text posts ───────────────────────────────────────────────────────
-async function generatePosts() {
-  $('post-err-box').style.display = 'none';
-  $('posts-grid').innerHTML = '';
-  const url = $('post-url').value.trim();
-  if (!url) { $('post-err-box').innerHTML='⚠ Paste a YouTube URL.'; $('post-err-box').style.display='block'; return; }
-  if (!CFG.backend) { openCfg(); return; }
-  if (!selectedPlats.length) { $('post-err-box').innerHTML='⚠ Select at least one platform.'; $('post-err-box').style.display='block'; return; }
+// ── Generate posts ────────────────────────────────────────────────────────────
+async function generatePosts(){
+  $('post-err-box').style.display='none';
+  $('posts-grid').innerHTML='';
+  const url=$('post-url').value.trim();
+  if(!url){ $('post-err-box').innerHTML='⚠ Paste a YouTube URL.'; $('post-err-box').style.display='block'; return; }
+  if(!CFG.backend){ openCfg(); return; }
+  if(!selectedPlats.length){ $('post-err-box').innerHTML='⚠ Select at least one platform.'; $('post-err-box').style.display='block'; return; }
 
-  $('post-btn').disabled = true;
-  $('post-label').textContent = 'Generating...';
-  $('post-status').style.display = 'flex';
-  $('post-status-text').textContent = 'Fetching transcript...';
+  $('post-btn').disabled=true; $('post-label').textContent='Generating...';
+  $('post-status').style.display='flex'; $('post-status-text').textContent='Fetching transcript...';
 
   try {
-    // Extract video ID
-    const m = url.match(/(?:v=|youtu\.be\/|\/shorts\/)([A-Za-z0-9_-]{11})/);
-    if (!m) throw new Error('Invalid YouTube URL');
-    const videoId = m[1];
+    const m=url.match(/(?:v=|youtu\.be\/|\/shorts\/)([A-Za-z0-9_-]{11})/);
+    if(!m) throw new Error('Invalid YouTube URL');
+    const videoId=m[1];
 
-    // Get transcript
-    const tData = await apiFetch('/transcript', { videoId });
-    $('post-status-text').textContent = 'Generating posts with AI...';
+    const tRes=await fetch(CFG.backend+'/transcript',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({videoId})});
+    const tData=await tRes.json();
+    if(!tRes.ok) throw new Error(tData.error||'Transcript failed');
 
-    // Generate posts
-    const gData = await apiFetch('/generate', {
-      transcript: tData.transcript,
-      title: tData.title,
-      tone: selectedTone,
-      platforms: selectedPlats,
-      apiKey: CFG.key
-    });
+    $('post-status-text').textContent='Generating posts with AI...';
+    const gRes=await fetch(CFG.backend+'/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({transcript:tData.transcript,title:tData.title,tone:selectedTone,platforms:selectedPlats,apiKey:CFG.key})});
+    const gData=await gRes.json();
+    if(!gRes.ok) throw new Error(gData.error||'Generation failed');
 
-    $('post-status').style.display = 'none';
-    renderPosts(gData.results, tData.title);
-
-  } catch(e) {
-    $('post-status').style.display = 'none';
-    $('post-err-box').innerHTML = '⚠ ' + esc(e.message);
-    $('post-err-box').style.display = 'block';
+    $('post-status').style.display='none';
+    renderPosts(gData.results);
+  } catch(e){
+    $('post-status').style.display='none';
+    $('post-err-box').innerHTML='⚠ '+esc(e.message);
+    $('post-err-box').style.display='block';
   } finally {
-    $('post-btn').disabled = false;
-    $('post-label').textContent = 'Generate posts';
+    $('post-btn').disabled=false; $('post-label').textContent='Generate posts';
   }
 }
 
-function renderPosts(results, title) {
-  const platMeta = {
-    linkedin:     {label:'LinkedIn',    color:'#0a66c2'},
-    twitter:      {label:'Twitter / X', color:'#000'},
-    instagram:    {label:'Instagram',   color:'#e1306c'},
-    tiktok:       {label:'TikTok',      color:'#ff0050'},
-    youtube_short:{label:'YT Shorts',   color:'#ff0000'}
-  };
-  const grid = $('posts-grid');
-  grid.style.display = 'grid';
-  grid.innerHTML = '';
-
-  Object.entries(results).forEach(([plat, text]) => {
-    const meta = platMeta[plat] || {label:plat, color:'#888'};
-    const card = document.createElement('div');
-    card.style.cssText = 'background:var(--white);border:1.5px solid var(--ink);border-radius:var(--r);overflow:hidden;box-shadow:3px 3px 0 var(--ink)';
-    card.innerHTML = `
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:11px 14px;background:var(--cream);border-bottom:1px solid var(--border)">
-        <div style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:500">
-          <div style="width:8px;height:8px;border-radius:50%;background:${meta.color}"></div>
-          ${meta.label}
-        </div>
-        <button onclick="copyPost(this)" data-text="${esc(text)}" style="font-family:'DM Mono',monospace;font-size:11px;padding:3px 10px;border:1px solid var(--border);border-radius:3px;background:var(--white);cursor:pointer">Copy</button>
-      </div>
-      <div style="padding:16px 14px;font-size:13px;line-height:1.8;white-space:pre-wrap;font-weight:300;max-height:280px;overflow-y:auto">${esc(text)}</div>
-    `;
+function renderPosts(results){
+  const meta={linkedin:{label:'LinkedIn',color:'#0a66c2'},twitter:{label:'Twitter/X',color:'#000'},instagram:{label:'Instagram',color:'#e1306c'},tiktok:{label:'TikTok',color:'#ff0050'},youtube_short:{label:'YT Shorts',color:'#ff0000'}};
+  const grid=$('posts-grid');
+  grid.style.display='grid'; grid.innerHTML='';
+  Object.entries(results).forEach(([plat,text])=>{
+    const m=meta[plat]||{label:plat,color:'#888'};
+    const card=document.createElement('div');
+    card.style.cssText='background:var(--white);border:1.5px solid var(--ink);border-radius:var(--r);overflow:hidden;box-shadow:3px 3px 0 var(--ink)';
+    card.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;padding:11px 14px;background:var(--cream);border-bottom:1px solid var(--border)"><div style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:500"><div style="width:8px;height:8px;border-radius:50%;background:${m.color}"></div>${m.label}</div><button onclick="copyPost(this)" data-text="${esc(text)}" style="font-family:'DM Mono',monospace;font-size:11px;padding:3px 10px;border:1px solid var(--border);border-radius:3px;background:var(--white);cursor:pointer">Copy</button></div><div style="padding:16px 14px;font-size:13px;line-height:1.8;white-space:pre-wrap;font-weight:300;max-height:280px;overflow-y:auto">${esc(text)}</div>`;
     grid.appendChild(card);
   });
-
-  grid.scrollIntoView({behavior:'smooth', block:'start'});
+  grid.scrollIntoView({behavior:'smooth',block:'start'});
 }
 
-async function copyPost(btn) {
+async function copyPost(btn){
   await navigator.clipboard.writeText(btn.dataset.text);
-  btn.textContent = 'Copied!';
-  setTimeout(() => btn.textContent='Copy', 2000);
+  btn.textContent='Copied!';
+  setTimeout(()=>btn.textContent='Copy',2000);
 }
 
-// ── Config modal ──────────────────────────────────────────────────────────────
 function openCfg(){ $('cfg-backend').value=CFG.backend; $('cfg-key').value=CFG.key; $('cfg-overlay').classList.add('open'); }
 function closeCfg(){ $('cfg-overlay').classList.remove('open'); }
 function handleOverlay(e){ if(e.target===$('cfg-overlay')) closeCfg(); }
-function saveCfg(){
-  CFG.backend = $('cfg-backend').value.trim();
-  CFG.key     = $('cfg-key').value.trim();
-  closeCfg();
-}
+function saveCfg(){ CFG.backend=$('cfg-backend').value.trim(); CFG.key=$('cfg-key').value.trim(); closeCfg(); }
 </script>
 </body>
 </html>
