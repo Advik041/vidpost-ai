@@ -146,7 +146,8 @@ def analyse():
                 if t and len(t) > 30: transcript = t
         except Exception as e:
             print(f"Supadata error: {e}")
-    clips = _detect_clips(title, duration, transcript, groq_key)
+    server_groq = os.environ.get("GROQ_API_KEY", groq_key)
+    clips = _detect_clips(title, duration, transcript, server_groq)
     return jsonify({"videoId":video_id,"title":title,"duration":duration,"clips":clips,"transcriptLength":len(transcript.split()),"mode":"url"})
 
 @app.route("/analyse-upload", methods=["POST","OPTIONS"])
@@ -174,7 +175,8 @@ def analyse_upload():
             print(f"Duration: {duration}s")
     except Exception as e:
         print(f"ffprobe error: {e}")
-    clips = _detect_clips(title, duration, f"Uploaded video: {title}. Duration: {duration}s.", groq_key)
+    server_groq = os.environ.get("GROQ_API_KEY", groq_key)
+    clips = _detect_clips(title, duration, f"Uploaded video: {title}. Duration: {duration}s.", server_groq)
     # Store upload_path in a global dict so it persists
     UPLOAD_STORE[upload_id] = upload_path
     threading.Timer(7200, lambda: _cleanup_upload(upload_id, upload_path)).start()
@@ -425,8 +427,9 @@ def generate_posts():
     platforms  = data.get("platforms",["linkedin"])
     api_key    = data.get("apiKey","").strip()
     if not transcript: return jsonify({"error":"Missing transcript"}), 400
-    groq_key = os.environ.get("GROQ_API_KEY", api_key)
-    if not groq_key: return jsonify({"error":"No API key"}), 400
+    # Always use server-side key — never expose to client
+    groq_key = os.environ.get("GROQ_API_KEY", "")
+    if not groq_key: return jsonify({"error":"Service not configured. Contact admin."}), 500
     tone_map = {
         "professional":"professional and insightful like a top industry expert",
         "casual":"casual and conversational like texting a smart friend",
