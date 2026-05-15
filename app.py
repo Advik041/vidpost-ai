@@ -328,12 +328,15 @@ def process_clip_job(job_id, video_id, upload_path, start, end, formats):
 
         if "vertical" in formats:
             vpath = os.path.join(job_dir,"vertical.mp4")
+            # Scale down first to save RAM, then pad to 9:16
             vr = subprocess.run([
                 "ffmpeg","-y","-i",cut_video,
-                "-vf","scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:black",
-                "-c:v","libx264","-preset","fast","-crf","23",
-                "-c:a","aac","-b:a","128k","-r","30",vpath
-            ], capture_output=True, text=True, timeout=120)
+                "-vf","scale=540:960:force_original_aspect_ratio=decrease,pad=540:960:(ow-iw)/2:(oh-ih)/2:black",
+                "-c:v","libx264","-preset","ultrafast","-crf","28",
+                "-c:a","aac","-b:a","96k","-r","30",
+                "-threads","1",
+                vpath
+            ], capture_output=True, text=True, timeout=180)
             print(f"Job {job_id}: Vertical rc={vr.returncode} size={os.path.getsize(vpath) if os.path.exists(vpath) else 0}")
             if os.path.exists(vpath) and os.path.getsize(vpath) > 0:
                 output_files["vertical"] = vpath
@@ -342,10 +345,12 @@ def process_clip_job(job_id, video_id, upload_path, start, end, formats):
             hpath = os.path.join(job_dir,"horizontal.mp4")
             hr = subprocess.run([
                 "ffmpeg","-y","-i",cut_video,
-                "-vf","scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2:black",
-                "-c:v","libx264","-preset","fast","-crf","23",
-                "-c:a","aac","-b:a","128k","-r","30",hpath
-            ], capture_output=True, text=True, timeout=120)
+                "-vf","scale=960:540:force_original_aspect_ratio=decrease,pad=960:540:(ow-iw)/2:(oh-ih)/2:black",
+                "-c:v","libx264","-preset","ultrafast","-crf","28",
+                "-c:a","aac","-b:a","96k","-r","30",
+                "-threads","1",
+                hpath
+            ], capture_output=True, text=True, timeout=180)
             print(f"Job {job_id}: Horizontal rc={hr.returncode} size={os.path.getsize(hpath) if os.path.exists(hpath) else 0}")
             if os.path.exists(hpath) and os.path.getsize(hpath) > 0:
                 output_files["horizontal"] = hpath
