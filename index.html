@@ -221,9 +221,7 @@ input::placeholder{color:var(--muted);font-style:italic}
     <div class="cfg-sub">Stored in your browser only.</div>
     <label class="cfg-label">Backend URL (Railway)</label>
     <input type="text" id="cfg-backend" placeholder="https://your-app.up.railway.app"/>
-    <label class="cfg-label">Groq API key (free at console.groq.com)</label>
-    <input type="password" id="cfg-key" placeholder="gsk_..." autocomplete="off"/>
-    <div style="font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;margin-top:6px">Free key → <a href="https://console.groq.com" target="_blank" style="color:var(--ink)">console.groq.com</a></div>
+    <div style="font-size:12px;color:var(--muted);line-height:1.6;margin-top:4px">AI processing is handled server-side. No API key needed.</div>
     <div class="cfg-actions">
       <button class="btn-save" onclick="saveCfg()">Save</button>
       <button class="btn-cancel" onclick="closeCfg()">Cancel</button>
@@ -233,10 +231,8 @@ input::placeholder{color:var(--muted);font-style:italic}
 
 <script>
 const CFG = {
-  get backend(){ return (localStorage.getItem('vp2_backend')||'').replace(/\/$/,'') },
-  get key(){     return localStorage.getItem('vp2_key')||'' },
-  set backend(v){ localStorage.setItem('vp2_backend', v.replace(/\/$/,'')) },
-  set key(v){     localStorage.setItem('vp2_key', v) }
+  get backend(){ return (localStorage.getItem('vp2_backend')||'https://vidpost-ai-production.up.railway.app').replace(/\/$/,'') },
+  set backend(v){ localStorage.setItem('vp2_backend', v.replace(/\/$/,'')) }
 };
 
 let selectedTone  = 'professional';
@@ -248,7 +244,7 @@ let currentMode   = 'url';
 let selectedFile  = null;
 
 window.addEventListener('DOMContentLoaded', () => {
-  if (!CFG.backend || !CFG.key) openCfg();
+  if (!CFG.backend) openCfg();
 
   document.querySelectorAll('#tone-row .btn-sm').forEach(b => {
     b.addEventListener('click', () => {
@@ -325,7 +321,7 @@ async function analyseUpload(){
   try {
     const formData = new FormData();
     formData.append('video', selectedFile);
-    formData.append('apiKey', CFG.key);
+    // no client key needed;
 
     const res = await fetch(CFG.backend+'/analyse-upload', {method:'POST', body: formData});
     const data = await res.json();
@@ -364,7 +360,7 @@ async function analyseVideo(){
   try {
     const res = await fetch(CFG.backend+'/analyse', {
       method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({url, apiKey: CFG.key})
+      body: JSON.stringify({url})
     });
     const data = await res.json();
     if(!res.ok) throw new Error(data.error || 'Analysis failed');
@@ -549,10 +545,10 @@ async function copyPost(btn){
   setTimeout(()=>btn.textContent='Copy',2000);
 }
 
-function openCfg(){ $('cfg-backend').value=CFG.backend; $('cfg-key').value=CFG.key; $('cfg-overlay').classList.add('open'); }
+function openCfg(){ $('cfg-backend').value=CFG.backend; $('cfg-overlay').classList.add('open'); }
 function closeCfg(){ $('cfg-overlay').classList.remove('open'); }
 function handleOverlay(e){ if(e.target===$('cfg-overlay')) closeCfg(); }
-function saveCfg(){ CFG.backend=$('cfg-backend').value.trim(); CFG.key=$('cfg-key').value.trim(); closeCfg(); }
+function saveCfg(){ CFG.backend=$('cfg-backend').value.trim(); closeCfg(); }
 </script>
 </body>
 </html>
