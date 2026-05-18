@@ -1,6 +1,10 @@
 {
   "rewrites": [
     {
+      "source": "/api/auth/:path*",
+      "destination": "https://vidpost-ai-production.up.railway.app/auth/:path*"
+    },
+    {
       "source": "/api/:path*",
       "destination": "https://vidpost-ai-production.up.railway.app/:path*"
     }
