@@ -1,20 +1,47 @@
-from flask import Flask, request, jsonify, send_file
+from flask import Flask, request, jsonify, send_file, redirect, session
 from flask_cors import CORS
-import re, os, uuid, json, subprocess, threading, time, shutil
+import re, os, uuid, json, subprocess, threading, time, shutil, secrets
 import requests
+from urllib.parse import urlencode
+import supabase as sb
 
 app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": "*"}})
+app.secret_key = os.environ.get("FLASK_SECRET", secrets.token_hex(32))
+CORS(app, resources={r"/*": {"origins": os.environ.get("ALLOWED_ORIGIN", "*")}},
+     supports_credentials=True)
 app.config['MAX_CONTENT_LENGTH'] = 500 * 1024 * 1024
 
-JOBS = {}
-CLIPS_DIR = "/tmp/vidpost_clips"
+# ── Supabase client ───────────────────────────────────────────────────────────
+SUPABASE_URL = os.environ.get("SUPABASE_URL", "")
+SUPABASE_KEY = os.environ.get("SUPABASE_SERVICE_KEY", "")
+supa = sb.create_client(SUPABASE_URL, SUPABASE_KEY) if SUPABASE_URL else None
+
+# ── Platform OAuth credentials (set in Railway Variables) ─────────────────────
+LINKEDIN_CLIENT_ID     = os.environ.get("LINKEDIN_CLIENT_ID", "")
+LINKEDIN_CLIENT_SECRET = os.environ.get("LINKEDIN_CLIENT_SECRET", "")
+GOOGLE_CLIENT_ID       = os.environ.get("GOOGLE_CLIENT_ID", "")
+GOOGLE_CLIENT_SECRET   = os.environ.get("GOOGLE_CLIENT_SECRET", "")
+INSTAGRAM_CLIENT_ID    = os.environ.get("INSTAGRAM_CLIENT_ID", "")
+INSTAGRAM_CLIENT_SECRET= os.environ.get("INSTAGRAM_CLIENT_SECRET", "")
+TIKTOK_CLIENT_ID       = os.environ.get("TIKTOK_CLIENT_ID", "")
+TIKTOK_CLIENT_SECRET   = os.environ.get("TIKTOK_CLIENT_SECRET", "")
+
+FRONTEND_URL = os.environ.get("FRONTEND_URL", "https://vidpost-ai.vercel.app")
+BACKEND_URL  = os.environ.get("BACKEND_URL",  "https://vidpost-ai-production.up.railway.app")
+
+JOBS     = {}
+CLIPS_DIR   = "/tmp/vidpost_clips"
 UPLOADS_DIR = "/tmp/vidpost_uploads"
+UPLOAD_STORE = {}
 os.makedirs(CLIPS_DIR, exist_ok=True)
 os.makedirs(UPLOADS_DIR, exist_ok=True)
 
+GROQ_KEY    = os.environ.get("GROQ_API_KEY", "")
+SUPADATA    = os.environ.get("SUPADATA_API_KEY", "")
+PROXY       = os.environ.get("PROXY_URL", "")
+
 def find_ytdlp():
-    for p in ["/usr/bin/yt-dlp","/usr/local/bin/yt-dlp","/opt/venv/bin/yt-dlp","/root/.nix-profile/bin/yt-dlp"]:
+    for p in ["/usr/bin/yt-dlp","/usr/local/bin/yt-dlp","/root/.nix-profile/bin/yt-dlp"]:
         if os.path.exists(p): return p
     try:
         r = subprocess.run(["which","yt-dlp"], capture_output=True, text=True)
@@ -22,447 +49,768 @@ def find_ytdlp():
     except: pass
     return "yt-dlp"
 
-YTDLP    = find_ytdlp()
-PROXY    = os.environ.get("PROXY_URL", "")
-SUPADATA = os.environ.get("SUPADATA_API_KEY", "")
-print(f"yt-dlp:{YTDLP} proxy:{'yes' if PROXY else 'no'} supadata:{'yes' if SUPADATA else 'no'}")
+YTDLP = find_ytdlp()
+print(f"VidPost AI | yt-dlp:{YTDLP} | proxy:{'yes' if PROXY else 'no'} | supabase:{'yes' if supa else 'no'}")
 
-def ytdlp_base():
-    cmd = [YTDLP, "--no-playlist",
-           "--user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"]
-    if PROXY: cmd += ["--proxy", PROXY]
-    return cmd
+
+# ════════════════════════════════════════════════════════════════════════════════
+# SUPABASE HELPERS
+# ════════════════════════════════════════════════════════════════════════════════
+
+def save_token(user_id, platform, access_token, refresh_token=None, extra=None):
+    """Save/update OAuth token for a user+platform."""
+    if not supa: return
+    data = {
+        "user_id": user_id,
+        "platform": platform,
+        "access_token": access_token,
+        "refresh_token": refresh_token or "",
+        "extra": json.dumps(extra or {}),
+        "updated_at": "now()"
+    }
+    supa.table("platform_tokens").upsert(data, on_conflict="user_id,platform").execute()
+
+def get_token(user_id, platform):
+    """Get OAuth token for a user+platform."""
+    if not supa: return None
+    res = supa.table("platform_tokens").select("*").eq("user_id", user_id).eq("platform", platform).execute()
+    if res.data:
+        row = res.data[0]
+        extra = json.loads(row.get("extra", "{}"))
+        return {"access_token": row["access_token"], "refresh_token": row["refresh_token"], **extra}
+    return None
+
+def get_connected_platforms(user_id):
+    """List all platforms a user has connected."""
+    if not supa: return []
+    res = supa.table("platform_tokens").select("platform,updated_at").eq("user_id", user_id).execute()
+    return [r["platform"] for r in (res.data or [])]
+
+def save_post(user_id, platform, content, post_id=None, scheduled_at=None, status="posted"):
+    """Save a post record."""
+    if not supa: return
+    supa.table("posts").insert({
+        "user_id": user_id,
+        "platform": platform,
+        "content": content,
+        "platform_post_id": post_id or "",
+        "scheduled_at": scheduled_at,
+        "status": status,
+        "created_at": "now()"
+    }).execute()
+
+
+# ════════════════════════════════════════════════════════════════════════════════
+# HEALTH
+# ════════════════════════════════════════════════════════════════════════════════
 
 @app.route("/health", methods=["GET"])
 def health():
     return jsonify({
-        "status": "ok", "ytdlp": YTDLP,
+        "status": "ok",
+        "ytdlp": YTDLP,
         "ffmpeg": bool(shutil.which("ffmpeg")),
         "proxy": "configured" if PROXY else "not set",
-        "supadata": "configured" if SUPADATA else "not set"
+        "supadata": "configured" if SUPADATA else "not set",
+        "supabase": "configured" if supa else "not set",
+        "platforms": {
+            "linkedin":  bool(LINKEDIN_CLIENT_ID),
+            "youtube":   bool(GOOGLE_CLIENT_ID),
+            "instagram": bool(INSTAGRAM_CLIENT_ID),
+            "tiktok":    bool(TIKTOK_CLIENT_ID)
+        }
     })
 
-# ── Debug endpoint — test ffmpeg on uploaded file ─────────────────────────────
-@app.route("/debug-clip", methods=["POST","OPTIONS"])
-def debug_clip():
+
+# ════════════════════════════════════════════════════════════════════════════════
+# OAUTH FLOWS
+# ════════════════════════════════════════════════════════════════════════════════
+
+# ── LinkedIn OAuth ─────────────────────────────────────────────────────────────
+@app.route("/auth/linkedin", methods=["GET"])
+def linkedin_auth():
+    user_id = request.args.get("user_id","")
+    state   = f"{user_id}:{secrets.token_hex(8)}"
+    params  = {
+        "response_type": "code",
+        "client_id":     LINKEDIN_CLIENT_ID,
+        "redirect_uri":  f"{BACKEND_URL}/auth/linkedin/callback",
+        "state":         state,
+        "scope":         "openid profile email w_member_social"
+    }
+    return redirect("https://www.linkedin.com/oauth/v2/authorization?" + urlencode(params))
+
+@app.route("/auth/linkedin/callback", methods=["GET"])
+def linkedin_callback():
+    code    = request.args.get("code","")
+    state   = request.args.get("state","")
+    user_id = state.split(":")[0] if ":" in state else ""
+
+    # Exchange code for token
+    resp = requests.post("https://www.linkedin.com/oauth/v2/accessToken", data={
+        "grant_type":    "authorization_code",
+        "code":          code,
+        "redirect_uri":  f"{BACKEND_URL}/auth/linkedin/callback",
+        "client_id":     LINKEDIN_CLIENT_ID,
+        "client_secret": LINKEDIN_CLIENT_SECRET
+    })
+    if not resp.ok:
+        return redirect(f"{FRONTEND_URL}?error=linkedin_auth_failed")
+
+    tokens = resp.json()
+    access_token = tokens.get("access_token","")
+
+    # Get LinkedIn profile (person URN needed for posting)
+    profile = requests.get("https://api.linkedin.com/v2/userinfo",
+        headers={"Authorization": f"Bearer {access_token}"})
+    person_urn = ""
+    if profile.ok:
+        pdata = profile.json()
+        person_urn = pdata.get("sub","")
+
+    save_token(user_id, "linkedin", access_token,
+               extra={"person_urn": person_urn, "expires_in": tokens.get("expires_in",0)})
+
+    return redirect(f"{FRONTEND_URL}?connected=linkedin")
+
+
+# ── Google / YouTube OAuth ─────────────────────────────────────────────────────
+@app.route("/auth/google", methods=["GET"])
+def google_auth():
+    user_id = request.args.get("user_id","")
+    state   = f"{user_id}:{secrets.token_hex(8)}"
+    params  = {
+        "client_id":     GOOGLE_CLIENT_ID,
+        "redirect_uri":  f"{BACKEND_URL}/auth/google/callback",
+        "response_type": "code",
+        "scope":         "https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/youtube.readonly openid email",
+        "access_type":   "offline",
+        "prompt":        "consent",
+        "state":         state
+    }
+    return redirect("https://accounts.google.com/o/oauth2/auth?" + urlencode(params))
+
+@app.route("/auth/google/callback", methods=["GET"])
+def google_callback():
+    code    = request.args.get("code","")
+    state   = request.args.get("state","")
+    user_id = state.split(":")[0] if ":" in state else ""
+
+    resp = requests.post("https://oauth2.googleapis.com/token", data={
+        "code":          code,
+        "client_id":     GOOGLE_CLIENT_ID,
+        "client_secret": GOOGLE_CLIENT_SECRET,
+        "redirect_uri":  f"{BACKEND_URL}/auth/google/callback",
+        "grant_type":    "authorization_code"
+    })
+    if not resp.ok:
+        return redirect(f"{FRONTEND_URL}?error=google_auth_failed")
+
+    tokens = resp.json()
+    save_token(user_id, "youtube",
+               tokens.get("access_token",""),
+               tokens.get("refresh_token",""),
+               extra={"expires_in": tokens.get("expires_in",0)})
+
+    return redirect(f"{FRONTEND_URL}?connected=youtube")
+
+
+# ── Instagram / Facebook OAuth ─────────────────────────────────────────────────
+@app.route("/auth/instagram", methods=["GET"])
+def instagram_auth():
+    user_id = request.args.get("user_id","")
+    state   = f"{user_id}:{secrets.token_hex(8)}"
+    params  = {
+        "client_id":     INSTAGRAM_CLIENT_ID,
+        "redirect_uri":  f"{BACKEND_URL}/auth/instagram/callback",
+        "scope":         "instagram_basic,instagram_content_publish,pages_read_engagement",
+        "response_type": "code",
+        "state":         state
+    }
+    return redirect("https://www.facebook.com/v19.0/dialog/oauth?" + urlencode(params))
+
+@app.route("/auth/instagram/callback", methods=["GET"])
+def instagram_callback():
+    code    = request.args.get("code","")
+    state   = request.args.get("state","")
+    user_id = state.split(":")[0] if ":" in state else ""
+
+    resp = requests.get("https://graph.facebook.com/v19.0/oauth/access_token", params={
+        "client_id":     INSTAGRAM_CLIENT_ID,
+        "client_secret": INSTAGRAM_CLIENT_SECRET,
+        "redirect_uri":  f"{BACKEND_URL}/auth/instagram/callback",
+        "code":          code
+    })
+    if not resp.ok:
+        return redirect(f"{FRONTEND_URL}?error=instagram_auth_failed")
+
+    tokens    = resp.json()
+    page_token= tokens.get("access_token","")
+
+    # Get Instagram Business Account ID
+    ig_account_id = ""
+    try:
+        pages = requests.get("https://graph.facebook.com/v19.0/me/accounts",
+            params={"access_token": page_token})
+        if pages.ok and pages.json().get("data"):
+            page_id = pages.json()["data"][0]["id"]
+            page_access_token = pages.json()["data"][0]["access_token"]
+            ig = requests.get(f"https://graph.facebook.com/v19.0/{page_id}",
+                params={"fields":"instagram_business_account","access_token": page_access_token})
+            if ig.ok:
+                ig_account_id = ig.json().get("instagram_business_account",{}).get("id","")
+    except: pass
+
+    save_token(user_id, "instagram", page_token,
+               extra={"ig_account_id": ig_account_id})
+
+    return redirect(f"{FRONTEND_URL}?connected=instagram")
+
+
+# ── TikTok OAuth ───────────────────────────────────────────────────────────────
+@app.route("/auth/tiktok", methods=["GET"])
+def tiktok_auth():
+    user_id    = request.args.get("user_id","")
+    csrf_state = f"{user_id}:{secrets.token_hex(8)}"
+    params = {
+        "client_key":    TIKTOK_CLIENT_ID,
+        "scope":         "user.info.basic,video.publish,video.upload",
+        "response_type": "code",
+        "redirect_uri":  f"{BACKEND_URL}/auth/tiktok/callback",
+        "state":         csrf_state
+    }
+    return redirect("https://www.tiktok.com/v2/auth/authorize/?" + urlencode(params))
+
+@app.route("/auth/tiktok/callback", methods=["GET"])
+def tiktok_callback():
+    code    = request.args.get("code","")
+    state   = request.args.get("state","")
+    user_id = state.split(":")[0] if ":" in state else ""
+
+    resp = requests.post("https://open.tiktokapis.com/v2/oauth/token/", data={
+        "client_key":    TIKTOK_CLIENT_ID,
+        "client_secret": TIKTOK_CLIENT_SECRET,
+        "code":          code,
+        "grant_type":    "authorization_code",
+        "redirect_uri":  f"{BACKEND_URL}/auth/tiktok/callback"
+    })
+    if not resp.ok:
+        return redirect(f"{FRONTEND_URL}?error=tiktok_auth_failed")
+
+    tokens = resp.json().get("data",{})
+    save_token(user_id, "tiktok",
+               tokens.get("access_token",""),
+               tokens.get("refresh_token",""),
+               extra={"open_id": tokens.get("open_id","")})
+
+    return redirect(f"{FRONTEND_URL}?connected=tiktok")
+
+
+# ── Get connected platforms for a user ─────────────────────────────────────────
+@app.route("/connections", methods=["GET","OPTIONS"])
+def connections():
     if request.method == "OPTIONS": return jsonify({}), 200
-    data        = request.get_json()
-    upload_path = data.get("uploadPath","").strip()
+    user_id = request.args.get("user_id","")
+    if not user_id: return jsonify({"error":"Missing user_id"}), 400
+    platforms = get_connected_platforms(user_id)
+    return jsonify({"connected": platforms})
 
-    if not upload_path:
-        return jsonify({"error": "Missing uploadPath"}), 400
+@app.route("/disconnect", methods=["POST","OPTIONS"])
+def disconnect():
+    if request.method == "OPTIONS": return jsonify({}), 200
+    data     = request.get_json()
+    user_id  = data.get("user_id","")
+    platform = data.get("platform","")
+    if not supa: return jsonify({"error":"No database"}), 500
+    supa.table("platform_tokens").delete().eq("user_id", user_id).eq("platform", platform).execute()
+    return jsonify({"disconnected": platform})
 
-    result = {"upload_path": upload_path}
 
-    # Check file exists
-    result["file_exists"] = os.path.exists(upload_path)
-    if not result["file_exists"]:
-        # List what IS in uploads dir
+# ════════════════════════════════════════════════════════════════════════════════
+# AUTO-POSTING
+# ════════════════════════════════════════════════════════════════════════════════
+
+@app.route("/post", methods=["POST","OPTIONS"])
+def auto_post():
+    """Post content to one or more platforms for a user."""
+    if request.method == "OPTIONS": return jsonify({}), 200
+
+    data      = request.get_json()
+    user_id   = data.get("user_id","")
+    platforms = data.get("platforms", [])
+    text      = data.get("text","").strip()
+    video_url = data.get("video_url","")  # public URL to video file
+
+    if not user_id:   return jsonify({"error":"Missing user_id"}), 400
+    if not platforms: return jsonify({"error":"No platforms selected"}), 400
+    if not text:      return jsonify({"error":"Missing text content"}), 400
+
+    results = {}
+    errors  = {}
+
+    for platform in platforms:
+        token_data = get_token(user_id, platform)
+        if not token_data:
+            errors[platform] = "Not connected. User needs to authenticate first."
+            continue
+
         try:
-            files = os.listdir(UPLOADS_DIR)
-            result["uploads_dir_contents"] = files
+            if platform == "linkedin":
+                result = post_linkedin(token_data, text, video_url)
+            elif platform == "youtube":
+                result = post_youtube_short(token_data, text, video_url)
+            elif platform == "instagram":
+                result = post_instagram(token_data, text, video_url)
+            elif platform == "tiktok":
+                result = post_tiktok(token_data, text, video_url)
+            else:
+                errors[platform] = f"Platform {platform} not supported yet"
+                continue
+
+            results[platform] = result
+            save_post(user_id, platform, text, post_id=result.get("id",""), status="posted")
+
         except Exception as e:
-            result["uploads_dir_error"] = str(e)
-        return jsonify(result)
+            print(f"Post error {platform}: {e}")
+            errors[platform] = str(e)
+            save_post(user_id, platform, text, status="failed")
 
-    # Get file size
-    result["file_size_bytes"] = os.path.getsize(upload_path)
+    return jsonify({"results": results, "errors": errors})
 
-    # Run ffprobe to check video info
-    try:
-        probe = subprocess.run([
-            "ffprobe", "-v", "quiet", "-print_format", "json",
-            "-show_format", "-show_streams", upload_path
-        ], capture_output=True, text=True, timeout=30)
-        result["ffprobe_returncode"] = probe.returncode
-        if probe.returncode == 0:
-            info = json.loads(probe.stdout)
-            fmt = info.get("format", {})
-            result["duration"] = fmt.get("duration")
-            result["format_name"] = fmt.get("format_name")
-            streams = info.get("streams", [])
-            result["streams"] = [{"codec_type": s.get("codec_type"), "codec_name": s.get("codec_name")} for s in streams]
-        else:
-            result["ffprobe_stderr"] = probe.stderr[:500]
-    except Exception as e:
-        result["ffprobe_error"] = str(e)
 
-    # Try a test cut
-    test_output = os.path.join("/tmp", f"test_cut_{uuid.uuid4().hex[:6]}.mp4")
-    try:
-        cut = subprocess.run([
-            "ffmpeg", "-y", "-ss", "10", "-i", upload_path,
-            "-t", "5", "-c:v", "libx264", "-preset", "ultrafast",
-            "-c:a", "aac", test_output
-        ], capture_output=True, text=True, timeout=60)
-        result["ffmpeg_returncode"] = cut.returncode
-        result["ffmpeg_stdout"] = cut.stdout[-500:] if cut.stdout else ""
-        result["ffmpeg_stderr"] = cut.stderr[-1000:] if cut.stderr else ""
-        if os.path.exists(test_output):
-            result["test_cut_size_bytes"] = os.path.getsize(test_output)
-            os.remove(test_output)
-        else:
-            result["test_cut_size_bytes"] = 0
-    except Exception as e:
-        result["ffmpeg_error"] = str(e)
+# ── LinkedIn post ──────────────────────────────────────────────────────────────
+def post_linkedin(token_data, text, video_url=""):
+    access_token = token_data["access_token"]
+    person_urn   = token_data.get("person_urn","")
 
-    return jsonify(result)
+    if not person_urn:
+        raise Exception("LinkedIn person URN not found. Reconnect LinkedIn.")
+
+    author = f"urn:li:person:{person_urn}"
+
+    if video_url:
+        # Video post — register upload first
+        register = requests.post(
+            "https://api.linkedin.com/v2/assets?action=registerUpload",
+            headers={"Authorization": f"Bearer {access_token}", "Content-Type": "application/json"},
+            json={
+                "registerUploadRequest": {
+                    "recipes": ["urn:li:digitalmediaRecipe:feedshare-video"],
+                    "owner": author,
+                    "serviceRelationships": [{"relationshipType":"OWNER","identifier":"urn:li:userGeneratedContent"}]
+                }
+            }
+        )
+        if not register.ok:
+            raise Exception(f"LinkedIn video register failed: {register.text[:200]}")
+
+        reg_data    = register.json()
+        upload_url  = reg_data["value"]["uploadMechanism"]["com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest"]["uploadUrl"]
+        asset       = reg_data["value"]["asset"]
+
+        # Upload video binary
+        video_resp = requests.get(video_url, timeout=60)
+        upload     = requests.put(upload_url,
+            headers={"Authorization": f"Bearer {access_token}", "Content-Type": "video/mp4"},
+            data=video_resp.content)
+        if not upload.ok:
+            raise Exception(f"LinkedIn video upload failed: {upload.text[:200]}")
+
+        post_body = {
+            "author": author,
+            "lifecycleState": "PUBLISHED",
+            "specificContent": {
+                "com.linkedin.ugc.ShareContent": {
+                    "shareCommentary": {"text": text},
+                    "shareMediaCategory": "VIDEO",
+                    "media": [{"status":"READY","description":{"text":""},"media":asset,"title":{"text":""}}]
+                }
+            },
+            "visibility": {"com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC"}
+        }
+    else:
+        post_body = {
+            "author": author,
+            "lifecycleState": "PUBLISHED",
+            "specificContent": {
+                "com.linkedin.ugc.ShareContent": {
+                    "shareCommentary": {"text": text},
+                    "shareMediaCategory": "NONE"
+                }
+            },
+            "visibility": {"com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC"}
+        }
+
+    resp = requests.post("https://api.linkedin.com/v2/ugcPosts",
+        headers={"Authorization": f"Bearer {access_token}", "Content-Type": "application/json",
+                 "X-Restli-Protocol-Version": "2.0.0"},
+        json=post_body)
+
+    if not resp.ok:
+        raise Exception(f"LinkedIn post failed: {resp.text[:300]}")
+
+    post_id = resp.headers.get("x-restli-id","")
+    return {"id": post_id, "platform": "linkedin", "status": "posted"}
+
+
+# ── YouTube Shorts upload ──────────────────────────────────────────────────────
+def post_youtube_short(token_data, text, video_url=""):
+    access_token  = token_data["access_token"]
+    refresh_token = token_data.get("refresh_token","")
+
+    if not video_url:
+        raise Exception("YouTube Shorts requires a video file")
+
+    # Refresh token if needed
+    if refresh_token:
+        ref = requests.post("https://oauth2.googleapis.com/token", data={
+            "client_id":     GOOGLE_CLIENT_ID,
+            "client_secret": GOOGLE_CLIENT_SECRET,
+            "refresh_token": refresh_token,
+            "grant_type":    "refresh_token"
+        })
+        if ref.ok:
+            access_token = ref.json().get("access_token", access_token)
+
+    # Download video
+    video_resp = requests.get(video_url, timeout=60)
+    video_data = video_resp.content
+
+    # Upload to YouTube
+    title = text[:100] if text else "VidPost AI Short"
+    meta  = {
+        "snippet": {
+            "title": title,
+            "description": text,
+            "tags": ["shorts"],
+            "categoryId": "22"
+        },
+        "status": {"privacyStatus": "public", "selfDeclaredMadeForKids": False}
+    }
+
+    resp = requests.post(
+        "https://www.googleapis.com/upload/youtube/v3/videos?uploadType=multipart&part=snippet,status",
+        headers={"Authorization": f"Bearer {access_token}"},
+        files={
+            "metadata": (None, json.dumps(meta), "application/json"),
+            "video":    ("video.mp4", video_data, "video/mp4")
+        }
+    )
+    if not resp.ok:
+        raise Exception(f"YouTube upload failed: {resp.text[:300]}")
+
+    video_id = resp.json().get("id","")
+    return {"id": video_id, "url": f"https://youtube.com/shorts/{video_id}", "platform": "youtube", "status": "posted"}
+
+
+# ── Instagram Reels post ───────────────────────────────────────────────────────
+def post_instagram(token_data, text, video_url=""):
+    access_token  = token_data["access_token"]
+    ig_account_id = token_data.get("ig_account_id","")
+
+    if not ig_account_id:
+        raise Exception("Instagram Business Account ID not found. Reconnect Instagram.")
+    if not video_url:
+        raise Exception("Instagram requires a video file for Reels")
+
+    # Step 1: Create media container
+    container = requests.post(
+        f"https://graph.facebook.com/v19.0/{ig_account_id}/media",
+        params={
+            "media_type":    "REELS",
+            "video_url":     video_url,
+            "caption":       text,
+            "access_token":  access_token
+        }
+    )
+    if not container.ok:
+        raise Exception(f"Instagram container failed: {container.text[:300]}")
+
+    container_id = container.json().get("id","")
+
+    # Step 2: Wait for processing (poll status)
+    for _ in range(12):
+        time.sleep(5)
+        status = requests.get(
+            f"https://graph.facebook.com/v19.0/{container_id}",
+            params={"fields":"status_code","access_token":access_token}
+        )
+        if status.ok and status.json().get("status_code") == "FINISHED":
+            break
+
+    # Step 3: Publish
+    publish = requests.post(
+        f"https://graph.facebook.com/v19.0/{ig_account_id}/media_publish",
+        params={"creation_id": container_id, "access_token": access_token}
+    )
+    if not publish.ok:
+        raise Exception(f"Instagram publish failed: {publish.text[:300]}")
+
+    media_id = publish.json().get("id","")
+    return {"id": media_id, "platform": "instagram", "status": "posted"}
+
+
+# ── TikTok video post ──────────────────────────────────────────────────────────
+def post_tiktok(token_data, text, video_url=""):
+    access_token = token_data["access_token"]
+
+    if not video_url:
+        raise Exception("TikTok requires a video file")
+
+    # Init upload
+    init = requests.post(
+        "https://open.tiktokapis.com/v2/post/publish/video/init/",
+        headers={"Authorization": f"Bearer {access_token}", "Content-Type": "application/json; charset=UTF-8"},
+        json={
+            "post_info": {
+                "title":          text[:150],
+                "privacy_level":  "PUBLIC_TO_EVERYONE",
+                "disable_duet":   False,
+                "disable_comment":False,
+                "disable_stitch": False
+            },
+            "source_info": {
+                "source":    "PULL_FROM_URL",
+                "video_url": video_url
+            }
+        }
+    )
+    if not init.ok:
+        raise Exception(f"TikTok init failed: {init.text[:300]}")
+
+    data      = init.json().get("data",{})
+    publish_id= data.get("publish_id","")
+    return {"id": publish_id, "platform": "tiktok", "status": "processing"}
+
+
+# ════════════════════════════════════════════════════════════════════════════════
+# EXISTING ENDPOINTS (clip generation etc — kept from before)
+# ════════════════════════════════════════════════════════════════════════════════
+
+def ytdlp_base():
+    cmd = [YTDLP,"--no-playlist",
+           "--user-agent","Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"]
+    if PROXY: cmd += ["--proxy", PROXY]
+    return cmd
 
 @app.route("/analyse", methods=["POST","OPTIONS"])
 def analyse():
     if request.method == "OPTIONS": return jsonify({}), 200
-    data     = request.get_json()
-    url      = data.get("url","").strip()
-    api_key  = data.get("apiKey","").strip()
-    groq_key = os.environ.get("GROQ_API_KEY", api_key)
+    data = request.get_json()
+    url  = data.get("url","").strip()
     if not url: return jsonify({"error":"Missing URL"}), 400
     m = re.search(r'(?:v=|youtu\.be/|/shorts/)([A-Za-z0-9_-]{11})', url)
     if not m: return jsonify({"error":"Invalid YouTube URL"}), 400
     video_id = m.group(1)
     title = "YouTube Video"
     try:
-        r = requests.get(f"https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v={video_id}&format=json", timeout=5)
-        if r.ok: title = r.json().get("title", title)
+        r = requests.get(f"https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v={video_id}&format=json",timeout=5)
+        if r.ok: title = r.json().get("title",title)
     except: pass
     duration = 600
     try:
-        cmd = ytdlp_base() + ["--dump-json","--no-download", f"https://www.youtube.com/watch?v={video_id}"]
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=40)
-        if result.returncode == 0:
-            info = json.loads(result.stdout)
-            title = info.get("title", title)
-            duration = int(info.get("duration", 600))
-    except Exception as e:
-        print(f"yt-dlp info error: {e}")
-    transcript = f"Video: {title}. Duration: {duration} seconds."
+        cmd = ytdlp_base()+["--dump-json","--no-download",f"https://www.youtube.com/watch?v={video_id}"]
+        result = subprocess.run(cmd,capture_output=True,text=True,timeout=40)
+        if result.returncode==0:
+            info=json.loads(result.stdout); title=info.get("title",title); duration=int(info.get("duration",600))
+    except Exception as e: print(f"yt-dlp info:{e}")
+    transcript = f"Video:{title}. Duration:{duration}s."
     if SUPADATA:
         try:
-            resp = requests.get("https://api.supadata.ai/v1/youtube/transcript",
-                params={"videoId": video_id, "text": "true"},
-                headers={"x-api-key": SUPADATA}, timeout=20)
+            resp=requests.get("https://api.supadata.ai/v1/youtube/transcript",
+                params={"videoId":video_id,"text":"true"},headers={"x-api-key":SUPADATA},timeout=20)
             if resp.ok:
-                d = resp.json(); c = d.get("content","")
-                t = c if isinstance(c,str) else " ".join([s.get("text","") for s in c])
-                if t and len(t) > 30: transcript = t
-        except Exception as e:
-            print(f"Supadata error: {e}")
-    server_groq = os.environ.get("GROQ_API_KEY", groq_key)
-    clips = _detect_clips(title, duration, transcript, server_groq)
+                d=resp.json();c=d.get("content","")
+                t=c if isinstance(c,str) else " ".join([s.get("text","") for s in c])
+                if t and len(t)>30: transcript=t
+        except: pass
+    clips = _detect_clips(title,duration,transcript,GROQ_KEY)
     return jsonify({"videoId":video_id,"title":title,"duration":duration,"clips":clips,"transcriptLength":len(transcript.split()),"mode":"url"})
 
 @app.route("/analyse-upload", methods=["POST","OPTIONS"])
 def analyse_upload():
-    if request.method == "OPTIONS": return jsonify({}), 200
-    if "video" not in request.files: return jsonify({"error":"No video file"}), 400
-    file     = request.files["video"]
-    api_key  = request.form.get("apiKey","")
-    groq_key = os.environ.get("GROQ_API_KEY", api_key)
-    upload_id   = str(uuid.uuid4())[:8]
-    ext         = os.path.splitext(file.filename)[1].lower() or ".mp4"
-    upload_path = os.path.join(UPLOADS_DIR, f"{upload_id}{ext}")
+    if request.method=="OPTIONS": return jsonify({}),200
+    if "video" not in request.files: return jsonify({"error":"No video file"}),400
+    file=request.files["video"]
+    upload_id=str(uuid.uuid4())[:8]
+    ext=os.path.splitext(file.filename)[1].lower() or ".mp4"
+    upload_path=os.path.join(UPLOADS_DIR,f"{upload_id}{ext}")
     file.save(upload_path)
-    print(f"Saved upload: {upload_path} size:{os.path.getsize(upload_path)}")
-    duration = 600
-    title    = os.path.splitext(file.filename)[0] or "Uploaded Video"
+    print(f"Saved:{upload_path} {os.path.getsize(upload_path)}B")
+    duration=600; title=os.path.splitext(file.filename)[0] or "Uploaded Video"
     try:
-        probe = subprocess.run(["ffprobe","-v","quiet","-print_format","json",
-            "-show_format","-show_streams",upload_path],
-            capture_output=True, text=True, timeout=30)
-        if probe.returncode == 0:
-            info = json.loads(probe.stdout)
-            dur = float(info.get("format",{}).get("duration",600))
-            duration = int(dur)
-            print(f"Duration: {duration}s")
-    except Exception as e:
-        print(f"ffprobe error: {e}")
-    server_groq = os.environ.get("GROQ_API_KEY", groq_key)
-    clips = _detect_clips(title, duration, f"Uploaded video: {title}. Duration: {duration}s.", server_groq)
-    # Store upload_path in a global dict so it persists
-    UPLOAD_STORE[upload_id] = upload_path
-    threading.Timer(7200, lambda: _cleanup_upload(upload_id, upload_path)).start()
-    return jsonify({"uploadId":upload_id,"uploadPath":upload_path,
-        "title":title,"duration":duration,"clips":clips,"transcriptLength":0,"mode":"upload"})
+        probe=subprocess.run(["ffprobe","-v","quiet","-print_format","json","-show_format","-show_streams",upload_path],capture_output=True,text=True,timeout=30)
+        if probe.returncode==0: duration=int(float(json.loads(probe.stdout).get("format",{}).get("duration",600)))
+    except: pass
+    clips=_detect_clips(title,duration,f"Uploaded:{title}. {duration}s.",GROQ_KEY)
+    UPLOAD_STORE[upload_id]=upload_path
+    threading.Timer(7200,lambda:_cleanup(upload_id,upload_path)).start()
+    return jsonify({"uploadId":upload_id,"uploadPath":upload_path,"title":title,"duration":duration,"clips":clips,"transcriptLength":0,"mode":"upload"})
 
-UPLOAD_STORE = {}
+def _cleanup(uid,path):
+    UPLOAD_STORE.pop(uid,None)
+    if os.path.exists(path): os.remove(path)
 
-def _cleanup_upload(upload_id, path):
-    UPLOAD_STORE.pop(upload_id, None)
-    if os.path.exists(path):
-        os.remove(path)
-
-def _detect_clips(title, duration, transcript, groq_key):
-    clips = []
+def _detect_clips(title,duration,transcript,groq_key):
+    clips=[]
     if groq_key:
         try:
-            prompt = f"""Find the 5 best viral moments to clip from this video.
-VIDEO: "{title}"
-DURATION: {duration} seconds
-TRANSCRIPT: {transcript[:3000]}
-
-Return ONLY a valid JSON array:
-[{{"start":10,"end":70,"title":"Clip Title","hook":"Opening line","virality_score":8,"reason":"Why viral"}}]
-
-Rules: 30-90 seconds each, within 0-{duration}, spaced throughout. ONLY return JSON array."""
-            resp = requests.post("https://api.groq.com/openai/v1/chat/completions",
+            prompt=f"""Find 5 best viral moments to clip.
+VIDEO:"{title}" DURATION:{duration}s
+TRANSCRIPT:{transcript[:3000]}
+Return ONLY JSON array:[{{"start":10,"end":70,"title":"Title","hook":"Hook","virality_score":8,"reason":"Why"}}]
+Rules:30-90s each,within 0-{duration},spaced throughout.ONLY return JSON."""
+            resp=requests.post("https://api.groq.com/openai/v1/chat/completions",
                 headers={"Authorization":f"Bearer {groq_key}","Content-Type":"application/json"},
-                json={"model":"llama-3.3-70b-versatile","messages":[{"role":"user","content":prompt}],
-                      "max_tokens":800,"temperature":0.1},
-                timeout=30)
+                json={"model":"llama-3.3-70b-versatile","messages":[{"role":"user","content":prompt}],"max_tokens":800,"temperature":0.1},timeout=30)
             if resp.ok:
-                raw = resp.json()["choices"][0]["message"]["content"].strip()
-                match = re.search(r'\[[\s\S]*\]', raw)
+                raw=resp.json()["choices"][0]["message"]["content"].strip()
+                match=re.search(r'\[[\s\S]*\]',raw)
                 if match:
-                    parsed = json.loads(match.group())
-                    clips = [c for c in parsed if
-                        isinstance(c.get("start"),(int,float)) and isinstance(c.get("end"),(int,float)) and
-                        0 <= c["start"] < c["end"] <= duration and (c["end"]-c["start"]) >= 15]
-        except Exception as e:
-            print(f"AI clip error: {e}")
+                    parsed=json.loads(match.group())
+                    clips=[c for c in parsed if isinstance(c.get("start"),(int,float)) and isinstance(c.get("end"),(int,float)) and 0<=c["start"]<c["end"]<=duration and (c["end"]-c["start"])>=15]
+        except Exception as e: print(f"AI clip:{e}")
     if not clips:
-        seg = max(duration//6, 40)
+        seg=max(duration//6,40)
         for i in range(5):
-            s=i*seg+10; e=min(s+60,duration-5)
-            if e>s+15: clips.append({"start":s,"end":e,"title":f"Highlight {i+1}",
-                "hook":"Watch this...","virality_score":7,"reason":"Auto-detected"})
+            s=i*seg+10;e=min(s+60,duration-5)
+            if e>s+15: clips.append({"start":s,"end":e,"title":f"Highlight {i+1}","hook":"Watch this...","virality_score":7,"reason":"Auto-detected"})
     return clips
 
-@app.route("/clip", methods=["POST","OPTIONS"])
+@app.route("/clip",methods=["POST","OPTIONS"])
 def create_clip():
-    if request.method == "OPTIONS": return jsonify({}), 200
-    data        = request.get_json()
-    video_id    = data.get("videoId","").strip()
-    upload_path = data.get("uploadPath","").strip()
-    start       = float(data.get("start",0))
-    end         = float(data.get("end",60))
-    formats     = data.get("formats",["vertical","horizontal"])
-    if not video_id and not upload_path: return jsonify({"error":"Missing source"}), 400
-    if end-start < 5: return jsonify({"error":"Clip too short"}), 400
-
-    # Resolve upload path from store if needed
+    if request.method=="OPTIONS": return jsonify({}),200
+    data=request.get_json()
+    video_id=data.get("videoId","").strip()
+    upload_path=data.get("uploadPath","").strip()
+    start=float(data.get("start",0)); end=float(data.get("end",60))
+    formats=data.get("formats",["vertical","horizontal"])
+    if not video_id and not upload_path: return jsonify({"error":"Missing source"}),400
+    if end-start<5: return jsonify({"error":"Clip too short"}),400
     if upload_path and not os.path.exists(upload_path):
-        # Try to find by upload_id
-        for uid, path in UPLOAD_STORE.items():
-            if uid in upload_path:
-                upload_path = path
-                print(f"Resolved upload path: {upload_path}")
-                break
-
-    job_id = str(uuid.uuid4())[:8]
-    JOBS[job_id] = {"status":"queued","progress":0,"message":"Starting...","files":{}}
-    t = threading.Thread(target=process_clip_job, args=(job_id,video_id,upload_path,start,end,formats))
-    t.daemon = True; t.start()
+        for uid,path in UPLOAD_STORE.items():
+            if uid in upload_path: upload_path=path; break
+    job_id=str(uuid.uuid4())[:8]
+    JOBS[job_id]={"status":"queued","progress":0,"message":"Starting...","files":{}}
+    t=threading.Thread(target=process_clip_job,args=(job_id,video_id,upload_path,start,end,formats))
+    t.daemon=True; t.start()
     return jsonify({"jobId":job_id})
 
-def process_clip_job(job_id, video_id, upload_path, start, end, formats):
-    job_dir   = os.path.join(CLIPS_DIR, job_id)
-    os.makedirs(job_dir, exist_ok=True)
-    raw_video = None
-
+def process_clip_job(job_id,video_id,upload_path,start,end,formats):
+    job_dir=os.path.join(CLIPS_DIR,job_id); os.makedirs(job_dir,exist_ok=True)
+    raw_video=None
     try:
         if upload_path and os.path.exists(upload_path):
-            raw_video = upload_path
-            size = os.path.getsize(upload_path)
-            print(f"Job {job_id}: Using uploaded file {upload_path} ({size} bytes)")
-            update_job(job_id,"processing",20,f"Using uploaded file ({size//1024}KB)...")
+            raw_video=upload_path; sz=os.path.getsize(upload_path)
+            print(f"Job {job_id}:upload {sz}B"); update_job(job_id,"processing",20,f"Using uploaded file ({sz//1024}KB)...")
         elif video_id:
-            update_job(job_id,"downloading",10,"Downloading from YouTube...")
-            raw_video = os.path.join(job_dir,"raw.mp4")
-            yt_url = f"https://www.youtube.com/watch?v={video_id}"
-            cmd = ytdlp_base() + [
-                "--format","bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/best[height<=720][ext=mp4]/best[ext=mp4]/best",
-                "--download-sections", f"*{max(0,start-3)}-{end+3}",
-                "--force-keyframes-at-cuts","--merge-output-format","mp4",
-                "-o", raw_video, yt_url]
-            dl = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
-            if dl.returncode != 0 or not os.path.exists(raw_video):
-                raise Exception(f"Download failed. Try uploading the video file directly.")
-        else:
-            raise Exception("No video source provided")
-
-        if not raw_video or not os.path.exists(raw_video):
-            raise Exception(f"Source video not found at: {raw_video}")
-
-        file_size = os.path.getsize(raw_video)
-        print(f"Job {job_id}: Source video size: {file_size} bytes")
-        if file_size == 0:
-            raise Exception("Source video file is empty (0 bytes)")
-
-        update_job(job_id,"cutting",40,"Cutting clip to timestamps...")
-        cut_video = os.path.join(job_dir,"cut.mp4")
-
-        # Use -c copy first (fastest), fallback to re-encode
-        cut = subprocess.run([
-            "ffmpeg","-y",
-            "-ss", str(start),
-            "-i", raw_video,
-            "-t", str(end-start),
-            "-c", "copy",
-            "-avoid_negative_ts","make_zero",
-            cut_video
-        ], capture_output=True, text=True, timeout=120)
-
-        print(f"Job {job_id}: Cut returncode={cut.returncode}")
-        print(f"Job {job_id}: Cut stderr={cut.stderr[-500:]}")
-
-        if not os.path.exists(cut_video) or os.path.getsize(cut_video) == 0:
-            # Fallback: re-encode
-            print(f"Job {job_id}: Copy failed, trying re-encode...")
-            cut2 = subprocess.run([
-                "ffmpeg","-y",
-                "-i", raw_video,
-                "-ss", str(start),
-                "-t", str(end-start),
-                "-c:v","libx264","-preset","ultrafast","-crf","28",
-                "-c:a","aac","-b:a","96k",
-                cut_video
-            ], capture_output=True, text=True, timeout=120)
-            print(f"Job {job_id}: Re-encode returncode={cut2.returncode}")
-            print(f"Job {job_id}: Re-encode stderr={cut2.stderr[-500:]}")
-
-        if not os.path.exists(cut_video) or os.path.getsize(cut_video) == 0:
-            raise Exception(f"Cut failed. ffmpeg stderr: {cut.stderr[-300:]}")
-
-        cut_size = os.path.getsize(cut_video)
-        print(f"Job {job_id}: Cut video size: {cut_size} bytes")
-        update_job(job_id,"converting",65,"Converting to output formats...")
-
-        output_files = {}
-
+            update_job(job_id,"downloading",10,"Downloading..."); raw_video=os.path.join(job_dir,"raw.mp4")
+            cmd=ytdlp_base()+["--format","bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/best[height<=720][ext=mp4]/best[ext=mp4]/best",
+                "--download-sections",f"*{max(0,start-3)}-{end+3}","--force-keyframes-at-cuts","--merge-output-format","mp4","-o",raw_video,
+                f"https://www.youtube.com/watch?v={video_id}"]
+            dl=subprocess.run(cmd,capture_output=True,text=True,timeout=300)
+            if dl.returncode!=0 or not os.path.exists(raw_video): raise Exception("Download failed. Try uploading the video directly.")
+        else: raise Exception("No video source")
+        if not raw_video or not os.path.exists(raw_video): raise Exception("Source not found")
+        sz=os.path.getsize(raw_video)
+        if sz==0: raise Exception("Source file is empty")
+        update_job(job_id,"cutting",40,"Cutting clip...")
+        cut_video=os.path.join(job_dir,"cut.mp4")
+        cut=subprocess.run(["ffmpeg","-y","-ss",str(start),"-i",raw_video,"-t",str(end-start),"-c","copy","-avoid_negative_ts","make_zero",cut_video],capture_output=True,text=True,timeout=120)
+        if not os.path.exists(cut_video) or os.path.getsize(cut_video)==0:
+            cut2=subprocess.run(["ffmpeg","-y","-i",raw_video,"-ss",str(start),"-t",str(end-start),"-c:v","libx264","-preset","ultrafast","-crf","28","-c:a","aac","-b:a","96k",cut_video],capture_output=True,text=True,timeout=120)
+        if not os.path.exists(cut_video) or os.path.getsize(cut_video)==0: raise Exception("Cut failed")
+        update_job(job_id,"converting",65,"Converting formats...")
+        output_files={}
         if "vertical" in formats:
-            vpath = os.path.join(job_dir,"vertical.mp4")
-            # Scale down first to save RAM, then pad to 9:16
-            vr = subprocess.run([
-                "ffmpeg","-y","-i",cut_video,
-                "-vf","scale=540:960:force_original_aspect_ratio=decrease,pad=540:960:(ow-iw)/2:(oh-ih)/2:black",
-                "-c:v","libx264","-preset","ultrafast","-crf","28",
-                "-c:a","aac","-b:a","96k","-r","30",
-                "-threads","1",
-                vpath
-            ], capture_output=True, text=True, timeout=180)
-            print(f"Job {job_id}: Vertical rc={vr.returncode} size={os.path.getsize(vpath) if os.path.exists(vpath) else 0}")
-            if os.path.exists(vpath) and os.path.getsize(vpath) > 0:
-                output_files["vertical"] = vpath
-
+            vpath=os.path.join(job_dir,"vertical.mp4")
+            subprocess.run(["ffmpeg","-y","-i",cut_video,"-vf","scale=540:960:force_original_aspect_ratio=decrease,pad=540:960:(ow-iw)/2:(oh-ih)/2:black","-c:v","libx264","-preset","ultrafast","-crf","28","-c:a","aac","-b:a","96k","-r","30","-threads","1",vpath],capture_output=True,text=True,timeout=180)
+            if os.path.exists(vpath) and os.path.getsize(vpath)>0: output_files["vertical"]=vpath
         if "horizontal" in formats:
-            hpath = os.path.join(job_dir,"horizontal.mp4")
-            hr = subprocess.run([
-                "ffmpeg","-y","-i",cut_video,
-                "-vf","scale=960:540:force_original_aspect_ratio=decrease,pad=960:540:(ow-iw)/2:(oh-ih)/2:black",
-                "-c:v","libx264","-preset","ultrafast","-crf","28",
-                "-c:a","aac","-b:a","96k","-r","30",
-                "-threads","1",
-                hpath
-            ], capture_output=True, text=True, timeout=180)
-            print(f"Job {job_id}: Horizontal rc={hr.returncode} size={os.path.getsize(hpath) if os.path.exists(hpath) else 0}")
-            if os.path.exists(hpath) and os.path.getsize(hpath) > 0:
-                output_files["horizontal"] = hpath
-
-        if not output_files:
-            raise Exception("All format conversions produced empty files. Check ffmpeg logs.")
-
-        refs = {fmt:{"downloadUrl":f"/download/{job_id}/{fmt}",
-            "sizeMb":round(os.path.getsize(p)/(1024*1024),1),
-            "resolution":"1080x1920" if fmt=="vertical" else "1920x1080"}
-            for fmt,p in output_files.items()}
+            hpath=os.path.join(job_dir,"horizontal.mp4")
+            subprocess.run(["ffmpeg","-y","-i",cut_video,"-vf","scale=960:540:force_original_aspect_ratio=decrease,pad=960:540:(ow-iw)/2:(oh-ih)/2:black","-c:v","libx264","-preset","ultrafast","-crf","28","-c:a","aac","-b:a","96k","-r","30","-threads","1",hpath],capture_output=True,text=True,timeout=180)
+            if os.path.exists(hpath) and os.path.getsize(hpath)>0: output_files["horizontal"]=hpath
+        if not output_files: raise Exception("No output files created")
+        refs={fmt:{"downloadUrl":f"/download/{job_id}/{fmt}","publicUrl":f"{BACKEND_URL}/download/{job_id}/{fmt}","sizeMb":round(os.path.getsize(p)/(1024*1024),1),"resolution":"540x960" if fmt=="vertical" else "960x540"} for fmt,p in output_files.items()}
         update_job(job_id,"done",100,"Clip ready!",files=refs)
-        threading.Timer(3600, lambda: shutil.rmtree(job_dir,ignore_errors=True)).start()
-
+        threading.Timer(3600,lambda:shutil.rmtree(job_dir,ignore_errors=True)).start()
     except Exception as e:
-        print(f"Job {job_id} FAILED: {e}")
-        update_job(job_id,"error",0,str(e))
+        print(f"Job {job_id}:{e}"); update_job(job_id,"error",0,str(e))
 
-def update_job(job_id, status, progress, message, files=None):
+def update_job(job_id,status,progress,message,files=None):
     JOBS[job_id].update({"status":status,"progress":progress,"message":message,"updatedAt":time.time()})
-    if files is not None: JOBS[job_id]["files"] = files
+    if files is not None: JOBS[job_id]["files"]=files
 
-@app.route("/job/<job_id>", methods=["GET"])
+@app.route("/job/<job_id>",methods=["GET"])
 def get_job(job_id):
-    job = JOBS.get(job_id)
-    if not job: return jsonify({"error":"Not found"}), 404
+    job=JOBS.get(job_id)
+    if not job: return jsonify({"error":"Not found"}),404
     return jsonify(job)
 
-@app.route("/download/<job_id>/<fmt>", methods=["GET"])
-def download_clip(job_id, fmt):
-    job = JOBS.get(job_id)
-    if not job or job["status"]!="done": return jsonify({"error":"Not ready"}), 404
-    filepath = os.path.join(CLIPS_DIR,job_id,f"{fmt}.mp4")
-    if not os.path.exists(filepath): return jsonify({"error":"File not found"}), 404
-    return send_file(filepath, as_attachment=True, download_name=f"vidpost_{fmt}_{job_id}.mp4")
+@app.route("/download/<job_id>/<fmt>",methods=["GET"])
+def download_clip(job_id,fmt):
+    job=JOBS.get(job_id)
+    if not job or job["status"]!="done": return jsonify({"error":"Not ready"}),404
+    filepath=os.path.join(CLIPS_DIR,job_id,f"{fmt}.mp4")
+    if not os.path.exists(filepath): return jsonify({"error":"File not found"}),404
+    return send_file(filepath,as_attachment=True,download_name=f"vidpost_{fmt}_{job_id}.mp4")
 
-@app.route("/transcript", methods=["POST","OPTIONS"])
+@app.route("/transcript",methods=["POST","OPTIONS"])
 def get_transcript():
-    if request.method == "OPTIONS": return jsonify({}), 200
-    data     = request.get_json()
-    video_id = data.get("videoId","").strip()
-    if not video_id: return jsonify({"error":"Missing videoId"}), 400
-    if not SUPADATA: return jsonify({"error":"Supadata key not configured"}), 500
-    title = "YouTube Video"
+    if request.method=="OPTIONS": return jsonify({}),200
+    data=request.get_json(); video_id=data.get("videoId","").strip()
+    if not video_id: return jsonify({"error":"Missing videoId"}),400
+    if not SUPADATA: return jsonify({"error":"Supadata not configured"}),500
+    title="YouTube Video"
     try:
-        r = requests.get(f"https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v={video_id}&format=json", timeout=5)
-        if r.ok: title = r.json().get("title", title)
+        r=requests.get(f"https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v={video_id}&format=json",timeout=5)
+        if r.ok: title=r.json().get("title",title)
     except: pass
     try:
-        resp = requests.get("https://api.supadata.ai/v1/youtube/transcript",
-            params={"videoId":video_id,"text":"true"},
-            headers={"x-api-key":SUPADATA}, timeout=15)
+        resp=requests.get("https://api.supadata.ai/v1/youtube/transcript",params={"videoId":video_id,"text":"true"},headers={"x-api-key":SUPADATA},timeout=15)
         if resp.ok:
-            d = resp.json(); c = d.get("content","")
-            text = c if isinstance(c,str) else " ".join([s.get("text","") for s in c])
+            d=resp.json();c=d.get("content","")
+            text=c if isinstance(c,str) else " ".join([s.get("text","") for s in c])
             if text and len(text)>30:
-                text = re.sub(r'\[.*?\]','',text)
-                text = re.sub(r'\s+',' ',text).strip()
+                text=re.sub(r'\[.*?\]','',text);text=re.sub(r'\s+',' ',text).strip()
                 return jsonify({"transcript":text[:10000],"wordCount":len(text.split()),"title":title,"videoId":video_id})
-    except Exception as e:
-        print(f"Transcript error: {e}")
-    return jsonify({"error":"Could not fetch transcript"}), 422
+    except Exception as e: print(f"Transcript:{e}")
+    return jsonify({"error":"Could not fetch transcript"}),422
 
-@app.route("/generate", methods=["POST","OPTIONS"])
+@app.route("/generate",methods=["POST","OPTIONS"])
 def generate_posts():
-    if request.method == "OPTIONS": return jsonify({}), 200
-    data = request.get_json()
-    if not data: return jsonify({"error":"No body"}), 400
-    transcript = data.get("transcript","").strip()
-    title      = data.get("title","YouTube Video")
-    tone       = data.get("tone","professional")
-    platforms  = data.get("platforms",["linkedin"])
-    api_key    = data.get("apiKey","").strip()
-    if not transcript: return jsonify({"error":"Missing transcript"}), 400
-    # Always use server-side key — never expose to client
-    groq_key = os.environ.get("GROQ_API_KEY", "")
-    if not groq_key: return jsonify({"error":"Service not configured. Contact admin."}), 500
-    tone_map = {
-        "professional":"professional and insightful like a top industry expert",
-        "casual":"casual and conversational like texting a smart friend",
-        "bold":"bold and provocative with punchy short sentences",
-        "storytelling":"storytelling — open with a surprising moment then build to the insight"
+    if request.method=="OPTIONS": return jsonify({}),200
+    data=request.get_json()
+    if not data: return jsonify({"error":"No body"}),400
+    transcript=data.get("transcript","").strip(); title=data.get("title","YouTube Video")
+    tone=data.get("tone","professional"); platforms=data.get("platforms",["linkedin"])
+    if not transcript: return jsonify({"error":"Missing transcript"}),400
+    if not GROQ_KEY: return jsonify({"error":"No API key"}),400
+    tone_map={"professional":"professional and insightful","casual":"casual and conversational","bold":"bold and provocative","storytelling":"storytelling with a narrative arc"}
+    tone_desc=tone_map.get(tone,tone_map["professional"])
+    prompts={
+        "linkedin":f'Write viral LinkedIn post.\nVIDEO:"{title}"\nTONE:{tone_desc}\nTRANSCRIPT:{transcript[:3000]}\n\n[Hook under 12 words]\n\n[emoji] Insight 1\n[emoji] Insight 2\n[emoji] Insight 3\n\n[Question]\n\n#tag1 #tag2 #tag3\n\nMax 200 words. Output ONLY post.',
+        "twitter":f'Write 6-tweet thread.\nVIDEO:"{title}"\nTONE:{tone_desc}\nTRANSCRIPT:{transcript[:3000]}\n\nTweet 1:hook\nTweets 2-5:insights\nTweet 6:ending\nNumber 1/2/etc.\nOutput ONLY 6 tweets.',
+        "instagram":f'Write Instagram caption.\nVIDEO:"{title}"\nTONE:{tone_desc}\nTRANSCRIPT:{transcript[:3000]}\n\nHook\n\n3 paragraphs with emoji\n\nQuestion\n\n15 hashtags\n\nOutput ONLY caption.',
+        "tiktok":f'Write 45-sec TikTok script.\nVIDEO:"{title}"\nTONE:{tone_desc}\nTRANSCRIPT:{transcript[:3000]}\n\nHOOK\nPOINT1\nPOINT2\nPOINT3\nCTA\n\nUnder 130 words.',
+        "youtube_short":f'Write YouTube Shorts script.\nVIDEO:"{title}"\nTONE:{tone_desc}\nTRANSCRIPT:{transcript[:3000]}\n\n[HOOK][POINT1][POINT2][POINT3][CTA]\n\nUnder 150 words.'
     }
-    tone_desc = tone_map.get(tone, tone_map["professional"])
-    prompts = {
-        "linkedin":f'Write a viral LinkedIn post.\nVIDEO: "{title}"\nTONE: {tone_desc}\nTRANSCRIPT: {transcript[:3000]}\n\n[Hook under 12 words]\n\n[emoji] Insight 1\n[emoji] Insight 2\n[emoji] Insight 3\n\n[Question for comments]\n\n#tag1 #tag2 #tag3\n\nMax 200 words. Output ONLY the post.',
-        "twitter":f'Write a 6-tweet viral thread.\nVIDEO: "{title}"\nTONE: {tone_desc}\nTRANSCRIPT: {transcript[:3000]}\n\nTweet 1: Bold hook\nTweets 2-5: One insight each\nTweet 6: Ending + question\nNumber: 1/ 2/ etc.\nOutput ONLY 6 tweets, one per line.',
-        "instagram":f'Write a viral Instagram caption.\nVIDEO: "{title}"\nTONE: {tone_desc}\nTRANSCRIPT: {transcript[:3000]}\n\nLine 1: Hook\n\n3 paragraphs with emoji\n\nQuestion\n\n15 hashtags\n\nOutput ONLY caption.',
-        "tiktok":f'Write a 45-second TikTok script.\nVIDEO: "{title}"\nTONE: {tone_desc}\nTRANSCRIPT: {transcript[:3000]}\n\nHOOK\nPOINT 1\nPOINT 2\nPOINT 3\nCTA\n\nUnder 130 words. Output ONLY script.',
-        "youtube_short":f'Write a YouTube Shorts script.\nVIDEO: "{title}"\nTONE: {tone_desc}\nTRANSCRIPT: {transcript[:3000]}\n\n[HOOK][POINT 1][POINT 2][POINT 3][CTA]\n\nUnder 150 words. Output ONLY script.'
-    }
-    results,errors = {},{}
+    results,errors={},{}
     for platform in platforms:
         if platform not in prompts: continue
         try:
-            resp = requests.post("https://api.groq.com/openai/v1/chat/completions",
-                headers={"Authorization":f"Bearer {groq_key}","Content-Type":"application/json"},
-                json={"model":"llama-3.3-70b-versatile","messages":[{"role":"user","content":prompts[platform]}],
-                      "max_tokens":1024,"temperature":0.75},
-                timeout=30)
-            if resp.status_code==401: return jsonify({"error":"Invalid Groq API key"}), 401
-            if resp.status_code==429: return jsonify({"error":"Rate limit. Try again."}), 429
+            resp=requests.post("https://api.groq.com/openai/v1/chat/completions",
+                headers={"Authorization":f"Bearer {GROQ_KEY}","Content-Type":"application/json"},
+                json={"model":"llama-3.3-70b-versatile","messages":[{"role":"user","content":prompts[platform]}],"max_tokens":1024,"temperature":0.75},timeout=30)
+            if resp.status_code==401: return jsonify({"error":"Invalid Groq key"}),401
+            if resp.status_code==429: return jsonify({"error":"Rate limit"}),429
             if resp.ok: results[platform]=resp.json()["choices"][0]["message"]["content"].strip()
             else: errors[platform]=f"Error {resp.status_code}"
-        except Exception as e:
-            errors[platform]=str(e)
-    if not results: return jsonify({"error":"Generation failed","details":errors}), 500
+        except Exception as e: errors[platform]=str(e)
+    if not results: return jsonify({"error":"Generation failed","details":errors}),500
     return jsonify({"results":results,"errors":errors,"title":title})
 
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT",5000))
-    print(f"VidPost AI v2 | port:{port}")
-    app.run(host="0.0.0.0", port=port, debug=False)
+if __name__=="__main__":
+    port=int(os.environ.get("PORT",5000))
+    print(f"VidPost AI | port:{port}")
+    app.run(host="0.0.0.0",port=port,debug=False)
