@@ -438,8 +438,9 @@ function renderConnectPanel() {
 
 function connectPlatform(platform) {
   if (!currentUser) { openAuth(); return; }
-  // Redirect to OAuth flow
-  const url = `${API}/auth/${platform}?user_id=${currentUser.id}`;
+  // Go directly to Railway for OAuth (proxy doesn't handle redirects well)
+  const RAILWAY = 'https://vidpost-ai-production.up.railway.app';
+  const url = `${RAILWAY}/auth/${platform}?user_id=${encodeURIComponent(currentUser.id)}`;
   window.location.href = url;
 }
 
