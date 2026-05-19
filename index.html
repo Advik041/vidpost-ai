@@ -266,7 +266,7 @@ input::placeholder{color:var(--muted);font-style:italic}
 <script>
 // ── Config ────────────────────────────────────────────────────────────────────
 const API = '/api';
-const SUPABASE_URL = 'https://kwkrmnkqrwxyltxbmaru.supabase.co'; // Replace with your Supabase project URL
+const SUPABASE_URL = 'https://kwkrmnkqrwxyltxbmaru.supabase.co/'; // Replace with your Supabase project URL
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt3a3Jtbmtxcnd4eWx0eGJtYXJ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkwMTc5NjMsImV4cCI6MjA5NDU5Mzk2M30.qEGsRpTmv2jDSznmTiHZB8EHTYohGUQbGRB_7jjGe4I'; // Replace with your Supabase anon key
 
 // ── State ─────────────────────────────────────────────────────────────────────
@@ -396,10 +396,10 @@ function updateAuthUI() {
 
 // ── Platform connections ───────────────────────────────────────────────────────
 const PLATFORMS = [
-  {id:'linkedin',  name:'LinkedIn',  icon:'💼', color:'#0a66c2'},
-  {id:'youtube',   name:'YouTube',   icon:'▶',  color:'#ff0000'},
-  {id:'instagram', name:'Instagram', icon:'📸', color:'#e1306c'},
-  {id:'tiktok',    name:'TikTok',    icon:'🎵', color:'#ff0050'},
+  {id:'linkedin',  name:'LinkedIn',  icon:'💼', color:'#0a66c2', route:'linkedin'},
+  {id:'youtube',   name:'YouTube',   icon:'▶',  color:'#ff0000', route:'google'},
+  {id:'instagram', name:'Instagram', icon:'📸', color:'#e1306c', route:'instagram'},
+  {id:'tiktok',    name:'TikTok',    icon:'🎵', color:'#ff0050', route:'tiktok'},
 ];
 
 async function loadConnections() {
@@ -436,11 +436,13 @@ function renderConnectPanel() {
   }).join('');
 }
 
-function connectPlatform(platform) {
+function connectPlatform(platformId) {
   if (!currentUser) { openAuth(); return; }
-  // Go directly to Railway for OAuth (proxy doesn't handle redirects well)
+  // Get the route name (youtube uses /auth/google)
+  const plat = PLATFORMS.find(p => p.id === platformId);
+  const route = plat ? plat.route : platformId;
   const RAILWAY = 'https://vidpost-ai-production.up.railway.app';
-  const url = `${RAILWAY}/auth/${platform}?user_id=${encodeURIComponent(currentUser.id)}`;
+  const url = `${RAILWAY}/auth/${route}?user_id=${encodeURIComponent(currentUser.id)}`;
   window.location.href = url;
 }
 
