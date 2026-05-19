@@ -1,740 +1,1176 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>VidPost AI — YouTube → Viral Clips + Auto-Posting</title>
-<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Mono:wght@400;500&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<title>VidPost AI — Turn Any Video Into Viral Content Automatically</title>
+<meta name="description" content="AI clips your YouTube videos, writes platform-native captions, and auto-posts to LinkedIn, YouTube, Instagram, TikTok, X and Snapchat. Zero manual work.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Syne+Mono&family=Outfit:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
+/* ── Tokens ──────────────────────────────────────────────────────────────── */
+:root {
+  --lime:#c8ff00; --lime2:#a8d400; --lime3:#e8ff80;
+  --r:8px; --r2:16px;
+  --font-head:'Syne',sans-serif;
+  --font-body:'Outfit',sans-serif;
+  --font-mono:'Syne Mono',monospace;
+}
+[data-theme="dark"] {
+  --bg:#080808; --bg2:#111; --bg3:#181818; --bg4:#222;
+  --ink:#f0f0f0; --ink2:#aaa; --ink3:#555;
+  --border:#2a2a2a; --border2:#333;
+  --card:#111; --card2:#161616;
+  --glow:rgba(200,255,0,.12);
+}
+[data-theme="light"] {
+  --bg:#fafafa; --bg2:#f0f0f0; --bg3:#e8e8e8; --bg4:#ddd;
+  --ink:#0a0a0a; --ink2:#555; --ink3:#aaa;
+  --border:#e0e0e0; --border2:#d0d0d0;
+  --card:#fff; --card2:#f8f8f8;
+  --glow:rgba(168,212,0,.15);
+}
+
+/* ── Reset ───────────────────────────────────────────────────────────────── */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{--ink:#0d0d0d;--paper:#f4f1eb;--paper2:#ece8e0;--cream:#e8e2d6;--lime:#c5f135;--lime2:#a8d020;--muted:#8a867c;--border:#ccc8bf;--white:#fff;--red:#e03030;--r:6px;--blue:#2563eb}
-body{font-family:'DM Sans',sans-serif;background:var(--paper);color:var(--ink);min-height:100vh}
-header{position:sticky;top:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:14px 36px;background:rgba(244,241,235,.92);backdrop-filter:blur(12px);border-bottom:1.5px solid var(--ink)}
-.logo{display:flex;align-items:baseline;gap:6px}
-.logo-name{font-family:'Instrument Serif',serif;font-size:20px}
-.logo-tag{font-family:'DM Mono',monospace;font-size:10px;background:var(--lime);color:var(--ink);padding:2px 7px;border-radius:2px;font-weight:500;border:1px solid var(--ink)}
-.v2-tag{font-family:'DM Mono',monospace;font-size:10px;background:var(--ink);color:var(--lime);padding:2px 7px;border-radius:2px}
-.header-right{display:flex;align-items:center;gap:10px}
-.user-pill{font-size:12px;padding:5px 12px;border-radius:20px;border:1px solid var(--border);background:transparent;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s}
-.user-pill:hover{background:var(--ink);color:var(--lime);border-color:var(--ink)}
-.btn-cfg{font-size:12px;padding:6px 14px;border-radius:var(--r);border:1px solid var(--border);background:transparent;cursor:pointer;transition:all .15s}
-.btn-cfg:hover{background:var(--ink);color:var(--lime);border-color:var(--ink)}
-.hero{padding:48px 36px 32px;max-width:800px}
-.hero h1{font-family:'Instrument Serif',serif;font-size:clamp(34px,5vw,54px);line-height:1.08;letter-spacing:-1.5px;margin-bottom:12px}
-.hero h1 em{font-style:italic;color:var(--muted)}
-.hero h1 mark{background:var(--lime);padding:0 6px;font-style:normal;border-radius:2px}
-.hero-sub{font-size:15px;color:var(--muted);line-height:1.65;max-width:500px}
-.app{padding:0 36px 80px;max-width:1200px}
-.sl{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
-.card{background:var(--white);border:1.5px solid var(--ink);border-radius:var(--r);padding:24px;margin-bottom:14px;box-shadow:3px 3px 0 var(--ink)}
-.card-flat{background:var(--white);border:1px solid var(--border);border-radius:var(--r);padding:20px;margin-bottom:12px}
-input[type=text],input[type=password],input[type=number],input[type=email]{font-family:'DM Mono',monospace;font-size:13px;padding:12px 14px;border:1.5px solid var(--border);border-radius:4px;background:var(--paper);color:var(--ink);outline:none;transition:border-color .18s;width:100%}
-input:focus{border-color:var(--ink)}
-input::placeholder{color:var(--muted);font-style:italic}
-.btn-primary{padding:12px 24px;background:var(--lime);color:var(--ink);border:1.5px solid var(--ink);border-radius:4px;font-size:14px;font-weight:500;cursor:pointer;box-shadow:3px 3px 0 var(--ink);transition:all .15s;display:flex;align-items:center;gap:8px;font-family:'DM Sans',sans-serif;white-space:nowrap}
-.btn-primary:hover{transform:translate(-1px,-1px);box-shadow:4px 4px 0 var(--ink)}
-.btn-primary:active{transform:translate(1px,1px);box-shadow:1px 1px 0 var(--ink)}
-.btn-primary:disabled{opacity:.4;cursor:not-allowed;transform:none;box-shadow:3px 3px 0 var(--ink)}
-.btn-sm{padding:6px 12px;font-size:11px;border:1px solid var(--border);border-radius:3px;background:var(--white);cursor:pointer;font-family:'DM Mono',monospace;transition:all .12s;color:var(--muted)}
-.btn-sm:hover,.btn-sm.on{background:var(--ink);color:var(--lime);border-color:var(--ink)}
-.url-row{display:flex;gap:10px;align-items:stretch;margin-bottom:14px}
-#status-bar{display:none;align-items:center;gap:12px;padding:12px 16px;background:var(--ink);color:var(--lime);border-radius:4px;font-family:'DM Mono',monospace;font-size:12px;margin-bottom:14px}
-.spinner{width:14px;height:14px;border:2px solid rgba(197,241,53,.3);border-top-color:var(--lime);border-radius:50%;animation:spin .65s linear infinite;flex-shrink:0}
+html{scroll-behavior:smooth}
+body{font-family:var(--font-body);background:var(--bg);color:var(--ink);min-height:100vh;overflow-x:hidden;transition:background .3s,color .3s}
+::selection{background:var(--lime);color:#000}
+
+/* ── Noise overlay ───────────────────────────────────────────────────────── */
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+  background-size:200px;opacity:.4}
+
+/* ── Scrollbar ───────────────────────────────────────────────────────────── */
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+
+/* ── Nav ─────────────────────────────────────────────────────────────────── */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:16px 48px;
+  background:rgba(8,8,8,.8);
+  backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--border);
+  transition:background .3s}
+[data-theme="light"] nav{background:rgba(250,250,250,.85)}
+.nav-logo{font-family:var(--font-head);font-size:20px;font-weight:800;letter-spacing:-0.5px;color:var(--ink);text-decoration:none;display:flex;align-items:center;gap:8px}
+.nav-logo .logo-dot{width:8px;height:8px;border-radius:50%;background:var(--lime);display:inline-block}
+.nav-links{display:flex;align-items:center;gap:8px}
+.nav-link{font-size:13px;color:var(--ink2);text-decoration:none;padding:6px 14px;border-radius:20px;transition:all .2s;font-family:var(--font-head);font-weight:500}
+.nav-link:hover{color:var(--ink);background:var(--bg3)}
+.nav-cta{background:var(--lime);color:#000;font-size:13px;font-weight:700;padding:8px 20px;border-radius:20px;text-decoration:none;font-family:var(--font-head);transition:all .2s;border:none;cursor:pointer}
+.nav-cta:hover{background:var(--lime3);transform:translateY(-1px)}
+.theme-btn{width:36px;height:36px;border-radius:50%;border:1px solid var(--border2);background:var(--bg3);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px;transition:all .2s;color:var(--ink)}
+.theme-btn:hover{border-color:var(--lime);background:var(--glow)}
+
+/* ── Hero ────────────────────────────────────────────────────────────────── */
+.hero{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:120px 24px 80px;position:relative;z-index:1}
+.hero-badge{display:inline-flex;align-items:center;gap:8px;padding:6px 16px;border-radius:20px;border:1px solid var(--border2);background:var(--bg3);font-family:var(--font-mono);font-size:11px;color:var(--ink2);margin-bottom:32px;letter-spacing:.08em}
+.hero-badge span{width:6px;height:6px;border-radius:50%;background:var(--lime);display:inline-block;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.hero h1{font-family:var(--font-head);font-size:clamp(48px,7vw,96px);line-height:.95;font-weight:800;letter-spacing:-3px;margin-bottom:24px;max-width:900px}
+.hero h1 .accent{color:var(--lime)}
+.hero h1 .dim{color:var(--ink3)}
+.hero-sub{font-size:clamp(16px,2vw,20px);color:var(--ink2);line-height:1.6;max-width:560px;margin-bottom:48px;font-weight:300}
+.hero-actions{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-bottom:64px}
+.btn-hero{padding:14px 32px;border-radius:var(--r2);font-family:var(--font-head);font-size:15px;font-weight:700;cursor:pointer;transition:all .2s;text-decoration:none;display:inline-flex;align-items:center;gap:8px}
+.btn-hero.primary{background:var(--lime);color:#000;border:2px solid var(--lime);box-shadow:0 0 40px var(--glow)}
+.btn-hero.primary:hover{background:var(--lime3);transform:translateY(-2px);box-shadow:0 8px 40px var(--glow)}
+.btn-hero.secondary{background:transparent;color:var(--ink);border:2px solid var(--border2)}
+.btn-hero.secondary:hover{border-color:var(--lime);color:var(--lime)}
+
+/* ── Platform logos strip ─────────────────────────────────────────────────── */
+.platform-strip{display:flex;gap:16px;align-items:center;justify-content:center;flex-wrap:wrap}
+.plat-badge{display:flex;align-items:center;gap:6px;padding:8px 16px;border-radius:20px;border:1px solid var(--border);background:var(--bg3);font-size:12px;font-family:var(--font-head);font-weight:600;color:var(--ink2);transition:all .2s}
+.plat-badge:hover{border-color:var(--lime);color:var(--lime);background:var(--glow)}
+.plat-badge .dot{width:8px;height:8px;border-radius:50%}
+
+/* ── Section ─────────────────────────────────────────────────────────────── */
+section{padding:100px 48px;position:relative;z-index:1;max-width:1200px;margin:0 auto}
+.section-label{font-family:var(--font-mono);font-size:11px;letter-spacing:.15em;text-transform:uppercase;color:var(--lime);margin-bottom:16px}
+.section-title{font-family:var(--font-head);font-size:clamp(32px,4vw,56px);font-weight:800;letter-spacing:-2px;line-height:1;margin-bottom:16px}
+.section-sub{font-size:17px;color:var(--ink2);line-height:1.65;max-width:560px;font-weight:300}
+
+/* ── How it works ────────────────────────────────────────────────────────── */
+.steps-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:64px}
+@media(max-width:900px){.steps-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:500px){.steps-grid{grid-template-columns:1fr}}
+.step-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);padding:28px;position:relative;overflow:hidden;transition:all .3s}
+.step-card:hover{border-color:var(--lime);transform:translateY(-4px);box-shadow:0 20px 60px rgba(200,255,0,.06)}
+.step-num{font-family:var(--font-mono);font-size:11px;color:var(--lime);margin-bottom:16px;letter-spacing:.1em}
+.step-icon{font-size:32px;margin-bottom:14px}
+.step-title{font-family:var(--font-head);font-size:16px;font-weight:700;margin-bottom:8px}
+.step-desc{font-size:13px;color:var(--ink2);line-height:1.6}
+.step-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--lime),transparent);opacity:0;transition:opacity .3s}
+.step-card:hover::before{opacity:1}
+
+/* ── Features grid ───────────────────────────────────────────────────────── */
+.features-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:64px}
+@media(max-width:900px){.features-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:500px){.features-grid{grid-template-columns:1fr}}
+.feature-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);padding:32px;transition:all .3s}
+.feature-card:hover{border-color:var(--border2);transform:translateY(-2px)}
+.feature-card.highlight{background:var(--lime);border-color:var(--lime)}
+.feature-card.highlight .feat-title,.feature-card.highlight .feat-desc{color:#000}
+.feat-icon{font-size:28px;margin-bottom:16px}
+.feat-title{font-family:var(--font-head);font-size:17px;font-weight:700;margin-bottom:8px}
+.feat-desc{font-size:13px;color:var(--ink2);line-height:1.65}
+
+/* ── Platform section ────────────────────────────────────────────────────── */
+.platforms-full{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:48px}
+@media(max-width:700px){.platforms-full{grid-template-columns:repeat(2,1fr)}}
+.plat-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);padding:24px;display:flex;align-items:center;gap:16px;transition:all .3s}
+.plat-card:hover{border-color:var(--border2);transform:translateX(4px)}
+.plat-emoji{font-size:28px;flex-shrink:0}
+.plat-info{}
+.plat-name{font-family:var(--font-head);font-size:15px;font-weight:700;margin-bottom:4px}
+.plat-type{font-size:12px;color:var(--ink2)}
+.plat-status-badge{margin-left:auto;font-family:var(--font-mono);font-size:10px;padding:3px 10px;border-radius:20px;flex-shrink:0}
+.live{background:rgba(200,255,0,.1);color:var(--lime);border:1px solid rgba(200,255,0,.2)}
+.soon{background:var(--bg3);color:var(--ink3);border:1px solid var(--border)}
+
+/* ── Pricing ─────────────────────────────────────────────────────────────── */
+.pricing-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:64px}
+@media(max-width:800px){.pricing-grid{grid-template-columns:1fr}}
+.price-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);padding:36px;transition:all .3s;position:relative}
+.price-card.popular{border-color:var(--lime);background:var(--card2)}
+.price-card.popular::before{content:'Most Popular';position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:var(--lime);color:#000;font-family:var(--font-mono);font-size:10px;padding:4px 14px;border-radius:20px;font-weight:700;letter-spacing:.05em}
+.price-tier{font-family:var(--font-mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink2);margin-bottom:16px}
+.price-amount{font-family:var(--font-head);font-size:52px;font-weight:800;letter-spacing:-2px;margin-bottom:4px}
+.price-period{font-size:13px;color:var(--ink2);margin-bottom:24px}
+.price-features{list-style:none;margin-bottom:32px}
+.price-features li{font-size:13px;color:var(--ink2);padding:8px 0;border-bottom:1px solid var(--border);display:flex;gap:10px;align-items:flex-start;line-height:1.4}
+.price-features li::before{content:'→';color:var(--lime);flex-shrink:0;font-family:var(--font-mono)}
+.btn-price{width:100%;padding:13px;border-radius:var(--r);font-family:var(--font-head);font-size:14px;font-weight:700;cursor:pointer;transition:all .2s;border:2px solid var(--border2);background:transparent;color:var(--ink)}
+.btn-price:hover{border-color:var(--lime);color:var(--lime)}
+.price-card.popular .btn-price{background:var(--lime);color:#000;border-color:var(--lime)}
+.price-card.popular .btn-price:hover{background:var(--lime3)}
+
+/* ── Compare table ───────────────────────────────────────────────────────── */
+.compare-table{width:100%;border-collapse:collapse;margin-top:48px}
+.compare-table th{font-family:var(--font-head);font-size:14px;font-weight:700;padding:16px;text-align:center;border-bottom:2px solid var(--border)}
+.compare-table th:first-child{text-align:left}
+.compare-table td{padding:14px 16px;border-bottom:1px solid var(--border);font-size:13px;color:var(--ink2);text-align:center}
+.compare-table td:first-child{text-align:left;color:var(--ink);font-weight:500}
+.compare-table .us{color:var(--lime);font-weight:700;font-family:var(--font-head)}
+.compare-table tr:hover td{background:var(--bg3)}
+.check{color:var(--lime)}
+.cross{color:var(--ink3)}
+
+/* ── Testimonials ────────────────────────────────────────────────────────── */
+.testimonials-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:48px}
+@media(max-width:800px){.testimonials-grid{grid-template-columns:1fr}}
+.testi-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);padding:28px;transition:all .3s}
+.testi-card:hover{border-color:var(--border2)}
+.testi-text{font-size:14px;line-height:1.7;color:var(--ink2);margin-bottom:20px;font-style:italic}
+.testi-text::before{content:'"';font-family:var(--font-head);font-size:40px;color:var(--lime);line-height:.5;display:block;margin-bottom:8px}
+.testi-author{display:flex;align-items:center;gap:12px}
+.testi-avatar{width:36px;height:36px;border-radius:50%;background:var(--lime);display:flex;align-items:center;justify-content:center;font-family:var(--font-head);font-size:14px;font-weight:800;color:#000;flex-shrink:0}
+.testi-name{font-family:var(--font-head);font-size:13px;font-weight:700}
+.testi-role{font-size:11px;color:var(--ink3);font-family:var(--font-mono)}
+
+/* ── FAQ ─────────────────────────────────────────────────────────────────── */
+.faq-list{margin-top:48px;display:flex;flex-direction:column;gap:8px}
+.faq-item{background:var(--card);border:1px solid var(--border);border-radius:var(--r);overflow:hidden}
+.faq-q{padding:20px 24px;font-family:var(--font-head);font-size:15px;font-weight:700;cursor:pointer;display:flex;justify-content:space-between;align-items:center;transition:background .2s}
+.faq-q:hover{background:var(--bg3)}
+.faq-arrow{font-size:18px;color:var(--lime);transition:transform .3s;flex-shrink:0}
+.faq-item.open .faq-arrow{transform:rotate(45deg)}
+.faq-a{display:none;padding:0 24px 20px;font-size:14px;color:var(--ink2);line-height:1.7}
+.faq-item.open .faq-a{display:block}
+
+/* ── CTA section ─────────────────────────────────────────────────────────── */
+.cta-section{text-align:center;padding:120px 48px;background:var(--bg2);border-top:1px solid var(--border);border-bottom:1px solid var(--border);position:relative;z-index:1}
+.cta-section h2{font-family:var(--font-head);font-size:clamp(36px,5vw,72px);font-weight:800;letter-spacing:-2px;margin-bottom:20px}
+.cta-section p{font-size:18px;color:var(--ink2);margin-bottom:40px;font-weight:300}
+
+/* ── Footer ──────────────────────────────────────────────────────────────── */
+footer{padding:60px 48px 40px;border-top:1px solid var(--border);position:relative;z-index:1}
+.footer-top{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:40px;margin-bottom:48px}
+@media(max-width:800px){.footer-top{grid-template-columns:1fr 1fr}}
+.footer-brand{font-family:var(--font-head);font-size:20px;font-weight:800;margin-bottom:12px}
+.footer-tagline{font-size:13px;color:var(--ink2);line-height:1.6;max-width:280px}
+.footer-col-title{font-family:var(--font-head);font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink2);margin-bottom:16px}
+.footer-links{list-style:none;display:flex;flex-direction:column;gap:10px}
+.footer-links a{font-size:13px;color:var(--ink2);text-decoration:none;transition:color .2s}
+.footer-links a:hover{color:var(--lime)}
+.footer-bottom{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;padding-top:32px;border-top:1px solid var(--border)}
+.footer-copy{font-size:12px;color:var(--ink3);font-family:var(--font-mono)}
+.footer-legal{display:flex;gap:20px}
+.footer-legal a{font-size:12px;color:var(--ink3);text-decoration:none;transition:color .2s}
+.footer-legal a:hover{color:var(--ink2)}
+
+/* ── App section ─────────────────────────────────────────────────────────── */
+.app-section{padding:80px 48px;position:relative;z-index:1;max-width:1200px;margin:0 auto}
+.app-tabs{display:flex;gap:6px;margin-bottom:24px;background:var(--bg3);padding:6px;border-radius:var(--r2);width:fit-content}
+.app-tab{padding:8px 20px;border-radius:var(--r);font-family:var(--font-head);font-size:13px;font-weight:600;cursor:pointer;border:none;background:transparent;color:var(--ink2);transition:all .2s}
+.app-tab.on{background:var(--lime);color:#000}
+.app-panel{display:none}.app-panel.on{display:block}
+
+/* Inputs */
+input[type=text],input[type=email],input[type=password],input[type=number],textarea{
+  font-family:var(--font-mono);font-size:13px;padding:12px 16px;border:1.5px solid var(--border);
+  border-radius:var(--r);background:var(--bg3);color:var(--ink);outline:none;
+  transition:border-color .2s;width:100%}
+input:focus,textarea:focus{border-color:var(--lime)}
+input::placeholder,textarea::placeholder{color:var(--ink3)}
+
+.url-row{display:flex;gap:10px;margin-bottom:14px}
+.btn-go{padding:12px 24px;background:var(--lime);color:#000;border:none;border-radius:var(--r);font-family:var(--font-head);font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap;transition:all .2s}
+.btn-go:hover{background:var(--lime3)}
+.btn-go:disabled{opacity:.4;cursor:not-allowed}
+
+/* Cards in app */
+.a-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);padding:24px;margin-bottom:14px}
+
+/* Clip cards */
+.clip-card2{background:var(--card2);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:10px;transition:all .2s}
+.clip-card2.sel{border-color:var(--lime)}
+.clip-head{display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer}
+.clip-head:hover{background:var(--bg3)}
+.clip-n{width:26px;height:26px;border-radius:50%;background:var(--lime);color:#000;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:var(--font-mono)}
+.clip-info2{flex:1}
+.clip-t{font-family:var(--font-head);font-size:13px;font-weight:700}
+.clip-m{font-size:11px;color:var(--ink2);font-family:var(--font-mono);margin-top:2px}
+.clip-score{display:flex;gap:2px}
+.sdot{width:5px;height:5px;border-radius:50%;background:var(--border)}
+.sdot.on{background:var(--lime)}
+.clip-body2{display:none;padding:14px 16px;border-top:1px solid var(--border)}
+.clip-card2.sel .clip-body2{display:block}
+
+/* Platform toggles */
+.plat-toggles2{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.pt{padding:5px 12px;border-radius:20px;border:1px solid var(--border);font-size:11px;font-family:var(--font-head);font-weight:600;cursor:pointer;transition:all .15s;color:var(--ink2)}
+.pt.on{background:var(--lime);color:#000;border-color:var(--lime)}
+.pt.disabled{opacity:.3;cursor:not-allowed}
+
+/* Status */
+.status-bar2{display:none;align-items:center;gap:12px;padding:12px 16px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);font-family:var(--font-mono);font-size:12px;margin-bottom:14px;color:var(--ink2)}
+.spin2{width:14px;height:14px;border:2px solid var(--border2);border-top-color:var(--lime);border-radius:50%;animation:spin .65s linear infinite;flex-shrink:0}
 @keyframes spin{to{transform:rotate(360deg)}}
-.alert{display:none;padding:12px 16px;border-radius:4px;font-size:12px;margin-bottom:12px;font-family:'DM Mono',monospace;line-height:1.7;white-space:pre-line}
-.alert-err{background:#fff0f0;border:1.5px solid var(--red);color:var(--red)}
-.alert-ok{background:#f0fff4;border:1.5px solid #22c55e;color:#16a34a}
-#clips-section{display:none}
-.video-meta{display:flex;gap:20px;flex-wrap:wrap;padding:12px 16px;background:var(--cream);border-radius:4px;font-size:12px;font-family:'DM Mono',monospace;color:var(--muted);margin-bottom:16px}
-.video-meta strong{color:var(--ink)}
-.clip-card{background:var(--white);border:1.5px solid var(--border);border-radius:var(--r);overflow:hidden;transition:border-color .15s;margin-bottom:10px}
-.clip-card.selected{border-color:var(--ink);box-shadow:3px 3px 0 var(--ink)}
-.clip-header{display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;background:var(--cream)}
-.clip-num{width:28px;height:28px;border-radius:50%;background:var(--ink);color:var(--lime);font-size:12px;font-weight:500;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:'DM Mono',monospace}
-.clip-info{flex:1}
-.clip-title{font-size:13px;font-weight:500;margin-bottom:3px}
-.clip-meta{font-size:11px;color:var(--muted);font-family:'DM Mono',monospace}
-.score-dots{display:flex;gap:3px}
-.score-dot{width:6px;height:6px;border-radius:50%;background:var(--border)}
-.score-dot.on{background:var(--lime);border:1px solid var(--lime2)}
-.clip-body{display:none;padding:14px 16px;border-top:1px solid var(--border)}
-.clip-card.selected .clip-body{display:block}
-.clip-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px}
-.clip-field label{font-size:10px;font-family:'DM Mono',monospace;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:5px}
-.clip-field input{font-size:13px;padding:8px 10px}
-.clip-hook{font-size:13px;background:var(--paper);padding:10px 12px;border-radius:4px;border-left:3px solid var(--lime);margin-bottom:10px;font-style:italic}
-.clip-reason{font-size:12px;color:var(--muted);font-style:italic;margin-bottom:12px}
-.format-row{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
-.fmt-chip{display:flex;align-items:center;gap:6px;padding:6px 12px;border:1px solid var(--border);border-radius:20px;font-size:12px;cursor:pointer;transition:all .15s;font-family:'DM Sans',sans-serif;color:var(--muted)}
-.fmt-chip.on{background:var(--ink);color:var(--lime);border-color:var(--ink)}
-.process-btn{width:100%;padding:12px;background:var(--lime);color:var(--ink);border:1.5px solid var(--ink);border-radius:4px;font-size:14px;font-weight:500;cursor:pointer;box-shadow:3px 3px 0 var(--ink);transition:all .15s;font-family:'DM Sans',sans-serif}
-.process-btn:hover{transform:translate(-1px,-1px);box-shadow:4px 4px 0 var(--ink)}
-.job-row{background:var(--paper);border:1px solid var(--border);border-radius:4px;padding:12px 14px;margin-top:10px}
-.prog-track{height:4px;background:var(--cream);border-radius:2px;overflow:hidden;margin-bottom:6px}
-.prog-fill{height:100%;background:var(--lime);border-radius:2px;transition:width .4s}
-.download-row{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
-.btn-download{padding:10px 18px;background:var(--ink);color:var(--lime);border:none;border-radius:4px;font-size:12px;cursor:pointer;font-family:'DM Mono',monospace;display:flex;align-items:center;gap:6px;text-decoration:none}
-.mode-tabs{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
-.mtab{padding:8px 16px;border-radius:4px;border:1.5px solid var(--border);font-size:13px;cursor:pointer;background:transparent;font-family:'DM Sans',sans-serif;font-weight:500;color:var(--muted);transition:all .15s}
-.mtab.on{background:var(--ink);color:var(--lime);border-color:var(--ink)}
-.mode-panel{display:none}.mode-panel.on{display:block}
-.source-tabs{display:flex;gap:6px;margin-bottom:14px}
-.stab{padding:6px 14px;border-radius:20px;border:1px solid var(--border);font-size:12px;cursor:pointer;background:transparent;color:var(--muted);transition:all .15s;font-family:'DM Sans',sans-serif}
-.stab.on{background:var(--ink);color:var(--lime);border-color:var(--ink)}
-.drop-zone{border:2px dashed var(--border);border-radius:var(--r);padding:32px;text-align:center;cursor:pointer;transition:all .2s;margin-bottom:14px}
-.drop-zone:hover,.drop-zone.dragover{border-color:var(--ink);background:var(--cream)}
-.drop-zone.file-selected{border-color:var(--lime2);background:#f9ffe6;border-style:solid}
+.err2{display:none;padding:12px 16px;background:rgba(220,50,50,.08);border:1px solid rgba(220,50,50,.3);border-radius:var(--r);font-size:12px;color:#ff6b6b;margin-bottom:12px;font-family:var(--font-mono)}
+.ok2{display:none;padding:12px 16px;background:rgba(200,255,0,.08);border:1px solid rgba(200,255,0,.2);border-radius:var(--r);font-size:12px;color:var(--lime);margin-bottom:12px;font-family:var(--font-mono)}
 
-/* Platform connect cards */
-.platform-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:14px}
-.platform-card{border:1.5px solid var(--border);border-radius:var(--r);padding:14px;text-align:center;transition:all .15s;background:var(--white)}
-.platform-card.connected{border-color:#22c55e;background:#f0fff4}
-.platform-card.connected .plat-status{color:#16a34a}
-.platform-icon{font-size:24px;margin-bottom:6px}
-.platform-name{font-size:13px;font-weight:500;margin-bottom:4px}
-.plat-status{font-size:11px;font-family:'DM Mono',monospace;color:var(--muted);margin-bottom:8px}
-.btn-connect{width:100%;padding:7px;border-radius:3px;font-size:12px;font-family:'DM Sans',sans-serif;font-weight:500;cursor:pointer;border:1px solid var(--ink);background:var(--ink);color:var(--lime);transition:all .15s}
-.btn-connect:hover{opacity:.8}
-.btn-connect.connected{background:#f0fff4;color:#16a34a;border-color:#22c55e}
-.btn-connect.connected:hover{background:#fee2e2;color:var(--red);border-color:var(--red)}
+/* Download btn */
+.dl-btn{padding:10px 18px;background:var(--lime);color:#000;border:none;border-radius:var(--r);font-size:12px;font-family:var(--font-head);font-weight:700;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:6px;transition:all .2s}
+.dl-btn:hover{background:var(--lime3)}
 
-/* Auto-post row */
-.autopost-row{background:var(--paper2);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px;margin-top:10px}
-.autopost-title{font-size:13px;font-weight:500;margin-bottom:8px}
-.plat-toggles{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
-.plat-toggle{padding:5px 12px;border-radius:20px;border:1px solid var(--border);font-size:12px;cursor:pointer;transition:all .15s;color:var(--muted);font-family:'DM Sans',sans-serif}
-.plat-toggle.on{background:var(--ink);color:var(--lime);border-color:var(--ink)}
-.plat-toggle.disabled{opacity:.35;cursor:not-allowed}
-.btn-autopost{padding:10px 20px;background:var(--lime);color:var(--ink);border:1.5px solid var(--ink);border-radius:4px;font-size:13px;font-weight:500;cursor:pointer;box-shadow:2px 2px 0 var(--ink);font-family:'DM Sans',sans-serif;transition:all .15s}
-.btn-autopost:hover{transform:translate(-1px,-1px);box-shadow:3px 3px 0 var(--ink)}
-.btn-autopost:disabled{opacity:.4;cursor:not-allowed;transform:none}
+/* Connect platform cards */
+.connect-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
+.conn-card{background:var(--card);border:1.5px solid var(--border);border-radius:var(--r2);padding:20px;text-align:center;transition:all .2s}
+.conn-card.connected{border-color:var(--lime);background:rgba(200,255,0,.04)}
+.conn-icon{font-size:26px;margin-bottom:8px}
+.conn-name{font-family:var(--font-head);font-size:13px;font-weight:700;margin-bottom:4px}
+.conn-status{font-family:var(--font-mono);font-size:10px;color:var(--ink3);margin-bottom:12px}
+.conn-card.connected .conn-status{color:var(--lime)}
+.btn-conn{width:100%;padding:8px;border-radius:var(--r);font-family:var(--font-head);font-size:12px;font-weight:700;cursor:pointer;border:1.5px solid var(--border2);background:transparent;color:var(--ink);transition:all .2s}
+.btn-conn:hover{border-color:var(--lime);color:var(--lime)}
+.btn-conn.on{background:var(--lime);color:#000;border-color:var(--lime)}
 
 /* Auth modal */
-#auth-overlay{display:none;position:fixed;inset:0;background:rgba(13,13,13,.7);z-index:200;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
-#auth-overlay.open{display:flex}
-.auth-modal{background:var(--white);border:1.5px solid var(--ink);border-radius:var(--r);padding:32px;width:100%;max-width:400px;margin:20px;box-shadow:6px 6px 0 var(--ink)}
-.auth-title{font-family:'Instrument Serif',serif;font-size:22px;margin-bottom:4px}
-.auth-sub{font-size:12px;color:var(--muted);margin-bottom:20px;line-height:1.5}
-.auth-label{font-size:10px;font-family:'DM Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;display:block;margin-top:14px}
-.auth-actions{display:flex;gap:10px;margin-top:18px}
-.btn-auth{flex:1;padding:12px;background:var(--lime);color:var(--ink);border:1.5px solid var(--ink);border-radius:4px;font-size:14px;font-weight:500;cursor:pointer;font-family:'DM Sans',sans-serif;box-shadow:3px 3px 0 var(--ink)}
-.btn-ghost{padding:12px 16px;border:1px solid var(--border);border-radius:4px;font-size:13px;cursor:pointer;background:transparent;font-family:'DM Sans',sans-serif}
+#auth-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:200;align-items:center;justify-content:center;backdrop-filter:blur(8px)}
+#auth-modal.open{display:flex}
+.auth-box{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r2);padding:40px;width:100%;max-width:420px;margin:20px}
+.auth-box h2{font-family:var(--font-head);font-size:26px;font-weight:800;margin-bottom:6px;letter-spacing:-1px}
+.auth-box p{font-size:13px;color:var(--ink2);margin-bottom:28px}
+.auth-label{font-family:var(--font-mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink2);display:block;margin-bottom:6px;margin-top:16px}
+.auth-actions{display:flex;gap:10px;margin-top:24px}
+.btn-auth{flex:1;padding:13px;background:var(--lime);color:#000;border:none;border-radius:var(--r);font-family:var(--font-head);font-size:14px;font-weight:800;cursor:pointer;transition:all .2s}
+.btn-auth:hover{background:var(--lime3)}
+.btn-ghost2{padding:13px 18px;background:transparent;color:var(--ink);border:1.5px solid var(--border2);border-radius:var(--r);font-family:var(--font-head);font-size:13px;cursor:pointer;transition:all .2s}
+.btn-ghost2:hover{border-color:var(--lime);color:var(--lime)}
 
-/* Posts grid */
-#posts-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
-@media(max-width:600px){.hero,.app{padding-left:18px;padding-right:18px}header{padding:12px 18px}.clip-row{grid-template-columns:1fr}#posts-grid{grid-template-columns:1fr}.platform-grid{grid-template-columns:repeat(2,1fr)}}
+/* Legal pages */
+.legal-page{max-width:800px;margin:0 auto;padding:120px 48px 80px;display:none;position:relative;z-index:1}
+.legal-page.active{display:block}
+.legal-page h1{font-family:var(--font-head);font-size:48px;font-weight:800;letter-spacing:-2px;margin-bottom:8px}
+.legal-page .updated{font-family:var(--font-mono);font-size:12px;color:var(--ink3);margin-bottom:48px}
+.legal-page h2{font-family:var(--font-head);font-size:22px;font-weight:700;margin:36px 0 12px;letter-spacing:-.5px}
+.legal-page p,.legal-page li{font-size:15px;color:var(--ink2);line-height:1.75;margin-bottom:12px}
+.legal-page ul{padding-left:20px;margin-bottom:16px}
+.legal-page a{color:var(--lime)}
+
+/* Main landing */
+#landing{display:block}
+#app-view{display:none}
+
+/* Responsive */
+@media(max-width:768px){
+  nav{padding:14px 20px}
+  .nav-links .nav-link{display:none}
+  section{padding:60px 20px}
+  .app-section{padding:40px 20px}
+  .features-grid{grid-template-columns:1fr}
+  .pricing-grid{grid-template-columns:1fr}
+  .footer-top{grid-template-columns:1fr}
+  .compare-table{font-size:11px}
+  .compare-table th,.compare-table td{padding:10px 8px}
+  .cta-section{padding:80px 24px}
+  footer{padding:40px 20px}
+  .legal-page{padding:100px 20px 60px}
+}
 </style>
 </head>
 <body>
 
-<header>
-  <div class="logo">
-    <span class="logo-name">VidPost</span>
-    <span class="logo-tag">AI</span>
-    <span class="v2-tag">v2</span>
+<!-- ── Navigation ──────────────────────────────────────────────────────────── -->
+<nav id="main-nav">
+  <a href="#" class="nav-logo" onclick="showLanding()">
+    <span class="logo-dot"></span>
+    VidPost AI
+  </a>
+  <div class="nav-links">
+    <a href="#how" class="nav-link">How it works</a>
+    <a href="#platforms" class="nav-link">Platforms</a>
+    <a href="#pricing" class="nav-link">Pricing</a>
+    <a href="#faq" class="nav-link">FAQ</a>
+    <button class="theme-btn" onclick="toggleTheme()" id="theme-btn" title="Toggle theme">🌙</button>
+    <button class="nav-cta" onclick="showApp()">Start free →</button>
   </div>
-  <div class="header-right">
-    <span id="user-display" style="font-size:12px;color:var(--muted);font-family:'DM Mono',monospace"></span>
-    <button class="user-pill" id="auth-btn" onclick="openAuth()">Sign in</button>
-  </div>
-</header>
+</nav>
 
-<div class="hero">
-  <h1>One video.<br><mark>Every platform.</mark><br><em>Automatically.</em></h1>
-  <p class="hero-sub">Upload a video → AI finds viral clips → auto-posts to LinkedIn, YouTube, Instagram and TikTok. Zero manual work after setup.</p>
+<!-- ── Landing Page ────────────────────────────────────────────────────────── -->
+<div id="landing">
+
+  <!-- Hero -->
+  <div class="hero">
+    <div class="hero-badge"><span></span> AI-powered content repurposing</div>
+    <h1>One video.<br><span class="accent">Every platform.</span><br><span class="dim">Zero effort.</span></h1>
+    <p class="hero-sub">Upload any video → AI finds viral moments, cuts clips, writes captions, and auto-posts to all your social accounts. While you sleep.</p>
+    <div class="hero-actions">
+      <a href="#" class="btn-hero primary" onclick="showApp();return false">Try free — no card needed →</a>
+      <a href="#how" class="btn-hero secondary">See how it works</a>
+    </div>
+    <div class="platform-strip">
+      <div class="plat-badge"><div class="dot" style="background:#0a66c2"></div>LinkedIn</div>
+      <div class="plat-badge"><div class="dot" style="background:#ff0000"></div>YouTube</div>
+      <div class="plat-badge"><div class="dot" style="background:#e1306c"></div>Instagram</div>
+      <div class="plat-badge"><div class="dot" style="background:#ff0050"></div>TikTok</div>
+      <div class="plat-badge"><div class="dot" style="background:#000"></div>X / Twitter</div>
+      <div class="plat-badge"><div class="dot" style="background:#fffc00"></div>Snapchat</div>
+    </div>
+  </div>
+
+  <!-- How it works -->
+  <section id="how">
+    <div class="section-label">How it works</div>
+    <h2 class="section-title">Four steps.<br>Infinite content.</h2>
+    <p class="section-sub">From a single video to a full week of platform-native content in under 60 seconds.</p>
+    <div class="steps-grid">
+      <div class="step-card">
+        <div class="step-num">01</div>
+        <div class="step-icon">🎬</div>
+        <div class="step-title">Paste URL or upload</div>
+        <div class="step-desc">Drop a YouTube URL or upload any video file up to 500MB. We handle the rest.</div>
+      </div>
+      <div class="step-card">
+        <div class="step-num">02</div>
+        <div class="step-icon">🤖</div>
+        <div class="step-title">AI detects viral moments</div>
+        <div class="step-desc">Our AI scores every segment for hook strength, emotion, and virality. Picks the top 5 clips automatically.</div>
+      </div>
+      <div class="step-card">
+        <div class="step-num">03</div>
+        <div class="step-icon">✂️</div>
+        <div class="step-title">Clips + captions generated</div>
+        <div class="step-desc">Clips cut to 9:16 and 16:9. Platform-native captions, threads, scripts written for each channel.</div>
+      </div>
+      <div class="step-card">
+        <div class="step-num">04</div>
+        <div class="step-icon">🚀</div>
+        <div class="step-title">Auto-post everywhere</div>
+        <div class="step-desc">One click posts to all connected platforms simultaneously. Or schedule for optimal times.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features -->
+  <section id="features" style="background:var(--bg2);max-width:100%;border-top:1px solid var(--border);border-bottom:1px solid var(--border)">
+    <div style="max-width:1200px;margin:0 auto">
+      <div class="section-label">Features</div>
+      <h2 class="section-title">Built to beat<br>Opus Clip & Ocoya.</h2>
+      <div class="features-grid">
+        <div class="feature-card highlight">
+          <div class="feat-icon">🧠</div>
+          <div class="feat-title">AI that learns your audience</div>
+          <div class="feat-desc">After 30 days, our AI knows which hooks work for your specific audience. No competitor can copy this personalisation.</div>
+        </div>
+        <div class="feature-card">
+          <div class="feat-icon">📱</div>
+          <div class="feat-title">9:16 + 16:9 auto-conversion</div>
+          <div class="feat-desc">Every clip converted to perfect vertical and horizontal formats simultaneously. No manual cropping ever.</div>
+        </div>
+        <div class="feature-card">
+          <div class="feat-icon">✍️</div>
+          <div class="feat-title">Platform-native copy</div>
+          <div class="feat-desc">LinkedIn posts, Twitter threads, Instagram captions, TikTok scripts — each written for that platform's unique style.</div>
+        </div>
+        <div class="feature-card">
+          <div class="feat-icon">📅</div>
+          <div class="feat-title">Smart scheduling</div>
+          <div class="feat-desc">Post now or schedule at AI-recommended optimal times per platform. Full content calendar view.</div>
+        </div>
+        <div class="feature-card">
+          <div class="feat-icon">📊</div>
+          <div class="feat-title">Cross-platform analytics</div>
+          <div class="feat-desc">Views, likes, and reach across all platforms in one dashboard. See exactly what's working.</div>
+        </div>
+        <div class="feature-card">
+          <div class="feat-icon">🏢</div>
+          <div class="feat-title">Agency white-label</div>
+          <div class="feat-desc">Manage 10+ clients from one dashboard. White-label with your brand. Client approval workflow included.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Platforms -->
+  <section id="platforms">
+    <div class="section-label">Platforms</div>
+    <h2 class="section-title">Post everywhere.<br>From one place.</h2>
+    <p class="section-sub">Connect once. Every video automatically becomes content for every platform.</p>
+    <div class="platforms-full">
+      <div class="plat-card"><div class="plat-emoji">💼</div><div class="plat-info"><div class="plat-name">LinkedIn</div><div class="plat-type">Text posts + video</div></div><span class="plat-status-badge live">Live</span></div>
+      <div class="plat-card"><div class="plat-emoji">▶</div><div class="plat-info"><div class="plat-name">YouTube Shorts</div><div class="plat-type">Video upload</div></div><span class="plat-status-badge live">Live</span></div>
+      <div class="plat-card"><div class="plat-emoji">📸</div><div class="plat-info"><div class="plat-name">Instagram</div><div class="plat-type">Reels + carousels</div></div><span class="plat-status-badge live">Live</span></div>
+      <div class="plat-card"><div class="plat-emoji">🎵</div><div class="plat-info"><div class="plat-name">TikTok</div><div class="plat-type">Video + captions</div></div><span class="plat-status-badge live">Live</span></div>
+      <div class="plat-card"><div class="plat-emoji">𝕏</div><div class="plat-info"><div class="plat-name">X / Twitter</div><div class="plat-type">Threads + video</div></div><span class="plat-status-badge soon">Coming soon</span></div>
+      <div class="plat-card"><div class="plat-emoji">👻</div><div class="plat-info"><div class="plat-name">Snapchat</div><div class="plat-type">Spotlight + Stories</div></div><span class="plat-status-badge soon">Coming soon</span></div>
+    </div>
+  </section>
+
+  <!-- Compare -->
+  <section style="background:var(--bg2);max-width:100%;border-top:1px solid var(--border);border-bottom:1px solid var(--border)">
+    <div style="max-width:1200px;margin:0 auto">
+      <div class="section-label">Comparison</div>
+      <h2 class="section-title">Why creators<br>switch to VidPost.</h2>
+      <table class="compare-table">
+        <thead>
+          <tr>
+            <th>Feature</th>
+            <th class="us">VidPost AI</th>
+            <th>Opus Clip</th>
+            <th>Ocoya</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>AI clip detection</td><td class="us check">✓ Advanced</td><td>✓ Basic</td><td class="cross">✗</td></tr>
+          <tr><td>Text post generation</td><td class="us check">✓ All platforms</td><td class="cross">✗</td><td>✓ Limited</td></tr>
+          <tr><td>Auto-posting</td><td class="us check">✓ 6 platforms</td><td>✓ 2 platforms</td><td>✓ 3 platforms</td></tr>
+          <tr><td>Analytics feedback loop</td><td class="us check">✓ AI learns</td><td class="cross">✗</td><td class="cross">✗</td></tr>
+          <tr><td>Agency white-label</td><td class="us check">✓ Included</td><td class="cross">✗ Extra cost</td><td>✓ Enterprise only</td></tr>
+          <tr><td>Starting price</td><td class="us">$19/mo</td><td>$19/mo</td><td>$15/mo</td></tr>
+          <tr><td>Clip limits</td><td class="us check">✓ Unlimited</td><td class="cross">✗ Capped</td><td class="cross">✗ Capped</td></tr>
+          <tr><td>Snapchat + X support</td><td class="us check">✓ Coming soon</td><td class="cross">✗</td><td class="cross">✗</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Pricing -->
+  <section id="pricing">
+    <div class="section-label">Pricing</div>
+    <h2 class="section-title">Simple pricing.<br>No surprises.</h2>
+    <p class="section-sub">All plans include unlimited clip processing. No hidden fees.</p>
+    <div class="pricing-grid">
+      <div class="price-card">
+        <div class="price-tier">Free</div>
+        <div class="price-amount">$0</div>
+        <div class="price-period">forever</div>
+        <ul class="price-features">
+          <li>5 videos per month</li>
+          <li>LinkedIn + YouTube only</li>
+          <li>Watermarked clips</li>
+          <li>Text posts included</li>
+        </ul>
+        <button class="btn-price" onclick="showApp()">Get started free</button>
+      </div>
+      <div class="price-card popular">
+        <div class="price-tier">Creator</div>
+        <div class="price-amount">$19</div>
+        <div class="price-period">per month</div>
+        <ul class="price-features">
+          <li>Unlimited videos</li>
+          <li>All 6 platforms</li>
+          <li>No watermark</li>
+          <li>Auto-scheduling</li>
+          <li>Analytics dashboard</li>
+        </ul>
+        <button class="btn-price" onclick="showApp()">Start Creator plan</button>
+      </div>
+      <div class="price-card">
+        <div class="price-tier">Agency</div>
+        <div class="price-amount">$99</div>
+        <div class="price-period">per month</div>
+        <ul class="price-features">
+          <li>10 client workspaces</li>
+          <li>White-label dashboard</li>
+          <li>Client approval flow</li>
+          <li>Priority support</li>
+          <li>Custom domain</li>
+        </ul>
+        <button class="btn-price" onclick="showApp()">Start Agency plan</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Testimonials -->
+  <section style="background:var(--bg2);max-width:100%;border-top:1px solid var(--border)">
+    <div style="max-width:1200px;margin:0 auto">
+      <div class="section-label">What creators say</div>
+      <h2 class="section-title">Built by a creator.<br>For creators.</h2>
+      <div class="testimonials-grid">
+        <div class="testi-card">
+          <div class="testi-text">I was spending 3 hours a week repurposing my YouTube content. VidPost cut that to literally zero. The AI captions are actually good.</div>
+          <div class="testi-author"><div class="testi-avatar">R</div><div><div class="testi-name">Rahul M.</div><div class="testi-role">Finance YouTuber · 45k subs</div></div></div>
+        </div>
+        <div class="testi-card">
+          <div class="testi-text">Switched from Opus Clip because VidPost also writes my LinkedIn posts. One video = full week of content across all my channels.</div>
+          <div class="testi-author"><div class="testi-avatar">P</div><div><div class="testi-name">Priya S.</div><div class="testi-role">Tech creator · 28k followers</div></div></div>
+        </div>
+        <div class="testi-card">
+          <div class="testi-text">Managing 8 clients with VidPost's agency dashboard. Saved us 20 hours a week. The white-label feature is exactly what we needed.</div>
+          <div class="testi-author"><div class="testi-avatar">A</div><div><div class="testi-name">Arjun T.</div><div class="testi-role">Social media agency owner</div></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section id="faq">
+    <div class="section-label">FAQ</div>
+    <h2 class="section-title">Questions?<br>Answered.</h2>
+    <div class="faq-list">
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">Does it work with any YouTube video? <span class="faq-arrow">+</span></div>
+        <div class="faq-a">Yes — paste any public YouTube URL or upload a video file directly (MP4, MOV, AVI up to 500MB). We fetch the transcript automatically for AI clip detection.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">How is VidPost different from Opus Clip? <span class="faq-arrow">+</span></div>
+        <div class="faq-a">Opus Clip only does video clips. VidPost also generates LinkedIn posts, Twitter threads, Instagram captions, TikTok scripts, and YouTube Shorts scripts from the same video — and auto-posts all of them. Plus our AI learns from your analytics to improve over time.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">Is my content safe and private? <span class="faq-arrow">+</span></div>
+        <div class="faq-a">Yes. Uploaded videos are deleted from our servers within 1 hour of processing. We never store your video content permanently. Your OAuth tokens are encrypted in our database and never shared with third parties.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">Which platforms can I auto-post to? <span class="faq-arrow">+</span></div>
+        <div class="faq-a">Currently live: LinkedIn, YouTube Shorts, Instagram Reels, and TikTok. X/Twitter and Snapchat are coming soon. Connect accounts in the "Connect Accounts" tab.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">Can I cancel anytime? <span class="faq-arrow">+</span></div>
+        <div class="faq-a">Yes — cancel anytime with one click, no questions asked. You keep access until the end of your billing period.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">Who built this? <span class="faq-arrow">+</span></div>
+        <div class="faq-a">VidPost AI was built by a 15-year-old developer from Jodhpur, India. It started as a weekend project and grew into a full product. We're a small team obsessed with helping creators spend less time on distribution and more time creating.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <div class="cta-section">
+    <h2>Start turning videos<br>into <span style="color:var(--lime)">viral content</span> today.</h2>
+    <p>Free forever. No credit card. Takes 30 seconds to set up.</p>
+    <a href="#" class="btn-hero primary" onclick="showApp();return false" style="display:inline-flex">Start for free →</a>
+  </div>
+
+  <!-- Footer -->
+  <footer>
+    <div class="footer-top">
+      <div>
+        <div class="footer-brand">VidPost <span style="color:var(--lime)">AI</span></div>
+        <div class="footer-tagline">Turn any video into viral content for every platform. Automatically.</div>
+      </div>
+      <div>
+        <div class="footer-col-title">Product</div>
+        <ul class="footer-links">
+          <li><a href="#how">How it works</a></li>
+          <li><a href="#features">Features</a></li>
+          <li><a href="#pricing">Pricing</a></li>
+          <li><a href="#" onclick="showApp();return false">Launch app</a></li>
+        </ul>
+      </div>
+      <div>
+        <div class="footer-col-title">Platforms</div>
+        <ul class="footer-links">
+          <li><a href="#">LinkedIn</a></li>
+          <li><a href="#">YouTube Shorts</a></li>
+          <li><a href="#">Instagram Reels</a></li>
+          <li><a href="#">TikTok</a></li>
+          <li><a href="#">X / Twitter</a></li>
+          <li><a href="#">Snapchat</a></li>
+        </ul>
+      </div>
+      <div>
+        <div class="footer-col-title">Legal</div>
+        <ul class="footer-links">
+          <li><a href="#" onclick="showLegal('privacy');return false">Privacy Policy</a></li>
+          <li><a href="#" onclick="showLegal('terms');return false">Terms of Service</a></li>
+          <li><a href="#" onclick="showLegal('refund');return false">Refund Policy</a></li>
+          <li><a href="mailto:hello@vidpostai.com">Contact Us</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <div class="footer-copy">© 2025 VidPost AI. Built with ❤️ by a 15-year-old founder.</div>
+      <div class="footer-legal">
+        <a href="#" onclick="showLegal('privacy');return false">Privacy</a>
+        <a href="#" onclick="showLegal('terms');return false">Terms</a>
+        <a href="#" onclick="showLegal('refund');return false">Refunds</a>
+      </div>
+    </div>
+  </footer>
+
+</div><!-- /landing -->
+
+<!-- ── Legal Pages ─────────────────────────────────────────────────────────── -->
+<div class="legal-page" id="legal-privacy">
+  <a href="#" onclick="showLanding();return false" style="font-family:var(--font-mono);font-size:12px;color:var(--lime);text-decoration:none;display:block;margin-bottom:24px">← Back to home</a>
+  <h1>Privacy Policy</h1>
+  <div class="updated">Last updated: May 19, 2025</div>
+  <p>VidPost AI ("we", "us", "our") operates vidpost-ai.vercel.app. This Privacy Policy explains how we collect, use, and protect your information.</p>
+  <h2>Information We Collect</h2>
+  <ul>
+    <li><strong>Account information:</strong> Email address and password when you create an account.</li>
+    <li><strong>OAuth tokens:</strong> Access tokens from LinkedIn, YouTube, Instagram, and TikTok when you connect your accounts. These are encrypted and stored securely.</li>
+    <li><strong>Video content:</strong> Videos you upload for processing. These are deleted from our servers within 1 hour of processing completion.</li>
+    <li><strong>Usage data:</strong> Information about how you use our service, including clips created and posts published.</li>
+  </ul>
+  <h2>How We Use Your Information</h2>
+  <ul>
+    <li>To provide clip generation and auto-posting services</li>
+    <li>To improve our AI models and clip detection accuracy</li>
+    <li>To send service-related emails (no marketing without consent)</li>
+    <li>To prevent fraud and ensure security</li>
+  </ul>
+  <h2>Data Storage and Security</h2>
+  <p>Your data is stored on Supabase (PostgreSQL) with row-level security enabled. OAuth tokens are encrypted at rest. Video files are stored temporarily on Railway servers and deleted within 1 hour.</p>
+  <h2>Third-Party Services</h2>
+  <p>We use: Supabase (database), Railway (backend hosting), Vercel (frontend hosting), Groq (AI generation), Supadata (transcript fetching). Each has their own privacy policy.</p>
+  <h2>Your Rights</h2>
+  <p>You can request deletion of your account and all associated data at any time by emailing hello@vidpostai.com. We will process deletion requests within 30 days.</p>
+  <h2>OAuth Permissions</h2>
+  <p>We request only the minimum permissions needed to post content on your behalf. We never read your private messages, contacts, or personal data from connected platforms.</p>
+  <h2>Contact</h2>
+  <p>Questions about privacy? Email us at <a href="mailto:hello@vidpostai.com">hello@vidpostai.com</a></p>
 </div>
 
-<div class="app">
-  <div class="mode-tabs">
-    <button class="mtab on" onclick="switchMode('clips')">✂ AI Video Clips</button>
-    <button class="mtab" onclick="switchMode('posts')">✍ Text Posts</button>
-    <button class="mtab" onclick="switchMode('connect')">🔗 Connect Accounts</button>
-  </div>
+<div class="legal-page" id="legal-terms">
+  <a href="#" onclick="showLanding();return false" style="font-family:var(--font-mono);font-size:12px;color:var(--lime);text-decoration:none;display:block;margin-bottom:24px">← Back to home</a>
+  <h1>Terms of Service</h1>
+  <div class="updated">Last updated: May 19, 2025</div>
+  <p>By using VidPost AI, you agree to these Terms of Service. Please read them carefully.</p>
+  <h2>Acceptable Use</h2>
+  <p>You agree not to use VidPost AI to:</p>
+  <ul>
+    <li>Post content that violates the terms of service of any connected platform</li>
+    <li>Upload or distribute copyrighted content without permission</li>
+    <li>Spam or harass other users on any platform</li>
+    <li>Attempt to reverse engineer or circumvent our systems</li>
+    <li>Use the service for any illegal purpose</li>
+  </ul>
+  <h2>Content Ownership</h2>
+  <p>You retain full ownership of all videos you upload and content you generate. By using our service, you grant us a temporary license to process your content for the purpose of generating clips and posts.</p>
+  <h2>Service Availability</h2>
+  <p>We aim for 99% uptime but do not guarantee uninterrupted service. We are not liable for any losses resulting from service downtime.</p>
+  <h2>Platform Compliance</h2>
+  <p>You are responsible for ensuring your use of auto-posting complies with each platform's terms of service. We are not responsible for account suspensions resulting from policy violations on connected platforms.</p>
+  <h2>Subscriptions and Billing</h2>
+  <p>Paid plans are billed monthly. You can cancel at any time. No refunds for partial months except as described in our Refund Policy.</p>
+  <h2>Limitation of Liability</h2>
+  <p>VidPost AI is provided "as is". We are not liable for any indirect, incidental, or consequential damages arising from your use of the service.</p>
+  <h2>Changes to Terms</h2>
+  <p>We may update these terms. We will notify users by email of material changes. Continued use after changes constitutes acceptance.</p>
+  <h2>Contact</h2>
+  <p>Questions? Email <a href="mailto:hello@vidpostai.com">hello@vidpostai.com</a></p>
+</div>
 
-  <!-- CLIPS MODE -->
-  <div id="mode-clips" class="mode-panel on">
-    <div class="sl">Step 1 — Choose video source</div>
-    <div class="card">
-      <div class="source-tabs">
-        <button class="stab on" onclick="switchSource('url')">🔗 YouTube URL</button>
-        <button class="stab" onclick="switchSource('upload')">📁 Upload video</button>
+<div class="legal-page" id="legal-refund">
+  <a href="#" onclick="showLanding();return false" style="font-family:var(--font-mono);font-size:12px;color:var(--lime);text-decoration:none;display:block;margin-bottom:24px">← Back to home</a>
+  <h1>Refund Policy</h1>
+  <div class="updated">Last updated: May 19, 2025</div>
+  <p>We want you to be happy with VidPost AI. Here's our refund policy:</p>
+  <h2>7-Day Money-Back Guarantee</h2>
+  <p>If you're not satisfied within the first 7 days of your paid subscription, contact us at hello@vidpostai.com for a full refund. No questions asked.</p>
+  <h2>After 7 Days</h2>
+  <p>After the first 7 days, refunds are handled on a case-by-case basis. If you experienced a technical issue that prevented you from using the service, we will issue a prorated refund.</p>
+  <h2>Cancellations</h2>
+  <p>You can cancel your subscription at any time. You will retain access until the end of your current billing period. No refund is issued for the remaining period unless under the 7-day guarantee.</p>
+  <h2>How to Request a Refund</h2>
+  <p>Email <a href="mailto:hello@vidpostai.com">hello@vidpostai.com</a> with your account email and reason. We process all refund requests within 5 business days.</p>
+</div>
+
+<!-- ── App View ─────────────────────────────────────────────────────────────── -->
+<div id="app-view">
+  <div class="app-section">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:10px">
+      <div>
+        <h2 style="font-family:var(--font-head);font-size:28px;font-weight:800;letter-spacing:-1px">Dashboard</h2>
+        <p style="font-size:13px;color:var(--ink2);margin-top:4px" id="user-display-app"></p>
       </div>
-      <div id="src-url">
+      <div style="display:flex;gap:8px">
+        <button onclick="showLanding()" style="padding:8px 16px;border-radius:20px;border:1px solid var(--border2);background:transparent;color:var(--ink2);font-size:12px;cursor:pointer;font-family:var(--font-head)">← Back to site</button>
+        <button id="app-auth-btn" onclick="openAuth()" style="padding:8px 16px;border-radius:20px;border:1px solid var(--border2);background:transparent;color:var(--ink);font-size:12px;cursor:pointer;font-family:var(--font-head);font-weight:600">Sign in</button>
+      </div>
+    </div>
+
+    <div class="app-tabs">
+      <button class="app-tab on" onclick="switchTab('clips')">✂ Video Clips</button>
+      <button class="app-tab" onclick="switchTab('posts')">✍ Text Posts</button>
+      <button class="app-tab" onclick="switchTab('connect')">🔗 Connect</button>
+    </div>
+
+    <!-- CLIPS -->
+    <div id="tab-clips" class="app-panel on">
+      <div class="a-card">
+        <div style="margin-bottom:14px">
+          <div style="display:flex;gap:6px;margin-bottom:12px">
+            <button class="pt on" id="src-url-btn" onclick="switchSrc('url')">🔗 YouTube URL</button>
+            <button class="pt" id="src-up-btn" onclick="switchSrc('upload')">📁 Upload</button>
+          </div>
+          <div id="src-url-panel">
+            <div class="url-row">
+              <input type="text" id="clip-url" placeholder="https://www.youtube.com/watch?v=..."/>
+              <button class="btn-go" id="analyse-btn" onclick="analyseVideo()"><span id="analyse-lbl">Analyse →</span></button>
+            </div>
+          </div>
+          <div id="src-up-panel" style="display:none">
+            <div style="border:2px dashed var(--border2);border-radius:var(--r);padding:32px;text-align:center;cursor:pointer;transition:all .2s" id="dz" onclick="document.getElementById('fi').click()" ondragover="doDrag(event,true)" ondragleave="doDrag(event,false)" ondrop="doDrop(event)">
+              <input type="file" id="fi" accept="video/*" style="display:none" onchange="doFile(this.files[0])"/>
+              <div style="font-size:28px;margin-bottom:8px">🎬</div>
+              <div style="font-family:var(--font-head);font-size:14px;font-weight:700;margin-bottom:4px" id="dz-title">Drop video or click to browse</div>
+              <div style="font-size:12px;color:var(--ink2)" id="dz-sub">MP4, MOV, AVI — up to 500MB</div>
+            </div>
+            <button class="btn-go" id="up-btn" onclick="analyseUpload()" style="display:none;margin-top:10px"><span id="up-lbl">Analyse video →</span></button>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <span style="font-size:12px;color:var(--ink2);align-self:center;font-family:var(--font-mono)">Tone:</span>
+          <button class="pt on" data-tone="professional">Professional</button>
+          <button class="pt" data-tone="casual">Casual</button>
+          <button class="pt" data-tone="bold">Bold</button>
+          <button class="pt" data-tone="storytelling">Storytelling</button>
+        </div>
+      </div>
+
+      <div class="status-bar2" id="sb"><div class="spin2"></div><span id="st">Analysing...</span></div>
+      <div class="err2" id="eb"></div>
+      <div class="ok2" id="ob"></div>
+
+      <div id="clips-out" style="display:none">
+        <div style="display:flex;gap:16px;flex-wrap:wrap;padding:10px 14px;background:var(--bg3);border-radius:var(--r);font-size:11px;font-family:var(--font-mono);color:var(--ink2);margin-bottom:14px" id="vm"></div>
+        <div id="cg"></div>
+      </div>
+    </div>
+
+    <!-- POSTS -->
+    <div id="tab-posts" class="app-panel">
+      <div class="a-card">
         <div class="url-row">
-          <input type="text" id="clip-url" placeholder="https://www.youtube.com/watch?v=..."/>
-          <button class="btn-primary" id="analyse-btn" onclick="analyseVideo()">
-            <span id="analyse-label">Analyse</span><span>→</span>
-          </button>
+          <input type="text" id="post-url" placeholder="https://www.youtube.com/watch?v=..."/>
+          <button class="btn-go" id="post-btn" onclick="genPosts()"><span id="post-lbl">Generate →</span></button>
         </div>
-        <div style="font-size:12px;color:var(--muted)">AI detects the 5 best moments to clip automatically.</div>
-      </div>
-      <div id="src-upload" style="display:none">
-        <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()" ondragover="handleDrag(event,true)" ondragleave="handleDrag(event,false)" ondrop="handleDrop(event)">
-          <input type="file" id="file-input" accept="video/*,.mp4,.mov,.avi,.mkv,.webm" style="display:none" onchange="handleFile(this.files[0])"/>
-          <div style="font-size:28px;margin-bottom:8px">🎬</div>
-          <div style="font-size:14px;font-weight:500;margin-bottom:4px" id="drop-title">Drop video here or click to browse</div>
-          <div style="font-size:12px;color:var(--muted)" id="drop-sub">MP4, MOV, AVI — up to 500MB</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+          <span style="font-size:12px;color:var(--ink2);align-self:center;font-family:var(--font-mono)">Platforms:</span>
+          <button class="pt on" data-plat="linkedin">LinkedIn</button>
+          <button class="pt on" data-plat="twitter">Twitter/X</button>
+          <button class="pt on" data-plat="instagram">Instagram</button>
+          <button class="pt on" data-plat="tiktok">TikTok</button>
+          <button class="pt on" data-plat="youtube_short">YT Shorts</button>
         </div>
-        <button class="btn-primary" id="upload-btn" onclick="analyseUpload()" style="display:none">
-          <span id="upload-label">Analyse uploaded video</span><span>→</span>
-        </button>
       </div>
+      <div id="post-status" style="display:none;align-items:center;gap:10px;padding:10px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);font-family:var(--font-mono);font-size:12px;margin-bottom:12px;color:var(--ink2)">
+        <div class="spin2"></div><span id="post-st">Generating...</span>
+      </div>
+      <div class="err2" id="post-eb"></div>
+      <div id="posts-out" style="display:grid;grid-template-columns:repeat(2,1fr);gap:14px"></div>
     </div>
 
-    <div id="status-bar"><div class="spinner"></div><span id="status-text">Analysing...</span></div>
-    <div class="alert alert-err" id="err-box"></div>
-    <div class="alert alert-ok" id="ok-box"></div>
-
-    <div id="clips-section">
-      <div class="sl">Step 2 — AI-detected clips</div>
-      <div class="video-meta" id="video-meta"></div>
-      <div id="clips-grid"></div>
-    </div>
-  </div>
-
-  <!-- POSTS MODE -->
-  <div id="mode-posts" class="mode-panel">
-    <div class="card">
-      <div class="url-row">
-        <input type="text" id="post-url" placeholder="https://www.youtube.com/watch?v=..."/>
-        <button class="btn-primary" id="post-btn" onclick="generatePosts()">
-          <span id="post-label">Generate posts</span><span>→</span>
-        </button>
+    <!-- CONNECT -->
+    <div id="tab-connect" class="app-panel">
+      <div id="connect-gate-app" style="display:none">
+        <div class="a-card" style="text-align:center;padding:40px">
+          <div style="font-size:32px;margin-bottom:12px">🔐</div>
+          <div style="font-family:var(--font-head);font-size:18px;font-weight:800;margin-bottom:8px">Sign in to connect accounts</div>
+          <div style="font-size:13px;color:var(--ink2);margin-bottom:20px">Connect once and auto-post to all platforms forever.</div>
+          <button class="btn-go" onclick="openAuth()">Sign in to continue →</button>
+        </div>
       </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px" id="tone-row">
-        <span style="font-size:12px;color:var(--muted);align-self:center">Tone:</span>
-        <button class="btn-sm on" data-tone="professional">Professional</button>
-        <button class="btn-sm" data-tone="casual">Casual</button>
-        <button class="btn-sm" data-tone="bold">Bold</button>
-        <button class="btn-sm" data-tone="storytelling">Storytelling</button>
-      </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px" id="plat-row">
-        <span style="font-size:12px;color:var(--muted);align-self:center">Platforms:</span>
-        <button class="btn-sm on" data-plat="linkedin">LinkedIn</button>
-        <button class="btn-sm on" data-plat="twitter">Twitter</button>
-        <button class="btn-sm on" data-plat="instagram">Instagram</button>
-        <button class="btn-sm on" data-plat="tiktok">TikTok</button>
-        <button class="btn-sm on" data-plat="youtube_short">YT Shorts</button>
-      </div>
-    </div>
-    <div id="post-status" style="display:none;align-items:center;gap:10px;padding:10px 14px;background:var(--ink);color:var(--lime);border-radius:4px;font-family:'DM Mono',monospace;font-size:12px;margin-bottom:12px">
-      <div class="spinner"></div><span id="post-status-text">Generating...</span>
-    </div>
-    <div class="alert alert-err" id="post-err-box"></div>
-    <div id="posts-grid"></div>
-  </div>
-
-  <!-- CONNECT ACCOUNTS -->
-  <div id="mode-connect" class="mode-panel">
-    <div class="sl">Connect your social accounts for auto-posting</div>
-    <div id="connect-gate" style="display:none">
-      <div class="card-flat" style="text-align:center;padding:32px">
-        <div style="font-size:24px;margin-bottom:10px">🔐</div>
-        <div style="font-size:14px;font-weight:500;margin-bottom:6px">Sign in to connect accounts</div>
-        <div style="font-size:13px;color:var(--muted);margin-bottom:16px">You need an account to save your platform connections.</div>
-        <button class="btn-primary" onclick="openAuth()" style="margin:0 auto">Sign in to continue →</button>
-      </div>
-    </div>
-    <div id="connect-panels" style="display:none">
-      <div class="platform-grid" id="platform-grid"></div>
-      <div class="card-flat" style="margin-top:4px">
-        <div style="font-size:12px;color:var(--muted);line-height:1.7">
-          <strong style="color:var(--ink)">How it works:</strong> Connect your accounts once → every time you process a clip, VidPost can auto-post it to your connected platforms. You stay in control — choose which platforms to post to each time.
+      <div id="connect-main" style="display:none">
+        <div class="connect-grid" id="cg-platforms"></div>
+        <div style="margin-top:16px;padding:16px;background:var(--bg3);border-radius:var(--r);font-size:12px;color:var(--ink2);line-height:1.6">
+          <strong style="color:var(--ink)">X/Twitter and Snapchat coming soon.</strong> Apply on the waitlist to be notified when they launch.
         </div>
       </div>
     </div>
   </div>
 </div>
 
-<!-- Auth Modal -->
-<div id="auth-overlay" onclick="handleAuthOverlay(event)">
-  <div class="auth-modal">
-    <div class="auth-title" style="font-family:'Instrument Serif',serif">Welcome to VidPost AI</div>
-    <div class="auth-sub">Sign in or create an account to save your connections and post history.</div>
+<!-- ── Auth Modal ──────────────────────────────────────────────────────────── -->
+<div id="auth-modal" onclick="handleAuthBg(event)">
+  <div class="auth-box">
+    <h2>Welcome back.</h2>
+    <p>Sign in or create your free account.</p>
     <label class="auth-label">Email</label>
-    <input type="email" id="auth-email" placeholder="you@example.com"/>
+    <input type="email" id="ae" placeholder="you@example.com"/>
     <label class="auth-label">Password</label>
-    <input type="password" id="auth-password" placeholder="••••••••" autocomplete="current-password"/>
+    <input type="password" id="ap" placeholder="••••••••" autocomplete="current-password"/>
     <div class="auth-actions">
-      <button class="btn-auth" onclick="signIn()">Sign in</button>
-      <button class="btn-ghost" onclick="signUp()">Create account</button>
+      <button class="btn-auth" onclick="doSignIn()">Sign in</button>
+      <button class="btn-ghost2" onclick="doSignUp()">Create account</button>
     </div>
-    <div style="font-size:11px;color:var(--muted);margin-top:12px;text-align:center;font-family:'DM Mono',monospace" id="auth-msg"></div>
+    <div style="font-size:11px;color:var(--ink3);margin-top:12px;text-align:center;font-family:var(--font-mono)" id="am"></div>
   </div>
 </div>
 
 <script>
 // ── Config ────────────────────────────────────────────────────────────────────
 const API = '/api';
-const SUPABASE_URL = 'https://kwkrmnkqrwxyltxbmaru.supabase.co/'; // Replace with your Supabase project URL
-const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt3a3Jtbmtxcnd4eWx0eGJtYXJ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkwMTc5NjMsImV4cCI6MjA5NDU5Mzk2M30.qEGsRpTmv2jDSznmTiHZB8EHTYohGUQbGRB_7jjGe4I'; // Replace with your Supabase anon key
+const SUPABASE_URL  = 'https://kwkrmnkqrwxyltxbmaru.supabase.co/';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt3a3Jtbmtxcnd4eWx0eGJtYXJ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkwMTc5NjMsImV4cCI6MjA5NDU5Mzk2M30.qEGsRpTmv2jDSznmTiHZB8EHTYohGUQbGRB_7jjGe4I';
+const RAILWAY = 'https://vidpost-ai-production.up.railway.app';
 
 // ── State ─────────────────────────────────────────────────────────────────────
-let currentUser      = null;
-let currentVideoId   = '';
-let currentUploadPath= '';
-let currentTitle     = '';
-let currentMode      = 'url';
-let selectedFile     = null;
-let selectedTone     = 'professional';
-let selectedPlats    = ['linkedin','twitter','instagram','tiktok','youtube_short'];
-let connectedPlats   = [];
-let lastClipFiles    = {};
-let selectedAutoPlats= [];
+let currentUser=null, currentVideoId='', currentUploadPath='', currentTitle='';
+let selectedTone='professional', selectedPlats=['linkedin','twitter','instagram','tiktok','youtube_short'];
+let selectedFile=null, connectedPlats=[], isDark=true;
+
+// ── Theme ─────────────────────────────────────────────────────────────────────
+function toggleTheme(){
+  isDark=!isDark;
+  document.documentElement.setAttribute('data-theme', isDark?'dark':'light');
+  document.getElementById('theme-btn').textContent = isDark?'🌙':'☀️';
+  localStorage.setItem('vp_theme', isDark?'dark':'light');
+}
+
+// ── Nav ───────────────────────────────────────────────────────────────────────
+function showLanding(){
+  document.getElementById('landing').style.display='block';
+  document.getElementById('app-view').style.display='none';
+  document.querySelectorAll('.legal-page').forEach(p=>p.classList.remove('active'));
+  window.scrollTo(0,0);
+}
+function showApp(){
+  document.getElementById('landing').style.display='none';
+  document.getElementById('app-view').style.display='block';
+  document.querySelectorAll('.legal-page').forEach(p=>p.classList.remove('active'));
+  window.scrollTo(0,0);
+  if(!currentUser) setTimeout(()=>{ if(!currentUser) openAuth(); }, 500);
+}
+function showLegal(page){
+  document.getElementById('landing').style.display='none';
+  document.getElementById('app-view').style.display='none';
+  document.querySelectorAll('.legal-page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('legal-'+page).classList.add('active');
+  window.scrollTo(0,0);
+}
+
+// ── FAQ ───────────────────────────────────────────────────────────────────────
+function toggleFaq(el){
+  const item=el.parentElement;
+  item.classList.toggle('open');
+}
+
+// ── App tabs ──────────────────────────────────────────────────────────────────
+function switchTab(t){
+  const tabs=['clips','posts','connect'];
+  document.querySelectorAll('.app-tab').forEach((b,i)=>b.classList.toggle('on',tabs[i]===t));
+  document.querySelectorAll('.app-panel').forEach(p=>p.classList.remove('on'));
+  document.getElementById('tab-'+t).classList.add('on');
+  if(t==='connect') renderConnect();
+}
+
+function switchSrc(s){
+  document.getElementById('src-url-panel').style.display=s==='url'?'block':'none';
+  document.getElementById('src-up-panel').style.display=s==='upload'?'block':'none';
+  document.getElementById('src-url-btn').classList.toggle('on',s==='url');
+  document.getElementById('src-up-btn').classList.toggle('on',s==='upload');
+}
 
 // ── Init ──────────────────────────────────────────────────────────────────────
-window.addEventListener('DOMContentLoaded', () => {
-  // Check URL params for OAuth callbacks
-  const params = new URLSearchParams(window.location.search);
-  const connected = params.get('connected');
-  const error     = params.get('error');
-  if (connected) {
-    showOk(`✅ ${connected} connected successfully!`);
-    switchMode('connect');
-    window.history.replaceState({}, '', '/');
-  }
-  if (error) {
-    showErr(`Connection failed: ${error}. Try again.`);
-    window.history.replaceState({}, '', '/');
-  }
+window.addEventListener('DOMContentLoaded',()=>{
+  const savedTheme=localStorage.getItem('vp_theme')||'dark';
+  isDark=savedTheme==='dark';
+  document.documentElement.setAttribute('data-theme',savedTheme);
+  document.getElementById('theme-btn').textContent=isDark?'🌙':'☀️';
 
-  // Check saved session
-  const savedUser = localStorage.getItem('vp_user');
-  if (savedUser) {
-    try { currentUser = JSON.parse(savedUser); updateAuthUI(); loadConnections(); } catch(e) {}
-  }
+  const params=new URLSearchParams(window.location.search);
+  if(params.get('connected')){ showOk('✅ '+params.get('connected')+' connected!'); switchTab('connect'); showApp(); window.history.replaceState({},'','/'); }
+  if(params.get('error')){ showErr('Connection failed: '+params.get('error')); showApp(); window.history.replaceState({},'','/'); }
+
+  const saved=localStorage.getItem('vp_user');
+  if(saved){ try{ currentUser=JSON.parse(saved); updateAuthUI(); loadConnections(); }catch(e){} }
 
   // Tone chips
-  document.querySelectorAll('#tone-row .btn-sm').forEach(b => {
-    b.addEventListener('click', () => {
-      document.querySelectorAll('#tone-row .btn-sm').forEach(x => x.classList.remove('on'));
-      b.classList.add('on'); selectedTone = b.dataset.tone;
+  document.querySelectorAll('[data-tone]').forEach(b=>{
+    b.addEventListener('click',()=>{
+      document.querySelectorAll('[data-tone]').forEach(x=>x.classList.remove('on'));
+      b.classList.add('on'); selectedTone=b.dataset.tone;
     });
   });
 
   // Platform chips
-  document.querySelectorAll('#plat-row .btn-sm').forEach(b => {
-    b.addEventListener('click', () => {
+  document.querySelectorAll('[data-plat]').forEach(b=>{
+    b.addEventListener('click',()=>{
       b.classList.toggle('on');
-      selectedPlats = [...document.querySelectorAll('#plat-row .btn-sm.on')].map(x => x.dataset.plat);
+      selectedPlats=[...document.querySelectorAll('[data-plat].on')].map(x=>x.dataset.plat);
     });
   });
 
-  document.getElementById('clip-url').addEventListener('keydown', e => { if(e.key==='Enter') analyseVideo(); });
-  document.getElementById('post-url').addEventListener('keydown', e => { if(e.key==='Enter') generatePosts(); });
+  document.getElementById('clip-url').addEventListener('keydown',e=>{if(e.key==='Enter')analyseVideo();});
+  document.getElementById('post-url').addEventListener('keydown',e=>{if(e.key==='Enter')genPosts();});
 });
 
+// ── Helpers ───────────────────────────────────────────────────────────────────
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const fmt=s=>{const m=Math.floor(s/60);return `${m}:${String(Math.round(s%60)).padStart(2,'0')}`};
+function showSt(m){$('sb').style.display='flex';$('st').textContent=m;}
+function hideSt(){$('sb').style.display='none';}
+function showErr(m){$('eb').textContent='⚠ '+m;$('eb').style.display='block';}
+function hideErr(){$('eb').style.display='none';}
+function showOk(m){$('ob').textContent=m;$('ob').style.display='block';}
+function hideOk(){$('ob').style.display='none';}
+async function apiFetch(path,body,fd=false){
+  const o={method:'POST'};
+  if(fd){o.body=body;}else{o.headers={'Content-Type':'application/json'};o.body=JSON.stringify(body);}
+  const r=await fetch(API+path,o);
+  const d=await r.json();
+  if(!r.ok) throw new Error(d.error||`Error ${r.status}`);
+  return d;
+}
+
 // ── Auth ──────────────────────────────────────────────────────────────────────
-function openAuth(){ document.getElementById('auth-overlay').classList.add('open'); }
-function closeAuth(){ document.getElementById('auth-overlay').classList.remove('open'); }
-function handleAuthOverlay(e){ if(e.target===document.getElementById('auth-overlay')) closeAuth(); }
-
-async function supabaseRequest(path, method='GET', body=null) {
-  const res = await fetch(`${SUPABASE_URL}/auth/v1${path}`, {
-    method, headers: {
-      'Content-Type':'application/json',
-      'apikey': SUPABASE_ANON,
-      'Authorization': `Bearer ${SUPABASE_ANON}`
-    },
-    body: body ? JSON.stringify(body) : null
-  });
-  return res.json();
+function openAuth(){$('auth-modal').classList.add('open');}
+function closeAuth(){$('auth-modal').classList.remove('open');}
+function handleAuthBg(e){if(e.target===$('auth-modal'))closeAuth();}
+async function sbReq(path,method='GET',body=null){
+  const r=await fetch(`${SUPABASE_URL}/auth/v1${path}`,{method,headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON,'Authorization':`Bearer ${SUPABASE_ANON}`},body:body?JSON.stringify(body):null});
+  return r.json();
 }
-
-async function signIn() {
-  const email = document.getElementById('auth-email').value.trim();
-  const pass  = document.getElementById('auth-password').value;
-  if (!email || !pass) { document.getElementById('auth-msg').textContent = 'Enter email and password'; return; }
-  document.getElementById('auth-msg').textContent = 'Signing in...';
-  const data = await supabaseRequest('/token?grant_type=password', 'POST', {email, password: pass});
-  if (data.access_token) {
-    currentUser = {id: data.user.id, email: data.user.email, token: data.access_token};
-    localStorage.setItem('vp_user', JSON.stringify(currentUser));
-    updateAuthUI(); closeAuth(); loadConnections();
-  } else {
-    document.getElementById('auth-msg').textContent = data.error_description || 'Sign in failed';
-  }
+async function doSignIn(){
+  const email=$('ae').value.trim(),pass=$('ap').value;
+  if(!email||!pass){$('am').textContent='Enter email and password';return;}
+  $('am').textContent='Signing in...';
+  const d=await sbReq('/token?grant_type=password','POST',{email,password:pass});
+  if(d.access_token){currentUser={id:d.user.id,email:d.user.email,token:d.access_token};localStorage.setItem('vp_user',JSON.stringify(currentUser));updateAuthUI();closeAuth();loadConnections();}
+  else $('am').textContent=d.error_description||'Sign in failed';
 }
-
-async function signUp() {
-  const email = document.getElementById('auth-email').value.trim();
-  const pass  = document.getElementById('auth-password').value;
-  if (!email || !pass) { document.getElementById('auth-msg').textContent = 'Enter email and password'; return; }
-  if (pass.length < 6) { document.getElementById('auth-msg').textContent = 'Password must be 6+ characters'; return; }
-  document.getElementById('auth-msg').textContent = 'Creating account...';
-  const data = await supabaseRequest('/signup', 'POST', {email, password: pass});
-  if (data.id || data.access_token) {
-    document.getElementById('auth-msg').textContent = '✅ Account created! Check email to confirm, then sign in.';
-  } else {
-    document.getElementById('auth-msg').textContent = data.error_description || data.msg || 'Sign up failed';
-  }
+async function doSignUp(){
+  const email=$('ae').value.trim(),pass=$('ap').value;
+  if(!email||!pass){$('am').textContent='Enter email and password';return;}
+  if(pass.length<6){$('am').textContent='Password must be 6+ characters';return;}
+  $('am').textContent='Creating account...';
+  const d=await sbReq('/signup','POST',{email,password:pass});
+  if(d.id||d.access_token) $('am').textContent='✅ Account created! Check email to confirm, then sign in.';
+  else $('am').textContent=d.error_description||d.msg||'Sign up failed';
 }
-
-function signOut() {
-  currentUser = null; connectedPlats = [];
-  localStorage.removeItem('vp_user');
-  updateAuthUI();
-  document.getElementById('auth-btn').textContent = 'Sign in';
-}
-
-function updateAuthUI() {
-  const btn = document.getElementById('auth-btn');
-  const disp= document.getElementById('user-display');
-  if (currentUser) {
-    disp.textContent = currentUser.email;
-    btn.textContent  = 'Sign out';
-    btn.onclick      = signOut;
-    renderConnectPanel();
-  } else {
-    disp.textContent = '';
-    btn.textContent  = 'Sign in';
-    btn.onclick      = openAuth;
-    document.getElementById('connect-gate').style.display = 'block';
-    document.getElementById('connect-panels').style.display = 'none';
-  }
+function signOut(){currentUser=null;connectedPlats=[];localStorage.removeItem('vp_user');updateAuthUI();}
+function updateAuthUI(){
+  const btn=$('app-auth-btn'),disp=$('user-display-app');
+  if(currentUser){disp.textContent=currentUser.email;btn.textContent='Sign out';btn.onclick=signOut;}
+  else{disp.textContent='';btn.textContent='Sign in';btn.onclick=openAuth;}
+  renderConnect();
 }
 
 // ── Platform connections ───────────────────────────────────────────────────────
-const PLATFORMS = [
-  {id:'linkedin',  name:'LinkedIn',  icon:'💼', color:'#0a66c2', route:'linkedin'},
-  {id:'youtube',   name:'YouTube',   icon:'▶',  color:'#ff0000', route:'google'},
-  {id:'instagram', name:'Instagram', icon:'📸', color:'#e1306c', route:'instagram'},
-  {id:'tiktok',    name:'TikTok',    icon:'🎵', color:'#ff0050', route:'tiktok'},
+const PLATS=[
+  {id:'linkedin',name:'LinkedIn',icon:'💼',route:'linkedin'},
+  {id:'youtube',name:'YouTube',icon:'▶',route:'google'},
+  {id:'instagram',name:'Instagram',icon:'📸',route:'instagram'},
+  {id:'tiktok',name:'TikTok',icon:'🎵',route:'tiktok'},
 ];
-
-async function loadConnections() {
-  if (!currentUser) return;
-  try {
-    const res = await fetch(`${API}/connections?user_id=${currentUser.id}`);
-    const data = await res.json();
-    connectedPlats = data.connected || [];
-  } catch(e) { connectedPlats = []; }
-  renderConnectPanel();
+async function loadConnections(){
+  if(!currentUser)return;
+  try{const r=await fetch(`${API}/connections?user_id=${currentUser.id}`);const d=await r.json();connectedPlats=d.connected||[];}catch(e){connectedPlats=[];}
+  renderConnect();
 }
-
-function renderConnectPanel() {
-  if (!currentUser) {
-    document.getElementById('connect-gate').style.display = 'block';
-    document.getElementById('connect-panels').style.display = 'none';
-    return;
-  }
-  document.getElementById('connect-gate').style.display = 'none';
-  document.getElementById('connect-panels').style.display = 'block';
-
-  const grid = document.getElementById('platform-grid');
-  grid.innerHTML = PLATFORMS.map(p => {
-    const isConnected = connectedPlats.includes(p.id);
-    return `<div class="platform-card${isConnected?' connected':''}">
-      <div class="platform-icon">${p.icon}</div>
-      <div class="platform-name">${p.name}</div>
-      <div class="plat-status">${isConnected ? '✓ Connected' : 'Not connected'}</div>
-      <button class="btn-connect${isConnected?' connected':''}"
-        onclick="${isConnected ? `disconnectPlatform('${p.id}')` : `connectPlatform('${p.id}')`}">
-        ${isConnected ? 'Disconnect' : `Connect ${p.name}`}
+function renderConnect(){
+  const gate=$('connect-gate-app'),main=$('connect-main');
+  if(!currentUser){gate.style.display='block';main.style.display='none';return;}
+  gate.style.display='none';main.style.display='block';
+  const grid=$('cg-platforms');
+  grid.innerHTML=PLATS.map(p=>{
+    const on=connectedPlats.includes(p.id);
+    return `<div class="conn-card${on?' connected':''}">
+      <div class="conn-icon">${p.icon}</div>
+      <div class="conn-name">${p.name}</div>
+      <div class="conn-status">${on?'✓ Connected':'Not connected'}</div>
+      <button class="btn-conn${on?' on':''}" onclick="${on?`disconnPlat('${p.id}')`:`connPlat('${p.id}','${p.route}')`}">
+        ${on?'Disconnect':'Connect'}
       </button>
     </div>`;
   }).join('');
 }
-
-function connectPlatform(platformId) {
-  if (!currentUser) { openAuth(); return; }
-  // Get the route name (youtube uses /auth/google)
-  const plat = PLATFORMS.find(p => p.id === platformId);
-  const route = plat ? plat.route : platformId;
-  const RAILWAY = 'https://vidpost-ai-production.up.railway.app';
-  const url = `${RAILWAY}/auth/${route}?user_id=${encodeURIComponent(currentUser.id)}`;
-  window.location.href = url;
+function connPlat(id,route){
+  if(!currentUser){openAuth();return;}
+  window.location.href=`${RAILWAY}/auth/${route}?user_id=${encodeURIComponent(currentUser.id)}`;
 }
-
-async function disconnectPlatform(platform) {
-  if (!currentUser) return;
-  if (!confirm(`Disconnect ${platform}?`)) return;
-  await fetch(`${API}/disconnect`, {
-    method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({user_id: currentUser.id, platform})
-  });
-  connectedPlats = connectedPlats.filter(p => p !== platform);
-  renderConnectPanel();
-}
-
-// ── Mode / source switch ───────────────────────────────────────────────────────
-function switchMode(m) {
-  const modes = ['clips','posts','connect'];
-  document.querySelectorAll('.mtab').forEach((t,i) => t.classList.toggle('on', modes[i]===m));
-  document.querySelectorAll('.mode-panel').forEach(p => p.classList.remove('on'));
-  document.getElementById('mode-'+m).classList.add('on');
-  if (m === 'connect') renderConnectPanel();
-}
-
-function switchSource(s) {
-  currentMode = s;
-  document.querySelectorAll('.stab').forEach((t,i) => t.classList.toggle('on', ['url','upload'][i]===s));
-  document.getElementById('src-url').style.display    = s==='url'?'block':'none';
-  document.getElementById('src-upload').style.display = s==='upload'?'block':'none';
-  hideErr(); hideOk();
-}
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-const $  = id => document.getElementById(id);
-const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-function fmtTime(s){ const m=Math.floor(s/60); return `${m}:${String(Math.round(s%60)).padStart(2,'0')}`; }
-function showStatus(msg){ $('status-bar').style.display='flex'; $('status-text').textContent=msg; }
-function hideStatus(){ $('status-bar').style.display='none'; }
-function showErr(msg){ const e=$('err-box'); e.innerHTML='⚠ '+msg; e.style.display='block'; }
-function hideErr(){ $('err-box').style.display='none'; }
-function showOk(msg){ const e=$('ok-box'); e.innerHTML=msg; e.style.display='block'; }
-function hideOk(){ $('ok-box').style.display='none'; }
-
-async function apiFetch(path, body, isFormData=false) {
-  const opts = { method:'POST' };
-  if (isFormData) { opts.body = body; }
-  else { opts.headers={'Content-Type':'application/json'}; opts.body=JSON.stringify(body); }
-  const res = await fetch(API+path, opts);
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || `Server error ${res.status}`);
-  return data;
+async function disconnPlat(id){
+  if(!confirm('Disconnect '+id+'?'))return;
+  await fetch(`${API}/disconnect`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({user_id:currentUser.id,platform:id})});
+  connectedPlats=connectedPlats.filter(p=>p!==id);renderConnect();
 }
 
 // ── File upload ───────────────────────────────────────────────────────────────
-function handleDrag(e,over){ e.preventDefault(); $('drop-zone').classList.toggle('dragover',over); }
-function handleDrop(e){ e.preventDefault(); $('drop-zone').classList.remove('dragover'); handleFile(e.dataTransfer.files[0]); }
-function handleFile(file) {
-  if(!file) return;
-  if(file.size > 500*1024*1024){ showErr('File too large. Max 500MB.'); return; }
-  selectedFile = file;
-  $('drop-zone').classList.add('file-selected');
-  $('drop-title').textContent = file.name;
-  $('drop-sub').textContent   = (file.size/(1024*1024)).toFixed(1)+'MB — ready';
-  $('upload-btn').style.display = 'flex';
+function doDrag(e,on){e.preventDefault();$('dz').style.borderColor=on?'var(--lime)':'var(--border2)';}
+function doDrop(e){e.preventDefault();$('dz').style.borderColor='var(--border2)';doFile(e.dataTransfer.files[0]);}
+function doFile(f){
+  if(!f)return;
+  if(f.size>500*1024*1024){showErr('Max 500MB');return;}
+  selectedFile=f;$('dz-title').textContent=f.name;$('dz-sub').textContent=(f.size/(1024*1024)).toFixed(1)+'MB';$('up-btn').style.display='inline-flex';
 }
 
-// ── Analyse (URL) ─────────────────────────────────────────────────────────────
-async function analyseVideo() {
-  hideErr(); hideOk(); $('clips-section').style.display='none';
-  const url = $('clip-url').value.trim();
-  if (!url){ showErr('Paste a YouTube URL first.'); return; }
-  $('analyse-btn').disabled=true; $('analyse-label').textContent='Analysing...';
-  showStatus('Fetching video info and detecting clips...');
-  try {
-    const data = await apiFetch('/analyse', {url});
-    currentVideoId=''; currentUploadPath=''; currentTitle=data.title; currentVideoId=data.videoId;
-    $('video-meta').innerHTML=`<span><strong>${esc(data.title)}</strong></span><span>Duration:<strong>${fmtTime(data.duration)}</strong></span><span>Transcript:<strong>${data.transcriptLength} words</strong></span><span>Clips:<strong>${data.clips.length}</strong></span>`;
-    renderClips(data.clips, data.duration);
-    $('clips-section').style.display='block';
-    $('clips-section').scrollIntoView({behavior:'smooth',block:'start'});
-    hideStatus();
-  } catch(e){ hideStatus(); showErr(e.message); }
-  finally { $('analyse-btn').disabled=false; $('analyse-label').textContent='Analyse'; }
+// ── Analyse URL ───────────────────────────────────────────────────────────────
+async function analyseVideo(){
+  hideErr();hideOk();$('clips-out').style.display='none';
+  const url=$('clip-url').value.trim();
+  if(!url){showErr('Paste a YouTube URL');return;}
+  $('analyse-btn').disabled=true;$('analyse-lbl').textContent='Analysing...';
+  showSt('Fetching video and detecting clips...');
+  try{
+    const d=await apiFetch('/analyse',{url});
+    currentVideoId=d.videoId;currentUploadPath='';currentTitle=d.title;
+    $('vm').innerHTML=`<span><strong>${esc(d.title)}</strong></span><span>Duration: <strong>${fmt(d.duration)}</strong></span><span>Transcript: <strong>${d.transcriptLength} words</strong></span>`;
+    renderClips(d.clips,d.duration);$('clips-out').style.display='block';$('clips-out').scrollIntoView({behavior:'smooth',block:'start'});hideSt();
+  }catch(e){hideSt();showErr(e.message);}
+  finally{$('analyse-btn').disabled=false;$('analyse-lbl').textContent='Analyse →';}
 }
 
-// ── Analyse (Upload) ──────────────────────────────────────────────────────────
-async function analyseUpload() {
-  if(!selectedFile){ showErr('Select a video file first.'); return; }
-  hideErr(); hideOk(); $('clips-section').style.display='none';
-  $('upload-btn').disabled=true; $('upload-label').textContent='Uploading...';
-  showStatus('Uploading and analysing video...');
-  try {
-    const fd = new FormData();
-    fd.append('video', selectedFile);
-    const data = await apiFetch('/analyse-upload', fd, true);
-    currentUploadPath=data.uploadPath; currentVideoId=''; currentTitle=data.title;
-    $('video-meta').innerHTML=`<span><strong>${esc(data.title)}</strong></span><span>Duration:<strong>${fmtTime(data.duration)}</strong></span><span>Clips:<strong>${data.clips.length}</strong></span><span style="color:#16a34a">✓ Uploaded</span>`;
-    renderClips(data.clips, data.duration);
-    $('clips-section').style.display='block';
-    $('clips-section').scrollIntoView({behavior:'smooth',block:'start'});
-    hideStatus();
-  } catch(e){ hideStatus(); showErr(e.message); }
-  finally { $('upload-btn').disabled=false; $('upload-label').textContent='Analyse uploaded video'; }
+// ── Analyse upload ────────────────────────────────────────────────────────────
+async function analyseUpload(){
+  if(!selectedFile){showErr('Select a file first');return;}
+  hideErr();hideOk();$('clips-out').style.display='none';
+  $('up-btn').disabled=true;$('up-lbl').textContent='Uploading...';
+  showSt('Uploading and analysing...');
+  try{
+    const fd=new FormData();fd.append('video',selectedFile);
+    const d=await apiFetch('/analyse-upload',fd,true);
+    currentUploadPath=d.uploadPath;currentVideoId='';currentTitle=d.title;
+    $('vm').innerHTML=`<span><strong>${esc(d.title)}</strong></span><span>Duration: <strong>${fmt(d.duration)}</strong></span><span style="color:var(--lime)">✓ Uploaded</span>`;
+    renderClips(d.clips,d.duration);$('clips-out').style.display='block';hideSt();
+  }catch(e){hideSt();showErr(e.message);}
+  finally{$('up-btn').disabled=false;$('up-lbl').textContent='Analyse video →';}
 }
 
 // ── Render clips ──────────────────────────────────────────────────────────────
-function renderClips(clips, duration) {
-  const grid = $('clips-grid'); grid.innerHTML='';
-  clips.forEach((clip,i) => {
-    const card = document.createElement('div');
-    card.className='clip-card'; card.id=`clip-${i}`;
-    const dots = Array.from({length:10},(_,d)=>`<div class="score-dot${d<clip.virality_score?' on':''}"></div>`).join('');
-    card.innerHTML=`
-      <div class="clip-header" onclick="toggleClip(${i})">
-        <div class="clip-num">${i+1}</div>
-        <div class="clip-info">
-          <div class="clip-title">${esc(clip.title)}</div>
-          <div class="clip-meta">${fmtTime(clip.start)} → ${fmtTime(clip.end)} · ${Math.round(clip.end-clip.start)}s</div>
-        </div>
-        <div style="display:flex;align-items:center;gap:6px">
-          <div class="score-dots">${dots}</div>
-          <span style="font-size:11px;font-family:'DM Mono',monospace;color:var(--muted)">${clip.virality_score}/10</span>
-        </div>
+function renderClips(clips,dur){
+  const g=$('cg');g.innerHTML='';
+  clips.forEach((c,i)=>{
+    const el=document.createElement('div');
+    el.className='clip-card2';el.id=`cc-${i}`;
+    const dots=Array.from({length:10},(_,d)=>`<div class="sdot${d<c.virality_score?' on':''}"></div>`).join('');
+    el.innerHTML=`
+      <div class="clip-head" onclick="togClip(${i})">
+        <div class="clip-n">${i+1}</div>
+        <div class="clip-info2"><div class="clip-t">${esc(c.title)}</div><div class="clip-m">${fmt(c.start)} → ${fmt(c.end)} · ${Math.round(c.end-c.start)}s</div></div>
+        <div style="display:flex;align-items:center;gap:6px"><div class="clip-score">${dots}</div><span style="font-size:11px;font-family:var(--font-mono);color:var(--ink2)">${c.virality_score}/10</span></div>
       </div>
-      <div class="clip-body">
-        <div class="clip-hook">"${esc(clip.hook)}"</div>
-        <div class="clip-reason">${esc(clip.reason)}</div>
-        <div class="clip-row">
-          <div class="clip-field"><label>Start (sec)</label><input type="number" id="start-${i}" value="${clip.start}" min="0" max="${duration}" step="1"/></div>
-          <div class="clip-field"><label>End (sec)</label><input type="number" id="end-${i}" value="${clip.end}" min="0" max="${duration}" step="1"/></div>
-          <div class="clip-field"><label>Clip name</label><input type="text" id="ctitle-${i}" value="${esc(clip.title)}"/></div>
+      <div class="clip-body2">
+        <div style="font-size:13px;background:var(--bg3);padding:10px 12px;border-radius:var(--r);border-left:3px solid var(--lime);margin-bottom:10px;font-style:italic;color:var(--ink2)">"${esc(c.hook)}"</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px">
+          <div><label style="font-size:10px;font-family:var(--font-mono);color:var(--ink3);text-transform:uppercase;letter-spacing:.08em;display:block;margin-bottom:4px">Start</label><input type="number" id="s-${i}" value="${c.start}" min="0" max="${dur}"/></div>
+          <div><label style="font-size:10px;font-family:var(--font-mono);color:var(--ink3);text-transform:uppercase;letter-spacing:.08em;display:block;margin-bottom:4px">End</label><input type="number" id="e-${i}" value="${c.end}" min="0" max="${dur}"/></div>
+          <div><label style="font-size:10px;font-family:var(--font-mono);color:var(--ink3);text-transform:uppercase;letter-spacing:.08em;display:block;margin-bottom:4px">Name</label><input type="text" id="n-${i}" value="${esc(c.title)}"/></div>
         </div>
-        <div class="sl">Output formats</div>
-        <div class="format-row">
-          <div class="fmt-chip on" data-clip="${i}" data-fmt="vertical" onclick="toggleFmt(this)">📱 9:16 Vertical</div>
-          <div class="fmt-chip on" data-clip="${i}" data-fmt="horizontal" onclick="toggleFmt(this)">🖥 16:9 Horizontal</div>
+        <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap">
+          <div class="pt on" data-clip="${i}" data-fmt="vertical" onclick="this.classList.toggle('on')">📱 9:16</div>
+          <div class="pt on" data-clip="${i}" data-fmt="horizontal" onclick="this.classList.toggle('on')">🖥 16:9</div>
         </div>
-        <button class="process-btn" onclick="processClip(${i})">✂ Process this clip</button>
-        <div id="job-${i}"></div>
+        <button onclick="processClip(${i})" style="width:100%;padding:12px;background:var(--lime);color:#000;border:none;border-radius:var(--r);font-family:var(--font-head);font-size:14px;font-weight:800;cursor:pointer;transition:all .2s" onmouseover="this.style.background='var(--lime3)'" onmouseout="this.style.background='var(--lime)'">✂ Process this clip</button>
+        <div id="jb-${i}"></div>
       </div>`;
-    grid.appendChild(card);
+    g.appendChild(el);
   });
 }
-
-function toggleClip(i){
-  const card=$(`clip-${i}`), was=card.classList.contains('selected');
-  document.querySelectorAll('.clip-card').forEach(c=>c.classList.remove('selected'));
-  if(!was) card.classList.add('selected');
-}
-function toggleFmt(el){ el.classList.toggle('on'); }
+function togClip(i){const c=$(`cc-${i}`),was=c.classList.contains('sel');document.querySelectorAll('.clip-card2').forEach(x=>x.classList.remove('sel'));if(!was)c.classList.add('sel');}
 
 // ── Process clip ──────────────────────────────────────────────────────────────
-async function processClip(i) {
-  const start=parseFloat($(`start-${i}`).value);
-  const end  =parseFloat($(`end-${i}`).value);
-  const fmts =[...document.querySelectorAll(`.fmt-chip.on[data-clip="${i}"]`)].map(f=>f.dataset.fmt);
-  if(!fmts.length){ alert('Select at least one format.'); return; }
-  if(end-start<5){ alert('Clip must be at least 5 seconds.'); return; }
-
-  const jobDiv=$(`job-${i}`);
-  jobDiv.innerHTML=`<div class="job-row"><div style="font-size:12px;font-family:'DM Mono',monospace;margin-bottom:8px;color:var(--muted)">Processing...</div><div class="prog-track"><div class="prog-fill" id="pf-${i}" style="width:5%"></div></div><div style="font-size:11px;font-family:'DM Mono',monospace;color:var(--muted)" id="pm-${i}">Starting...</div></div>`;
-
-  try {
-    const body={start,end,formats:fmts};
-    if(currentUploadPath) body.uploadPath=currentUploadPath;
-    else body.videoId=currentVideoId;
-    const data=await apiFetch('/clip',body);
-    pollJob(data.jobId, i);
-  } catch(e){
-    jobDiv.innerHTML=`<div class="alert alert-err" style="display:block;margin-top:10px">⚠ ${esc(e.message)}</div>`;
-  }
+async function processClip(i){
+  const s=parseFloat($(`s-${i}`).value),e=parseFloat($(`e-${i}`).value);
+  const fmts=[...document.querySelectorAll(`.pt.on[data-clip="${i}"]`)].map(f=>f.dataset.fmt);
+  if(!fmts.length){alert('Select a format');return;}
+  if(e-s<5){alert('Clip too short');return;}
+  const jb=$(`jb-${i}`);
+  jb.innerHTML=`<div style="background:var(--bg3);border-radius:var(--r);padding:12px;margin-top:10px"><div style="font-size:11px;font-family:var(--font-mono);color:var(--ink2);margin-bottom:8px">Processing...</div><div style="height:3px;background:var(--border);border-radius:2px;overflow:hidden;margin-bottom:6px"><div id="pf-${i}" style="height:100%;background:var(--lime);border-radius:2px;transition:width .4s;width:5%"></div></div><div style="font-size:11px;font-family:var(--font-mono);color:var(--ink3)" id="pm-${i}">Starting...</div></div>`;
+  try{
+    const body={start:s,end:e,formats:fmts};
+    if(currentUploadPath) body.uploadPath=currentUploadPath; else body.videoId=currentVideoId;
+    const d=await apiFetch('/clip',body);
+    pollJob(d.jobId,i);
+  }catch(err){jb.innerHTML=`<div class="err2" style="display:block;margin-top:10px">⚠ ${esc(err.message)}</div>`;}
 }
-
-function pollJob(jobId,clipIdx){
+function pollJob(jid,ci){
   const iv=setInterval(async()=>{
     try{
-      const res=await fetch(`${API}/job/${jobId}`);
-      const job=await res.json();
-      const fill=$(`pf-${clipIdx}`),msg=$(`pm-${clipIdx}`);
-      if(fill) fill.style.width=job.progress+'%';
-      if(msg)  msg.textContent=job.message;
-      if(job.status==='done'){
-        clearInterval(iv);
-        lastClipFiles=job.files;
-        renderDownloads(jobId,clipIdx,job.files);
-      } else if(job.status==='error'){
-        clearInterval(iv);
-        $(`job-${clipIdx}`).innerHTML=`<div class="alert alert-err" style="display:block;margin-top:10px">⚠ ${esc(job.message)}</div>`;
-      }
-    } catch(e){ clearInterval(iv); }
+      const r=await fetch(`${API}/job/${jid}`);const j=await r.json();
+      const pf=$(`pf-${ci}`),pm=$(`pm-${ci}`);
+      if(pf)pf.style.width=j.progress+'%';if(pm)pm.textContent=j.message;
+      if(j.status==='done'){clearInterval(iv);renderDownloads(jid,ci,j.files);}
+      else if(j.status==='error'){clearInterval(iv);$(`jb-${ci}`).innerHTML=`<div class="err2" style="display:block;margin-top:10px">⚠ ${esc(j.message)}</div>`;}
+    }catch(e){clearInterval(iv);}
   },2000);
 }
-
-function renderDownloads(jobId,clipIdx,files){
-  const btns=Object.entries(files).map(([fmt,info])=>
-    `<a href="${API}${info.downloadUrl}" download class="btn-download">⬇ ${fmt==='vertical'?'9:16':'16:9'} ${info.sizeMb}MB</a>`
-  ).join('');
-
-  // Build auto-post section
-  const connected = connectedPlats.filter(p=>['linkedin','youtube','instagram','tiktok'].includes(p));
-  const autoPostHtml = connected.length > 0 ? `
-    <div class="autopost-row">
-      <div class="autopost-title">🚀 Auto-post this clip</div>
-      <div class="plat-toggles" id="apt-${clipIdx}">
-        ${connected.map(p=>`<div class="plat-toggle on" data-plat="${p}" onclick="this.classList.toggle('on')">${p}</div>`).join('')}
-      </div>
-      <div style="display:flex;gap:8px;align-items:center">
-        <input type="text" id="caption-${clipIdx}" placeholder="Caption for this clip..." style="flex:1;font-size:12px;padding:8px 10px"/>
-        <button class="btn-autopost" onclick="autoPostClip(${clipIdx},'${Object.values(files)[0]?.publicUrl||''}')">Post now →</button>
-      </div>
-    </div>` : currentUser ? `<div style="font-size:12px;color:var(--muted);margin-top:8px;font-family:'DM Mono',monospace">Connect social accounts to enable auto-posting → <span style="cursor:pointer;text-decoration:underline;color:var(--ink)" onclick="switchMode('connect')">Connect accounts</span></div>` : '';
-
-  $(`job-${clipIdx}`).innerHTML=`
-    <div class="job-row" style="background:#f0fff4;border-color:#22c55e">
-      <div style="font-size:12px;font-family:'DM Mono',monospace;color:#16a34a;margin-bottom:8px">✅ Clip ready!</div>
-      <div class="download-row">${btns}</div>
-      ${autoPostHtml}
-    </div>`;
+function renderDownloads(jid,ci,files){
+  const btns=Object.entries(files).map(([fmt,info])=>`<a href="${API}${info.downloadUrl}" download class="dl-btn">⬇ ${fmt==='vertical'?'9:16':'16:9'} ${info.sizeMb}MB</a>`).join('');
+  const conn=connectedPlats.filter(p=>['linkedin','youtube','instagram','tiktok'].includes(p));
+  const ap=conn.length>0?`<div style="margin-top:12px;padding:14px;background:var(--bg3);border-radius:var(--r)">
+    <div style="font-family:var(--font-head);font-size:13px;font-weight:700;margin-bottom:10px">🚀 Auto-post this clip</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px" id="apt-${ci}">${conn.map(p=>`<div class="pt on" data-plat="${p}" onclick="this.classList.toggle('on')">${p}</div>`).join('')}</div>
+    <div style="display:flex;gap:8px"><input type="text" id="cap-${ci}" placeholder="Caption..." style="flex:1;font-size:12px;padding:8px 10px"/><button onclick="autoPost(${ci},'${Object.values(files)[0]?.publicUrl||''}')" style="padding:8px 16px;background:var(--lime);color:#000;border:none;border-radius:var(--r);font-family:var(--font-head);font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">Post now →</button></div>
+  </div>`:currentUser?`<div style="font-size:11px;color:var(--ink3);font-family:var(--font-mono);margin-top:10px">Connect social accounts to enable auto-posting → <span style="cursor:pointer;color:var(--lime);text-decoration:underline" onclick="switchTab('connect')">Connect now</span></div>`:'';
+  $(`jb-${ci}`).innerHTML=`<div style="background:rgba(200,255,0,.05);border:1px solid rgba(200,255,0,.2);border-radius:var(--r);padding:14px;margin-top:10px"><div style="font-size:12px;font-family:var(--font-mono);color:var(--lime);margin-bottom:10px">✅ Clip ready!</div><div style="display:flex;gap:8px;flex-wrap:wrap">${btns}</div>${ap}</div>`;
 }
-
-// ── Auto-post clip ────────────────────────────────────────────────────────────
-async function autoPostClip(clipIdx, videoUrl) {
-  if (!currentUser){ openAuth(); return; }
-  const toggles = [...document.querySelectorAll(`#apt-${clipIdx} .plat-toggle.on`)].map(t=>t.dataset.plat);
-  if (!toggles.length){ alert('Select at least one platform to post to.'); return; }
-  const caption = $(`caption-${clipIdx}`)?.value || currentTitle;
-
-  const btn = document.querySelector(`#job-${clipIdx} .btn-autopost`);
-  if(btn){ btn.disabled=true; btn.textContent='Posting...'; }
-
-  try {
-    const data = await apiFetch('/post', {
-      user_id: currentUser.id,
-      platforms: toggles,
-      text: caption,
-      video_url: videoUrl
-    });
-    const posted = Object.keys(data.results||{}).join(', ');
-    const failed = Object.keys(data.errors||{}).join(', ');
-    let msg = '';
-    if(posted) msg += `✅ Posted to: ${posted}`;
-    if(failed) msg += `\n⚠ Failed: ${failed}`;
-    if(btn){ btn.textContent='Posted! ✅'; }
-    showOk(msg || '✅ Posted successfully!');
-    $('clips-section').scrollIntoView({behavior:'smooth',block:'start'});
-  } catch(e){
-    showErr('Auto-post failed: '+e.message);
-    if(btn){ btn.disabled=false; btn.textContent='Post now →'; }
-  }
+async function autoPost(ci,videoUrl){
+  if(!currentUser){openAuth();return;}
+  const toggles=[...document.querySelectorAll(`#apt-${ci} .pt.on`)].map(t=>t.dataset.plat);
+  if(!toggles.length){alert('Select a platform');return;}
+  const caption=$(`cap-${ci}`)?.value||currentTitle;
+  try{
+    const d=await apiFetch('/post',{user_id:currentUser.id,platforms:toggles,text:caption,video_url:videoUrl});
+    const posted=Object.keys(d.results||{}).join(', ');
+    showOk(`✅ Posted to: ${posted||'done'}`);
+  }catch(e){showErr('Post failed: '+e.message);}
 }
 
 // ── Generate posts ────────────────────────────────────────────────────────────
-async function generatePosts() {
-  $('post-err-box').style.display='none'; $('posts-grid').innerHTML='';
+async function genPosts(){
+  $('post-eb').style.display='none';$('posts-out').innerHTML='';
   const url=$('post-url').value.trim();
-  if(!url){ $('post-err-box').innerHTML='⚠ Paste a YouTube URL.'; $('post-err-box').style.display='block'; return; }
-  if(!selectedPlats.length){ $('post-err-box').innerHTML='⚠ Select at least one platform.'; $('post-err-box').style.display='block'; return; }
-  $('post-btn').disabled=true; $('post-label').textContent='Generating...';
-  $('post-status').style.display='flex'; $('post-status-text').textContent='Fetching transcript...';
-  try {
+  if(!url){$('post-eb').textContent='⚠ Paste a URL';$('post-eb').style.display='block';return;}
+  $('post-btn').disabled=true;$('post-lbl').textContent='Generating...';
+  $('post-status').style.display='flex';$('post-st').textContent='Fetching transcript...';
+  try{
     const m=url.match(/(?:v=|youtu\.be\/|\/shorts\/)([A-Za-z0-9_-]{11})/);
-    if(!m) throw new Error('Invalid YouTube URL');
-    const tData=await apiFetch('/transcript',{videoId:m[1]});
-    $('post-status-text').textContent='Generating with AI...';
-    const gData=await apiFetch('/generate',{transcript:tData.transcript,title:tData.title,tone:selectedTone,platforms:selectedPlats});
+    if(!m)throw new Error('Invalid URL');
+    const t=await apiFetch('/transcript',{videoId:m[1]});
+    $('post-st').textContent='Writing posts with AI...';
+    const g=await apiFetch('/generate',{transcript:t.transcript,title:t.title,tone:selectedTone,platforms:selectedPlats});
     $('post-status').style.display='none';
-    renderPosts(gData.results);
-  } catch(e){
-    $('post-status').style.display='none';
-    $('post-err-box').innerHTML='⚠ '+esc(e.message);
-    $('post-err-box').style.display='block';
-  } finally {
-    $('post-btn').disabled=false; $('post-label').textContent='Generate posts';
-  }
+    renderPosts(g.results);
+  }catch(e){$('post-status').style.display='none';$('post-eb').textContent='⚠ '+esc(e.message);$('post-eb').style.display='block';}
+  finally{$('post-btn').disabled=false;$('post-lbl').textContent='Generate →';}
 }
-
-function renderPosts(results){
-  const meta={linkedin:{label:'LinkedIn',color:'#0a66c2'},twitter:{label:'Twitter/X',color:'#000'},instagram:{label:'Instagram',color:'#e1306c'},tiktok:{label:'TikTok',color:'#ff0050'},youtube_short:{label:'YT Shorts',color:'#ff0000'}};
-  const grid=$('posts-grid'); grid.style.display='grid'; grid.innerHTML='';
-  Object.entries(results).forEach(([plat,text])=>{
-    const m=meta[plat]||{label:plat,color:'#888'};
-    const card=document.createElement('div');
-    card.style.cssText='background:var(--white);border:1.5px solid var(--ink);border-radius:var(--r);overflow:hidden;box-shadow:3px 3px 0 var(--ink)';
-    card.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;padding:11px 14px;background:var(--cream);border-bottom:1px solid var(--border)"><div style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:500"><div style="width:8px;height:8px;border-radius:50%;background:${m.color}"></div>${m.label}</div><button onclick="copyPost(this)" data-text="${esc(text)}" style="font-family:'DM Mono',monospace;font-size:11px;padding:3px 10px;border:1px solid var(--border);border-radius:3px;background:var(--white);cursor:pointer">Copy</button></div><div style="padding:16px 14px;font-size:13px;line-height:1.8;white-space:pre-wrap;font-weight:300;max-height:280px;overflow-y:auto">${esc(text)}</div>`;
-    grid.appendChild(card);
+function renderPosts(r){
+  const meta={linkedin:{l:'LinkedIn',c:'#0a66c2'},twitter:{l:'Twitter/X',c:'#000'},instagram:{l:'Instagram',c:'#e1306c'},tiktok:{l:'TikTok',c:'#ff0050'},youtube_short:{l:'YT Shorts',c:'#ff0000'}};
+  const g=$('posts-out');g.style.display='grid';g.innerHTML='';
+  Object.entries(r).forEach(([p,text])=>{
+    const m=meta[p]||{l:p,c:'#888'};
+    const el=document.createElement('div');
+    el.style.cssText='background:var(--card);border:1px solid var(--border);border-radius:var(--r2);overflow:hidden';
+    el.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--bg3);border-bottom:1px solid var(--border)"><div style="display:flex;align-items:center;gap:8px;font-family:var(--font-head);font-size:13px;font-weight:700"><div style="width:8px;height:8px;border-radius:50%;background:${m.c}"></div>${m.l}</div><button onclick="doCopy(this)" data-text="${esc(text)}" style="font-family:var(--font-mono);font-size:10px;padding:3px 10px;border:1px solid var(--border2);border-radius:20px;background:transparent;color:var(--ink2);cursor:pointer">Copy</button></div><div style="padding:16px;font-size:13px;line-height:1.8;white-space:pre-wrap;color:var(--ink2);max-height:260px;overflow-y:auto">${esc(text)}</div>`;
+    g.appendChild(el);
   });
-  grid.scrollIntoView({behavior:'smooth',block:'start'});
+  g.scrollIntoView({behavior:'smooth',block:'start'});
 }
-
-async function copyPost(btn){
+async function doCopy(btn){
   await navigator.clipboard.writeText(btn.dataset.text);
-  btn.textContent='Copied!';
-  setTimeout(()=>btn.textContent='Copy',2000);
+  btn.textContent='Copied!';btn.style.color='var(--lime)';
+  setTimeout(()=>{btn.textContent='Copy';btn.style.color='';},2000);
 }
 </script>
 </body>
