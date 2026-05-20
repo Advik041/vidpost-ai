@@ -25,6 +25,10 @@ INSTAGRAM_CLIENT_ID    = os.environ.get("INSTAGRAM_CLIENT_ID", "")
 INSTAGRAM_CLIENT_SECRET= os.environ.get("INSTAGRAM_CLIENT_SECRET", "")
 TIKTOK_CLIENT_ID       = os.environ.get("TIKTOK_CLIENT_ID", "")
 TIKTOK_CLIENT_SECRET   = os.environ.get("TIKTOK_CLIENT_SECRET", "")
+TWITTER_CLIENT_ID      = os.environ.get("TWITTER_CLIENT_ID", "")
+TWITTER_CLIENT_SECRET  = os.environ.get("TWITTER_CLIENT_SECRET", "")
+SNAPCHAT_CLIENT_ID     = os.environ.get("SNAPCHAT_CLIENT_ID", "")
+SNAPCHAT_CLIENT_SECRET = os.environ.get("SNAPCHAT_CLIENT_SECRET", "")
 
 FRONTEND_URL = os.environ.get("FRONTEND_URL", "https://vidpost-ai.vercel.app")
 BACKEND_URL  = os.environ.get("BACKEND_URL",  "https://vidpost-ai-production.up.railway.app")
@@ -52,6 +56,99 @@ def find_ytdlp():
 YTDLP = find_ytdlp()
 print(f"VidPost AI | yt-dlp:{YTDLP} | proxy:{'yes' if PROXY else 'no'} | supabase:{'yes' if supa else 'no'}")
 
+
+
+# ── X / Twitter OAuth (OAuth 2.0 PKCE) ───────────────────────────────────────
+@app.route("/auth/twitter", methods=["GET"])
+def twitter_auth():
+    user_id   = request.args.get("user_id","")
+    state     = f"{user_id}:{secrets.token_hex(8)}"
+    challenge = secrets.token_urlsafe(32)
+    # Store challenge in session for verification
+    session['twitter_challenge'] = challenge
+    session['twitter_state']     = state
+    params = {
+        "response_type":         "code",
+        "client_id":             TWITTER_CLIENT_ID,
+        "redirect_uri":          f"{BACKEND_URL}/auth/twitter/callback",
+        "scope":                 "tweet.read tweet.write users.read offline.access",
+        "state":                 state,
+        "code_challenge":        challenge,
+        "code_challenge_method": "plain"
+    }
+    return redirect("https://twitter.com/i/oauth2/authorize?" + urlencode(params))
+
+@app.route("/auth/twitter/callback", methods=["GET"])
+def twitter_callback():
+    code     = request.args.get("code","")
+    state    = request.args.get("state","")
+    user_id  = state.split(":")[0] if ":" in state else ""
+    challenge= session.get('twitter_challenge','')
+
+    resp = requests.post(
+        "https://api.twitter.com/2/oauth2/token",
+        headers={"Content-Type":"application/x-www-form-urlencoded"},
+        data={
+            "code":            code,
+            "grant_type":      "authorization_code",
+            "client_id":       TWITTER_CLIENT_ID,
+            "redirect_uri":    f"{BACKEND_URL}/auth/twitter/callback",
+            "code_verifier":   challenge
+        },
+        auth=(TWITTER_CLIENT_ID, TWITTER_CLIENT_SECRET)
+    )
+    if not resp.ok:
+        print(f"Twitter token error: {resp.text}")
+        return redirect(f"{FRONTEND_URL}?error=twitter_auth_failed")
+
+    tokens = resp.json()
+    save_token(user_id, "twitter",
+               tokens.get("access_token",""),
+               tokens.get("refresh_token",""),
+               extra={"expires_in": tokens.get("expires_in",0)})
+    return redirect(f"{FRONTEND_URL}?connected=twitter")
+
+
+# ── Snapchat OAuth ────────────────────────────────────────────────────────────
+@app.route("/auth/snapchat", methods=["GET"])
+def snapchat_auth():
+    user_id = request.args.get("user_id","")
+    state   = f"{user_id}:{secrets.token_hex(8)}"
+    params  = {
+        "client_id":     SNAPCHAT_CLIENT_ID,
+        "redirect_uri":  f"{BACKEND_URL}/auth/snapchat/callback",
+        "response_type": "code",
+        "scope":         "snapchat-marketing-api",
+        "state":         state
+    }
+    return redirect("https://accounts.snapchat.com/login/oauth2/authorize?" + urlencode(params))
+
+@app.route("/auth/snapchat/callback", methods=["GET"])
+def snapchat_callback():
+    code    = request.args.get("code","")
+    state   = request.args.get("state","")
+    user_id = state.split(":")[0] if ":" in state else ""
+
+    resp = requests.post(
+        "https://accounts.snapchat.com/login/oauth2/access_token",
+        data={
+            "code":          code,
+            "client_id":     SNAPCHAT_CLIENT_ID,
+            "client_secret": SNAPCHAT_CLIENT_SECRET,
+            "grant_type":    "authorization_code",
+            "redirect_uri":  f"{BACKEND_URL}/auth/snapchat/callback"
+        }
+    )
+    if not resp.ok:
+        print(f"Snapchat token error: {resp.text}")
+        return redirect(f"{FRONTEND_URL}?error=snapchat_auth_failed")
+
+    tokens = resp.json()
+    save_token(user_id, "snapchat",
+               tokens.get("access_token",""),
+               tokens.get("refresh_token",""),
+               extra={"expires_in": tokens.get("expires_in",0)})
+    return redirect(f"{FRONTEND_URL}?connected=snapchat")
 
 # ════════════════════════════════════════════════════════════════════════════════
 # SUPABASE HELPERS
@@ -117,7 +214,9 @@ def health():
             "linkedin":  bool(LINKEDIN_CLIENT_ID),
             "youtube":   bool(GOOGLE_CLIENT_ID),
             "instagram": bool(INSTAGRAM_CLIENT_ID),
-            "tiktok":    bool(TIKTOK_CLIENT_ID)
+            "tiktok":    bool(TIKTOK_CLIENT_ID),
+            "twitter":   bool(TWITTER_CLIENT_ID),
+            "snapchat":  bool(SNAPCHAT_CLIENT_ID)
         }
     })
 
@@ -363,6 +462,10 @@ def auto_post():
                 result = post_instagram(token_data, text, video_url)
             elif platform == "tiktok":
                 result = post_tiktok(token_data, text, video_url)
+            elif platform == "twitter":
+                result = post_twitter(token_data, text, video_url)
+            elif platform == "snapchat":
+                result = post_snapchat(token_data, text, video_url)
             else:
                 errors[platform] = f"Platform {platform} not supported yet"
                 continue
@@ -582,6 +685,75 @@ def post_tiktok(token_data, text, video_url=""):
     publish_id= data.get("publish_id","")
     return {"id": publish_id, "platform": "tiktok", "status": "processing"}
 
+
+
+# ── X / Twitter post ───────────────────────────────────────────────────────────
+def post_twitter(token_data, text, video_url=""):
+    access_token  = token_data["access_token"]
+    refresh_token = token_data.get("refresh_token","")
+
+    # Refresh token if expired
+    if refresh_token and TWITTER_CLIENT_ID:
+        try:
+            ref = requests.post(
+                "https://api.twitter.com/2/oauth2/token",
+                headers={"Content-Type":"application/x-www-form-urlencoded"},
+                data={"grant_type":"refresh_token","refresh_token":refresh_token,"client_id":TWITTER_CLIENT_ID},
+                auth=(TWITTER_CLIENT_ID, TWITTER_CLIENT_SECRET)
+            )
+            if ref.ok:
+                access_token = ref.json().get("access_token", access_token)
+        except: pass
+
+    headers = {"Authorization": f"Bearer {access_token}", "Content-Type": "application/json"}
+
+    # Text tweet (first 280 chars)
+    tweet_text = text[:280]
+    resp = requests.post(
+        "https://api.twitter.com/2/tweets",
+        headers=headers,
+        json={"text": tweet_text}
+    )
+    if not resp.ok:
+        raise Exception(f"Twitter post failed: {resp.text[:300]}")
+
+    tweet_id = resp.json().get("data",{}).get("id","")
+    return {"id": tweet_id, "url": f"https://twitter.com/i/web/status/{tweet_id}", "platform": "twitter", "status": "posted"}
+
+
+# ── Snapchat post ─────────────────────────────────────────────────────────────
+def post_snapchat(token_data, text, video_url=""):
+    access_token = token_data["access_token"]
+
+    # Get Snapchat user profile first
+    profile = requests.get(
+        "https://kit.snapchat.com/v1/me",
+        headers={"Authorization": f"Bearer {access_token}"}
+    )
+    if not profile.ok:
+        raise Exception(f"Snapchat profile fetch failed: {profile.text[:200]}")
+
+    external_id = profile.json().get("data",{}).get("me",{}).get("externalId","")
+    if not external_id:
+        raise Exception("Could not get Snapchat user ID")
+
+    if not video_url:
+        raise Exception("Snapchat Spotlight requires a video file")
+
+    # Upload to Snapchat Creative Library
+    video_data = requests.get(video_url, timeout=60).content
+
+    upload_resp = requests.post(
+        "https://adsapi.snapchat.com/v1/media",
+        headers={"Authorization": f"Bearer {access_token}"},
+        files={"file": ("video.mp4", video_data, "video/mp4")},
+        data={"name": text[:50], "type": "VIDEO"}
+    )
+    if not upload_resp.ok:
+        raise Exception(f"Snapchat upload failed: {upload_resp.text[:300]}")
+
+    media_id = upload_resp.json().get("media",{}).get("id","")
+    return {"id": media_id, "platform": "snapchat", "status": "posted"}
 
 # ════════════════════════════════════════════════════════════════════════════════
 # EXISTING ENDPOINTS (clip generation etc — kept from before)
