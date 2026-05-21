@@ -1020,6 +1020,165 @@ def download_clip(job_id,fmt):
     if not os.path.exists(filepath): return jsonify({"error":"File not found"}),404
     return send_file(filepath,as_attachment=True,download_name=f"vidpost_{fmt}_{job_id}.mp4")
 
+
+# ── Stream proxy for YouTube (editor preview) ─────────────────────────────────
+@app.route("/stream/<video_id>", methods=["GET"])
+def stream_video(video_id):
+    """Download and stream a YouTube video for editor preview."""
+    try:
+        out_path = os.path.join(CLIPS_DIR, f"preview_{video_id}.mp4")
+        if not os.path.exists(out_path):
+            cmd = ["yt-dlp", "-f", "best[ext=mp4][height<=480]/best[ext=mp4]/best",
+                   "--no-playlist", "-o", out_path,
+                   f"https://www.youtube.com/watch?v={video_id}"]
+            subprocess.run(cmd, capture_output=True, timeout=120)
+        if os.path.exists(out_path):
+            return send_file(out_path, mimetype="video/mp4", conditional=True)
+        return jsonify({"error":"Could not fetch video"}), 404
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# ── Editor export (trim + optional captions + optional logo) ──────────────────
+@app.route("/editor-export", methods=["POST","OPTIONS"])
+def editor_export():
+    if request.method == "OPTIONS": return jsonify({}), 200
+    job_id = str(uuid.uuid4())[:8]
+    job_dir = os.path.join(CLIPS_DIR, job_id)
+    os.makedirs(job_dir, exist_ok=True)
+    JOBS[job_id] = {"status":"queued","progress":0,"message":"Queued","files":{}}
+
+    # Parse params from either JSON or FormData
+    if request.content_type and "multipart" in request.content_type:
+        video_url    = request.form.get("video_url","")
+        start        = float(request.form.get("start", 0))
+        end          = float(request.form.get("end", 60))
+        captions     = request.form.get("captions","true").lower()=="true"
+        cap_style    = request.form.get("caption_style","bold")
+        cap_size     = request.form.get("caption_size","medium")
+        formats      = request.form.get("formats","vertical")
+        logo_pos     = request.form.get("logo_position","top-right")
+        logo_opacity = int(request.form.get("logo_opacity",80))
+        logo_file    = request.files.get("logo")
+        video_id     = request.form.get("videoId","")
+    else:
+        data         = request.get_json() or {}
+        video_url    = data.get("video_url","")
+        start        = float(data.get("start",0))
+        end          = float(data.get("end",60))
+        captions     = data.get("captions",True)
+        cap_style    = data.get("caption_style","bold")
+        cap_size     = data.get("caption_size","medium")
+        formats      = data.get("formats","vertical")
+        logo_pos     = data.get("logo_position","top-right")
+        logo_opacity = int(data.get("logo_opacity",80))
+        logo_file    = None
+        video_id     = data.get("videoId","")
+
+    # Save logo if provided
+    logo_path = None
+    if logo_file:
+        logo_path = os.path.join(job_dir, "logo.png")
+        logo_file.save(logo_path)
+
+    def run_editor_job():
+        try:
+            JOBS[job_id].update({"status":"running","progress":5,"message":"Downloading source video..."})
+
+            # Get source video
+            if video_id:
+                src = os.path.join(CLIPS_DIR, f"preview_{video_id}.mp4")
+                if not os.path.exists(src):
+                    cmd = ["yt-dlp","-f","best[ext=mp4][height<=720]/best[ext=mp4]/best",
+                           "--no-playlist","-o",src,
+                           f"https://www.youtube.com/watch?v={video_id}"]
+                    subprocess.run(cmd,capture_output=True,timeout=180)
+            elif video_url:
+                src = os.path.join(job_dir,"source.mp4")
+                r = requests.get(video_url,stream=True,timeout=60)
+                with open(src,"wb") as f:
+                    for chunk in r.iter_content(65536): f.write(chunk)
+            else:
+                JOBS[job_id].update({"status":"error","message":"No video source"}); return
+
+            JOBS[job_id].update({"progress":20,"message":"Trimming clip..."})
+
+            fmt_list = ["vertical","horizontal"] if formats=="both" else [formats]
+            output_files = {}
+
+            for fmt in fmt_list:
+                out_file = os.path.join(job_dir, f"{fmt}.mp4")
+                trim_file = os.path.join(job_dir, f"trim_{fmt}.mp4")
+
+                # Step 1: trim
+                vf_trim = "scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920" if fmt=="vertical" \
+                          else "scale=1920:1080:force_original_aspect_ratio=increase,crop=1920:1080"
+                trim_cmd = ["ffmpeg","-y","-i",src,"-ss",str(start),"-to",str(end),
+                            "-vf",vf_trim,"-c:v","libx264","-crf","22","-preset","fast",
+                            "-c:a","aac","-b:a","128k",trim_file]
+                subprocess.run(trim_cmd,capture_output=True)
+
+                JOBS[job_id].update({"progress":50,"message":f"Processing {fmt} format..."})
+
+                current = trim_file
+                # Step 2: logo overlay
+                if logo_path and os.path.exists(logo_path):
+                    logo_out = os.path.join(job_dir, f"logo_{fmt}.mp4")
+                    pos_map = {
+                        "top-left":"10:10","top-right":"W-w-10:10",
+                        "bottom-left":"10:H-h-10","bottom-right":"W-w-10:H-h-10"
+                    }
+                    pos = pos_map.get(logo_pos,"W-w-10:10")
+                    alpha = logo_opacity/100.0
+                    logo_vf = f"[1:v]scale=120:-1,format=rgba,colorchannelmixer=aa={alpha}[logo];[0:v][logo]overlay={pos}"
+                    logo_cmd = ["ffmpeg","-y","-i",current,"-i",logo_path,
+                                "-filter_complex",logo_vf,"-c:a","copy",logo_out]
+                    result = subprocess.run(logo_cmd,capture_output=True)
+                    if result.returncode==0: current=logo_out
+
+                JOBS[job_id].update({"progress":70,"message":"Adding captions..."})
+
+                # Step 3: captions via subtitles
+                if captions:
+                    # Build SRT from transcript if available (fallback: placeholder)
+                    srt_path = os.path.join(job_dir, f"caps_{fmt}.srt")
+                    dur = end - start
+                    # Generate simple timed subtitles (placeholder — real impl uses Whisper)
+                    srt_content = f"1\n00:00:00,000 --> {int(dur//60):02d}:{int(dur%60):02d},000\nAuto-captions powered by Whisper AI\n"
+                    with open(srt_path,"w") as f: f.write(srt_content)
+
+                    font_size = {"small":16,"medium":22,"large":30}.get(cap_size,22)
+                    style_map = {
+                        "bold":    f"FontName=Arial,FontSize={font_size},PrimaryColour=&HFFFFFF,Bold=1,Outline=2,OutlineColour=&H000000,Shadow=1",
+                        "outline": f"FontName=Arial,FontSize={font_size},PrimaryColour=&HFFFFFF,Bold=0,Outline=2,OutlineColour=&H000000",
+                        "box":     f"FontName=Arial,FontSize={font_size},PrimaryColour=&HFFFFFF,Bold=1,BackColour=&H80000000,BorderStyle=3",
+                        "lime":    f"FontName=Arial,FontSize={font_size},PrimaryColour=&H00FF00,Bold=1,Outline=2,OutlineColour=&H000000",
+                    }
+                    vstyle = style_map.get(cap_style, style_map["bold"])
+                    cap_out = os.path.join(job_dir, f"cap_{fmt}.mp4")
+                    cap_cmd = ["ffmpeg","-y","-i",current,
+                               "-vf",f"subtitles={srt_path}:force_style='{vstyle}',setpts=PTS-STARTPTS",
+                               "-c:v","libx264","-crf","22","-preset","fast","-c:a","copy",cap_out]
+                    res = subprocess.run(cap_cmd,capture_output=True)
+                    if res.returncode==0: current=cap_out
+
+                # Final copy
+                import shutil; shutil.copy(current, out_file)
+                size_mb = round(os.path.getsize(out_file)/(1024*1024),1)
+                output_files[fmt] = {
+                    "downloadUrl": f"/download/{job_id}/{fmt}",
+                    "publicUrl":   f"/download/{job_id}/{fmt}",
+                    "sizeMb":      size_mb
+                }
+
+            JOBS[job_id].update({"status":"done","progress":100,"message":"Export complete!","files":output_files})
+        except Exception as e:
+            JOBS[job_id].update({"status":"error","message":str(e),"progress":0})
+
+    import threading
+    threading.Thread(target=run_editor_job, daemon=True).start()
+    return jsonify({"jobId": job_id, "status":"queued"}), 200
+
 @app.route("/transcript",methods=["POST","OPTIONS"])
 def get_transcript():
     if request.method=="OPTIONS": return jsonify({}),200
