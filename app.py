@@ -23,6 +23,8 @@ GOOGLE_CLIENT_ID       = os.environ.get("GOOGLE_CLIENT_ID", "")
 GOOGLE_CLIENT_SECRET   = os.environ.get("GOOGLE_CLIENT_SECRET", "")
 INSTAGRAM_CLIENT_ID    = os.environ.get("INSTAGRAM_CLIENT_ID", "")
 INSTAGRAM_CLIENT_SECRET= os.environ.get("INSTAGRAM_CLIENT_SECRET", "")
+FACEBOOK_CLIENT_ID     = os.environ.get("FACEBOOK_CLIENT_ID", os.environ.get("INSTAGRAM_CLIENT_ID", ""))
+FACEBOOK_CLIENT_SECRET = os.environ.get("FACEBOOK_CLIENT_SECRET", os.environ.get("INSTAGRAM_CLIENT_SECRET", ""))
 TIKTOK_CLIENT_ID       = os.environ.get("TIKTOK_CLIENT_ID", "")
 TIKTOK_CLIENT_SECRET   = os.environ.get("TIKTOK_CLIENT_SECRET", "")
 TWITTER_CLIENT_ID      = os.environ.get("TWITTER_CLIENT_ID", "")
@@ -214,6 +216,7 @@ def health():
             "linkedin":  bool(LINKEDIN_CLIENT_ID),
             "youtube":   bool(GOOGLE_CLIENT_ID),
             "instagram": bool(INSTAGRAM_CLIENT_ID),
+            "facebook":  bool(FACEBOOK_CLIENT_ID),
             "tiktok":    bool(TIKTOK_CLIENT_ID),
             "twitter":   bool(TWITTER_CLIENT_ID),
             "snapchat":  bool(SNAPCHAT_CLIENT_ID)
@@ -366,6 +369,56 @@ def instagram_callback():
     return redirect(f"{FRONTEND_URL}?connected=instagram")
 
 
+# ── Facebook Page OAuth (separate from Instagram) ──────────────────────────────
+@app.route("/auth/facebook", methods=["GET"])
+def facebook_auth():
+    user_id = request.args.get("user_id","")
+    state   = f"{user_id}:{secrets.token_hex(8)}"
+    params  = {
+        "client_id":     FACEBOOK_CLIENT_ID,
+        "redirect_uri":  f"{BACKEND_URL}/auth/facebook/callback",
+        "scope":         "pages_manage_posts,pages_read_engagement,publish_video",
+        "response_type": "code",
+        "state":         state
+    }
+    return redirect("https://www.facebook.com/v19.0/dialog/oauth?" + urlencode(params))
+
+@app.route("/auth/facebook/callback", methods=["GET"])
+def facebook_callback():
+    code    = request.args.get("code","")
+    state   = request.args.get("state","")
+    user_id = state.split(":")[0] if ":" in state else ""
+
+    resp = requests.get("https://graph.facebook.com/v19.0/oauth/access_token", params={
+        "client_id":     FACEBOOK_CLIENT_ID,
+        "client_secret": FACEBOOK_CLIENT_SECRET,
+        "redirect_uri":  f"{BACKEND_URL}/auth/facebook/callback",
+        "code":          code
+    })
+    if not resp.ok:
+        return redirect(f"{FRONTEND_URL}?error=facebook_auth_failed")
+
+    tokens     = resp.json()
+    user_token = tokens.get("access_token","")
+
+    # Get the first managed Page + its page-scoped token
+    page_id    = ""
+    page_token = user_token
+    try:
+        pages = requests.get("https://graph.facebook.com/v19.0/me/accounts",
+            params={"access_token": user_token})
+        if pages.ok and pages.json().get("data"):
+            first_page = pages.json()["data"][0]
+            page_id    = first_page["id"]
+            page_token = first_page["access_token"]   # page-scoped (never expires)
+    except: pass
+
+    save_token(user_id, "facebook", page_token,
+               extra={"page_id": page_id, "user_token": user_token})
+
+    return redirect(f"{FRONTEND_URL}?connected=facebook")
+
+
 # ── TikTok OAuth ───────────────────────────────────────────────────────────────
 @app.route("/auth/tiktok", methods=["GET"])
 def tiktok_auth():
@@ -464,6 +517,8 @@ def auto_post():
                 result = post_tiktok(token_data, text, video_url)
             elif platform == "twitter":
                 result = post_twitter(token_data, text, video_url)
+            elif platform == "facebook":
+                result = post_facebook(token_data, text, video_url)
             elif platform == "snapchat":
                 result = post_snapchat(token_data, text, video_url)
             else:
@@ -721,7 +776,45 @@ def post_twitter(token_data, text, video_url=""):
     return {"id": tweet_id, "url": f"https://twitter.com/i/web/status/{tweet_id}", "platform": "twitter", "status": "posted"}
 
 
-# ── Snapchat post ─────────────────────────────────────────────────────────────
+# ── Facebook Page post ────────────────────────────────────────────────────────
+def post_facebook(token_data, text, video_url=""):
+    access_token = token_data["access_token"]   # page-scoped token
+    page_id      = token_data.get("page_id","")
+
+    if not page_id:
+        raise Exception("Facebook Page ID not found. Reconnect Facebook.")
+
+    if video_url:
+        # Download video first
+        video_data = requests.get(video_url, timeout=60).content
+
+        # Upload video to the page
+        upload = requests.post(
+            f"https://graph-video.facebook.com/v19.0/{page_id}/videos",
+            data={
+                "description":    text,
+                "access_token":   access_token,
+                "published":      "true"
+            },
+            files={"source": ("video.mp4", video_data, "video/mp4")}
+        )
+        if not upload.ok:
+            raise Exception(f"Facebook video upload failed: {upload.text[:300]}")
+        video_id = upload.json().get("id","")
+        return {"id": video_id, "platform": "facebook", "status": "posted"}
+    else:
+        # Text post to page feed
+        resp = requests.post(
+            f"https://graph.facebook.com/v19.0/{page_id}/feed",
+            params={
+                "message":      text,
+                "access_token": access_token
+            }
+        )
+        if not resp.ok:
+            raise Exception(f"Facebook post failed: {resp.text[:300]}")
+        post_id = resp.json().get("id","")
+        return {"id": post_id, "platform": "facebook", "status": "posted"}
 def post_snapchat(token_data, text, video_url=""):
     access_token = token_data["access_token"]
 
@@ -965,7 +1058,8 @@ def generate_posts():
         "twitter":f'Write 6-tweet thread.\nVIDEO:"{title}"\nTONE:{tone_desc}\nTRANSCRIPT:{transcript[:3000]}\n\nTweet 1:hook\nTweets 2-5:insights\nTweet 6:ending\nNumber 1/2/etc.\nOutput ONLY 6 tweets.',
         "instagram":f'Write Instagram caption.\nVIDEO:"{title}"\nTONE:{tone_desc}\nTRANSCRIPT:{transcript[:3000]}\n\nHook\n\n3 paragraphs with emoji\n\nQuestion\n\n15 hashtags\n\nOutput ONLY caption.',
         "tiktok":f'Write 45-sec TikTok script.\nVIDEO:"{title}"\nTONE:{tone_desc}\nTRANSCRIPT:{transcript[:3000]}\n\nHOOK\nPOINT1\nPOINT2\nPOINT3\nCTA\n\nUnder 130 words.',
-        "youtube_short":f'Write YouTube Shorts script.\nVIDEO:"{title}"\nTONE:{tone_desc}\nTRANSCRIPT:{transcript[:3000]}\n\n[HOOK][POINT1][POINT2][POINT3][CTA]\n\nUnder 150 words.'
+        "youtube_short":f'Write YouTube Shorts script.\nVIDEO:"{title}"\nTONE:{tone_desc}\nTRANSCRIPT:{transcript[:3000]}\n\n[HOOK][POINT1][POINT2][POINT3][CTA]\n\nUnder 150 words.',
+        "facebook":f'Write a Facebook Page post.\nVIDEO:"{title}"\nTONE:{tone_desc}\nTRANSCRIPT:{transcript[:3000]}\n\nHook sentence.\n\n2-3 engaging paragraphs with emojis.\n\nQuestion to drive comments.\n\n3-5 hashtags.\n\nMax 250 words. Output ONLY post.'
     }
     results,errors={},{}
     for platform in platforms:
