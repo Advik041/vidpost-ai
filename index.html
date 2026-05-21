@@ -319,7 +319,97 @@ input::placeholder,textarea::placeholder{color:var(--ink3)}
 .ed-slider:before{content:'';position:absolute;height:16px;width:16px;left:3px;bottom:3px;background:var(--ink3);border-radius:50%;transition:.3s}
 .ed-toggle input:checked+.ed-slider{background:var(--lime);border-color:var(--lime)}
 .ed-toggle input:checked+.ed-slider:before{transform:translateX(20px);background:#000}
-/* ── Caption style buttons ───────────────────────────────────────────────── */
+
+/* ── Load card ───────────────────────────────────────────────────────────── */
+.ed-load-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);padding:48px 32px;text-align:center;max-width:640px;margin:0 auto}
+.ed-load-icon{font-size:48px;margin-bottom:16px;filter:grayscale(0)}
+.ed-load-title{font-family:var(--font-head);font-size:22px;font-weight:800;margin-bottom:8px;letter-spacing:-.5px}
+.ed-load-sub{font-size:13px;color:var(--ink2);margin-bottom:24px;line-height:1.6}
+.ed-load-row{display:flex;gap:8px;max-width:520px;margin:0 auto}
+.ed-url-input{flex:1;padding:10px 14px;border-radius:var(--r);border:1px solid var(--border2);background:var(--bg3);color:var(--ink);font-family:var(--font-mono);font-size:12px}
+.ed-load-btn{padding:10px 20px;background:var(--lime);color:#000;border:none;border-radius:var(--r);font-family:var(--font-head);font-size:13px;font-weight:800;cursor:pointer;white-space:nowrap;transition:all .15s}
+.ed-load-btn:hover{background:var(--lime3)}
+
+/* ── Workspace ───────────────────────────────────────────────────────────── */
+.ed-topbar{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);margin-bottom:14px}
+.ed-columns{display:grid;grid-template-columns:1fr 320px;gap:14px;align-items:start}
+@media(max-width:860px){.ed-columns{grid-template-columns:1fr}}
+
+/* ── Left column ─────────────────────────────────────────────────────────── */
+.ed-left{display:flex;flex-direction:column;gap:0;background:var(--card);border:1px solid var(--border);border-radius:var(--r2);overflow:hidden}
+.ed-preview-box{position:relative;background:#000;aspect-ratio:16/9;overflow:hidden}
+.ed-preview-box.fmt-vertical{aspect-ratio:9/16;max-height:420px;margin:0 auto}
+.ed-fmt-badge{position:absolute;top:10px;left:10px;background:rgba(0,0,0,.7);color:#fff;font-family:var(--font-mono);font-size:10px;padding:3px 8px;border-radius:20px;border:1px solid rgba(255,255,255,.15)}
+.ed-cap-overlay{position:absolute;bottom:12%;left:0;right:0;text-align:center;padding:0 16px;pointer-events:none;font-family:var(--font-head);font-size:16px;line-height:1.3}
+.ed-controls{display:flex;align-items:center;gap:6px;padding:10px 14px;background:var(--bg3);border-top:1px solid var(--border)}
+.ed-ctrl-btn{width:32px;height:32px;border-radius:50%;border:1px solid var(--border2);background:var(--bg4);color:var(--ink);cursor:pointer;font-size:11px;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.ed-ctrl-btn:hover{border-color:var(--lime);color:var(--lime)}
+.ed-play-btn{width:40px;height:40px;background:var(--lime);color:#000;border-color:var(--lime);font-size:14px}
+.ed-play-btn:hover{background:var(--lime3);color:#000}
+.ed-time-display{font-family:var(--font-mono);font-size:11px;color:var(--ink2)}
+
+/* ── Timeline ────────────────────────────────────────────────────────────── */
+.ed-tl-wrap{padding:12px 14px 14px;border-top:1px solid var(--border)}
+.ed-tl-label{font-size:9px;font-family:var(--font-mono);color:var(--ink3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px}
+.ed-timeline{position:relative;height:52px;background:var(--bg3);border-radius:var(--r);border:1px solid var(--border2);cursor:crosshair;user-select:none;overflow:hidden}
+.ed-waveform{position:absolute;inset:0;display:flex;align-items:center;gap:1px;padding:4px 14px;pointer-events:none}
+.ed-waveform .wv-bar{flex:1;background:var(--ink3);border-radius:1px;min-height:2px;transition:background .2s}
+.ed-waveform .wv-bar.sel{background:rgba(200,255,0,.5)}
+.ed-shadow{position:absolute;top:0;bottom:0;background:rgba(0,0,0,.55);pointer-events:none}
+.ed-range-fill{position:absolute;top:0;bottom:0;border-left:2px solid var(--lime);border-right:2px solid var(--lime);background:rgba(200,255,0,.08);pointer-events:none}
+.ed-playhead{position:absolute;top:0;bottom:0;width:2px;background:#fff;pointer-events:none;box-shadow:0 0 4px rgba(255,255,255,.6)}
+.ed-handle{position:absolute;top:0;bottom:0;width:14px;z-index:4;cursor:ew-resize;display:flex;align-items:center;justify-content:center;background:var(--lime);transition:background .15s}
+.ed-handle-l{border-radius:4px 0 0 4px;left:0}
+.ed-handle-r{border-radius:0 4px 4px 0;right:0}
+.ed-handle:hover{background:var(--lime3)}
+.ed-handle-grip{width:2px;height:16px;background:rgba(0,0,0,.5);border-radius:1px;box-shadow:3px 0 0 rgba(0,0,0,.3)}
+
+/* Time ruler */
+.ed-ruler{height:16px;position:relative;margin-top:4px}
+.ed-ruler span{position:absolute;font-size:9px;font-family:var(--font-mono);color:var(--ink3);transform:translateX(-50%)}
+
+/* Time inputs */
+.ed-time-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:10px}
+.ed-time-chip{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:8px 10px}
+.ed-dur-chip{text-align:center}
+.ed-time-chip-label{display:block;font-size:9px;font-family:var(--font-mono);color:var(--ink3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px}
+.ed-time-chip-input{width:100%;background:transparent;border:none;color:var(--lime);font-family:var(--font-mono);font-size:13px;font-weight:700;outline:none}
+.ed-dur-val{font-family:var(--font-mono);font-size:13px;font-weight:700;color:var(--ink2)}
+
+/* ── Right column ────────────────────────────────────────────────────────── */
+.ed-right{display:flex;flex-direction:column;gap:10px}
+.ed-section{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);overflow:hidden}
+.ed-section-head{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;font-family:var(--font-head);font-size:13px;font-weight:700;background:var(--bg3);border-bottom:1px solid var(--border)}
+.ed-section > *:not(.ed-section-head){padding:12px 14px}
+.ed-field-label{font-size:9px;font-family:var(--font-mono);color:var(--ink3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px}
+
+/* Style grid */
+.ed-style-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.ed-style-btn{display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 8px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);cursor:pointer;transition:all .15s;font-family:var(--font-mono);font-size:10px;color:var(--ink2)}
+.ed-style-btn.on{border-color:var(--lime);background:rgba(200,255,0,.08);color:var(--lime)}
+.ed-style-btn:hover:not(.on){border-color:var(--border);}
+.ed-style-preview{font-size:18px;line-height:1}
+
+/* Logo */
+.ed-file-drop{display:block;padding:12px;border:1.5px dashed var(--border2);border-radius:var(--r);text-align:center;cursor:pointer;font-size:11px;color:var(--ink2);font-family:var(--font-mono);transition:border-color .15s}
+.ed-file-drop:hover{border-color:var(--lime);color:var(--lime)}
+.ed-pos-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.ed-pos-btn{padding:8px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);cursor:pointer;font-size:16px;transition:all .15s;color:var(--ink2)}
+.ed-pos-btn.on{border-color:var(--lime);background:rgba(200,255,0,.08)}
+
+/* Format buttons */
+.ed-fmt-btns{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;padding:12px 14px}
+.ed-fmt-btn{display:flex;flex-direction:column;align-items:center;gap:3px;padding:12px 6px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);cursor:pointer;transition:all .15s;font-family:var(--font-mono);font-size:10px;color:var(--ink2)}
+.ed-fmt-btn strong{font-family:var(--font-head);font-size:13px;color:var(--ink)}
+.ed-fmt-btn.on{border-color:var(--lime);background:rgba(200,255,0,.1)}
+.ed-fmt-btn.on strong{color:var(--lime)}
+
+/* Export button */
+.ed-export-btn{width:100%;padding:16px;background:var(--lime);color:#000;border:none;border-radius:var(--r2);font-family:var(--font-head);font-size:16px;font-weight:900;cursor:pointer;transition:all .2s;letter-spacing:-.3px}
+.ed-export-btn:hover{background:var(--lime3);transform:translateY(-1px)}
+.ed-export-btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+
+/* cap-style-btn (reused) */
 .cap-style-btn{padding:5px 12px;border-radius:20px;border:1px solid var(--border2);background:transparent;color:var(--ink2);font-size:11px;font-family:var(--font-mono);cursor:pointer;transition:all .15s}
 .cap-style-btn.on{background:var(--lime);color:#000;border-color:var(--lime);font-weight:700}
 .cap-style-btn:hover:not(.on){border-color:var(--lime);color:var(--lime)}
@@ -781,125 +871,196 @@ input::placeholder,textarea::placeholder{color:var(--ink3)}
 
     <!-- EDITOR -->
     <div id="tab-editor" class="app-panel">
-      <div class="a-card" style="margin-bottom:14px">
-        <div style="font-family:var(--font-head);font-size:15px;font-weight:800;margin-bottom:4px">✏ In-browser Clip Editor</div>
-        <div style="font-size:12px;color:var(--ink2)">Trim, caption, brand — export without leaving the browser. No Premiere needed.</div>
-      </div>
 
-      <!-- Source selector -->
-      <div class="a-card" style="margin-bottom:14px">
-        <div style="font-size:11px;font-family:var(--font-mono);color:var(--ink3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px">Load video</div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <input type="text" id="ed-url" placeholder="YouTube URL or paste a clip URL..." style="flex:1;min-width:200px"/>
-          <button onclick="editorLoadUrl()" style="padding:10px 18px;background:var(--lime);color:#000;border:none;border-radius:var(--r);font-family:var(--font-head);font-size:13px;font-weight:800;cursor:pointer;white-space:nowrap">Load →</button>
+      <!-- Empty / load state -->
+      <div id="ed-empty">
+        <div class="ed-load-card">
+          <div class="ed-load-icon">✂</div>
+          <div class="ed-load-title">Better than Opus Clip's editor</div>
+          <div class="ed-load-sub">Trim · Auto-captions · Brand watermark · 9:16 & 16:9 export — all in-browser</div>
+          <div class="ed-load-row">
+            <input type="text" id="ed-url" placeholder="Paste YouTube URL or a processed clip URL…" class="ed-url-input"/>
+            <button onclick="editorLoadUrl()" class="ed-load-btn" id="ed-load-btn">Load video →</button>
+          </div>
+          <div style="font-size:11px;color:var(--ink3);font-family:var(--font-mono);margin-top:10px">— or process a clip in the Clips tab and click "Edit this clip" —</div>
         </div>
-        <div style="margin-top:10px;font-size:11px;color:var(--ink3);font-family:var(--font-mono)">— or drop a processed clip URL from the Clips tab above —</div>
       </div>
 
-      <!-- Video preview -->
-      <div id="ed-preview-wrap" style="display:none">
-        <div class="a-card" style="margin-bottom:14px;padding:0;overflow:hidden">
-          <video id="ed-video" controls style="width:100%;max-height:340px;background:#000;display:block"></video>
-          <div style="padding:14px">
+      <!-- Full editor (shown after load) -->
+      <div id="ed-workspace" style="display:none">
 
-            <!-- Timeline scrubber -->
-            <div style="font-size:11px;font-family:var(--font-mono);color:var(--ink3);margin-bottom:8px;text-transform:uppercase;letter-spacing:.08em">Trim range</div>
-            <div id="ed-timeline" style="position:relative;height:44px;background:var(--bg3);border-radius:var(--r);border:1px solid var(--border2);cursor:pointer;margin-bottom:10px;user-select:none">
-              <!-- filled range -->
-              <div id="ed-range-fill" style="position:absolute;top:0;bottom:0;background:rgba(200,255,0,.18);border-top:2px solid var(--lime);border-bottom:2px solid var(--lime);pointer-events:none"></div>
-              <!-- playhead -->
-              <div id="ed-playhead" style="position:absolute;top:0;bottom:0;width:2px;background:white;pointer-events:none;transition:left .1s linear"></div>
-              <!-- start handle -->
-              <div id="ed-handle-start" title="Drag to set start"
-                style="position:absolute;top:0;bottom:0;width:12px;background:var(--lime);border-radius:4px 0 0 4px;cursor:ew-resize;z-index:2;display:flex;align-items:center;justify-content:center">
-                <div style="width:2px;height:14px;background:#000;border-radius:1px"></div>
+        <!-- Top bar -->
+        <div class="ed-topbar">
+          <div style="font-family:var(--font-head);font-size:14px;font-weight:800;display:flex;align-items:center;gap:8px">
+            <span style="color:var(--lime)">✂</span>
+            <span id="ed-title-lbl" style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Clip Editor</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <input type="text" id="ed-url-top" placeholder="Load another URL…" style="font-size:11px;padding:6px 10px;border-radius:var(--r);border:1px solid var(--border2);background:var(--bg3);color:var(--ink);font-family:var(--font-mono);width:200px"/>
+            <button onclick="editorLoadUrlTop()" style="padding:6px 14px;background:var(--bg4);border:1px solid var(--border2);border-radius:var(--r);color:var(--ink2);font-size:11px;font-family:var(--font-mono);cursor:pointer">Load</button>
+          </div>
+        </div>
+
+        <!-- Two-column layout -->
+        <div class="ed-columns">
+
+          <!-- LEFT: preview + timeline -->
+          <div class="ed-left">
+
+            <!-- Video canvas preview -->
+            <div class="ed-preview-box" id="ed-preview-box">
+              <video id="ed-video" style="width:100%;height:100%;object-fit:contain;background:#000;display:block"></video>
+              <!-- caption preview overlay -->
+              <div id="ed-cap-preview" class="ed-cap-overlay" style="display:none"></div>
+              <!-- format overlay badge -->
+              <div id="ed-fmt-badge" class="ed-fmt-badge">📱 9:16</div>
+            </div>
+
+            <!-- Playback controls -->
+            <div class="ed-controls">
+              <button onclick="edSkip(-5)" class="ed-ctrl-btn" title="−5s">⟨⟨</button>
+              <button onclick="edPlayPause()" class="ed-ctrl-btn ed-play-btn" id="ed-play-btn" title="Play/Pause">▶</button>
+              <button onclick="edSkip(5)" class="ed-ctrl-btn" title="+5s">⟩⟩</button>
+              <span class="ed-time-display" id="ed-time-cur">0:00</span>
+              <div style="flex:1"></div>
+              <span class="ed-time-display" id="ed-time-tot">0:00</span>
+              <button onclick="edMute()" class="ed-ctrl-btn" id="ed-mute-btn" title="Mute">🔊</button>
+            </div>
+
+            <!-- Timeline -->
+            <div class="ed-tl-wrap">
+              <div class="ed-tl-label">TRIM RANGE</div>
+              <div id="ed-timeline" class="ed-timeline">
+                <!-- waveform bars (generated by JS) -->
+                <div id="ed-waveform" class="ed-waveform"></div>
+                <!-- dark overlay: before start -->
+                <div id="ed-shadow-left" class="ed-shadow"></div>
+                <!-- dark overlay: after end -->
+                <div id="ed-shadow-right" class="ed-shadow"></div>
+                <!-- green selected range border -->
+                <div id="ed-range-fill" class="ed-range-fill"></div>
+                <!-- playhead -->
+                <div id="ed-playhead" class="ed-playhead"></div>
+                <!-- start handle -->
+                <div id="ed-handle-start" class="ed-handle ed-handle-l"><div class="ed-handle-grip"></div></div>
+                <!-- end handle -->
+                <div id="ed-handle-end" class="ed-handle ed-handle-r"><div class="ed-handle-grip"></div></div>
               </div>
-              <!-- end handle -->
-              <div id="ed-handle-end" title="Drag to set end"
-                style="position:absolute;top:0;bottom:0;width:12px;background:var(--lime);border-radius:0 4px 4px 0;cursor:ew-resize;z-index:2;display:flex;align-items:center;justify-content:center;right:0">
-                <div style="width:2px;height:14px;background:#000;border-radius:1px"></div>
+
+              <!-- Time ruler -->
+              <div id="ed-ruler" class="ed-ruler"></div>
+
+              <!-- Time inputs -->
+              <div class="ed-time-row">
+                <div class="ed-time-chip">
+                  <span class="ed-time-chip-label">START</span>
+                  <input type="number" id="ed-start-in" class="ed-time-chip-input" step="0.1" min="0" oninput="edStartInput()"/>
+                </div>
+                <div class="ed-time-chip ed-dur-chip">
+                  <span class="ed-time-chip-label">DURATION</span>
+                  <span id="ed-dur-lbl" class="ed-dur-val">—</span>
+                </div>
+                <div class="ed-time-chip" style="text-align:right">
+                  <span class="ed-time-chip-label">END</span>
+                  <input type="number" id="ed-end-in" class="ed-time-chip-input" step="0.1" min="0" oninput="edEndInput()"/>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- RIGHT: settings panel -->
+          <div class="ed-right">
+
+            <!-- Caption section -->
+            <div class="ed-section">
+              <div class="ed-section-head">
+                <span>💬 Auto-captions</span>
+                <label class="ed-toggle"><input type="checkbox" id="ed-captions" checked/><span class="ed-slider"></span></label>
+              </div>
+              <div id="ed-caption-opts">
+                <div class="ed-field-label">CAPTION STYLE</div>
+                <div class="ed-style-grid">
+                  <button class="ed-style-btn on" data-style="bold" onclick="selectCapStyle(this)">
+                    <span class="ed-style-preview" style="color:#fff;font-weight:900;text-shadow:2px 2px 0 #000,-2px -2px 0 #000">Aa</span>
+                    <span>Bold</span>
+                  </button>
+                  <button class="ed-style-btn" data-style="outline" onclick="selectCapStyle(this)">
+                    <span class="ed-style-preview" style="color:#fff;-webkit-text-stroke:1px #000">Aa</span>
+                    <span>Outline</span>
+                  </button>
+                  <button class="ed-style-btn" data-style="box" onclick="selectCapStyle(this)">
+                    <span class="ed-style-preview" style="background:#000;color:#fff;padding:2px 4px;border-radius:3px">Aa</span>
+                    <span>Box</span>
+                  </button>
+                  <button class="ed-style-btn" data-style="lime" onclick="selectCapStyle(this)">
+                    <span class="ed-style-preview" style="color:#c8ff00;font-weight:900">Aa</span>
+                    <span>Lime</span>
+                  </button>
+                </div>
+                <div class="ed-field-label" style="margin-top:10px">FONT SIZE</div>
+                <div style="display:flex;gap:6px">
+                  <button class="cap-style-btn" data-size="small" onclick="selectCapSize(this)">Small</button>
+                  <button class="cap-style-btn on" data-size="medium" onclick="selectCapSize(this)">Medium</button>
+                  <button class="cap-style-btn" data-size="large" onclick="selectCapSize(this)">Large</button>
+                </div>
               </div>
             </div>
 
-            <!-- Time readout -->
-            <div style="display:flex;justify-content:space-between;font-family:var(--font-mono);font-size:11px;color:var(--ink2);margin-bottom:14px">
-              <span>▶ Start: <strong id="ed-start-lbl" style="color:var(--lime)">0.0s</strong></span>
-              <span id="ed-dur-lbl" style="color:var(--ink3)">Duration: —</span>
-              <span>⏹ End: <strong id="ed-end-lbl" style="color:var(--lime)">0.0s</strong></span>
-            </div>
-
-            <!-- Caption toggle -->
-            <div style="display:flex;align-items:center;justify-content:space-between;padding:12px;background:var(--bg3);border-radius:var(--r);margin-bottom:8px;border:1px solid var(--border)">
-              <div>
-                <div style="font-family:var(--font-head);font-size:13px;font-weight:700;margin-bottom:2px">💬 Auto-captions</div>
-                <div style="font-size:11px;color:var(--ink2)">Whisper AI transcribes and burns styled captions into the clip</div>
+            <!-- Watermark section -->
+            <div class="ed-section">
+              <div class="ed-section-head">
+                <span>🏷 Brand watermark</span>
+                <label class="ed-toggle"><input type="checkbox" id="ed-logo-on" onchange="document.getElementById('ed-logo-opts').style.display=this.checked?'block':'none'"/><span class="ed-slider"></span></label>
               </div>
-              <label class="ed-toggle">
-                <input type="checkbox" id="ed-captions" checked/>
-                <span class="ed-slider"></span>
-              </label>
-            </div>
-
-            <!-- Caption style -->
-            <div id="ed-caption-opts" style="padding:10px 12px;background:var(--bg3);border-radius:var(--r);margin-bottom:8px;border:1px solid var(--border);font-size:12px">
-              <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
-                <span style="font-family:var(--font-mono);font-size:10px;color:var(--ink3);text-transform:uppercase;letter-spacing:.06em">Style:</span>
-                <button class="cap-style-btn on" data-style="bold" onclick="selectCapStyle(this)">Bold white</button>
-                <button class="cap-style-btn" data-style="outline" onclick="selectCapStyle(this)">Outlined</button>
-                <button class="cap-style-btn" data-style="box" onclick="selectCapStyle(this)">Box highlight</button>
-                <button class="cap-style-btn" data-style="lime" onclick="selectCapStyle(this)">Lime accent</button>
+              <div id="ed-logo-opts" style="display:none">
+                <div class="ed-field-label">LOGO FILE</div>
+                <label class="ed-file-drop" id="ed-logo-drop">
+                  <input type="file" id="ed-logo-file" accept="image/png,image/jpeg,image/webp" style="display:none" onchange="edLogoSelected(this)"/>
+                  <span id="ed-logo-name">Click to upload PNG / JPG</span>
+                </label>
+                <div class="ed-field-label" style="margin-top:10px">POSITION</div>
+                <div class="ed-pos-grid" id="ed-pos-grid">
+                  <button class="ed-pos-btn" data-pos="top-left" onclick="selectLogoPos(this)">↖</button>
+                  <button class="ed-pos-btn on" data-pos="top-right" onclick="selectLogoPos(this)">↗</button>
+                  <button class="ed-pos-btn" data-pos="bottom-left" onclick="selectLogoPos(this)">↙</button>
+                  <button class="ed-pos-btn" data-pos="bottom-right" onclick="selectLogoPos(this)">↘</button>
+                </div>
+                <div class="ed-field-label" style="margin-top:10px">OPACITY</div>
+                <input type="range" id="ed-logo-opacity" min="10" max="100" value="80" style="width:100%;accent-color:var(--lime)"/>
               </div>
             </div>
 
-            <!-- Brand logo -->
-            <div style="display:flex;align-items:center;justify-content:space-between;padding:12px;background:var(--bg3);border-radius:var(--r);margin-bottom:8px;border:1px solid var(--border)">
-              <div>
-                <div style="font-family:var(--font-head);font-size:13px;font-weight:700;margin-bottom:2px">🏷 Brand watermark</div>
-                <div style="font-size:11px;color:var(--ink2)">Upload a logo PNG — overlaid on every clip</div>
-              </div>
-              <label class="ed-toggle">
-                <input type="checkbox" id="ed-logo-on"/>
-                <span class="ed-slider"></span>
-              </label>
-            </div>
-            <div id="ed-logo-opts" style="display:none;padding:10px 12px;background:var(--bg3);border-radius:var(--r);margin-bottom:8px;border:1px solid var(--border)">
-              <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-                <input type="file" id="ed-logo-file" accept="image/png,image/jpeg,image/webp" style="font-size:11px;font-family:var(--font-mono);color:var(--ink2);flex:1"/>
-                <div style="font-size:11px;color:var(--ink3);font-family:var(--font-mono)">Position:</div>
-                <select id="ed-logo-pos" style="font-size:11px;padding:4px 8px;background:var(--bg4);border:1px solid var(--border2);border-radius:var(--r);color:var(--ink);font-family:var(--font-mono)">
-                  <option value="top-left">Top left</option>
-                  <option value="top-right" selected>Top right</option>
-                  <option value="bottom-left">Bottom left</option>
-                  <option value="bottom-right">Bottom right</option>
-                </select>
-              </div>
-            </div>
-
-            <!-- Format -->
-            <div style="padding:12px;background:var(--bg3);border-radius:var(--r);margin-bottom:14px;border:1px solid var(--border)">
-              <div style="font-family:var(--font-head);font-size:13px;font-weight:700;margin-bottom:8px">📐 Output format</div>
-              <div style="display:flex;gap:8px;flex-wrap:wrap">
-                <button class="cap-style-btn on" data-fmt="vertical" onclick="selectFmt(this)">📱 9:16 Vertical</button>
-                <button class="cap-style-btn" data-fmt="horizontal" onclick="selectFmt(this)">🖥 16:9 Horizontal</button>
-                <button class="cap-style-btn" data-fmt="both" onclick="selectFmt(this)">Both</button>
+            <!-- Format section -->
+            <div class="ed-section">
+              <div class="ed-section-head"><span>📐 Output format</span></div>
+              <div class="ed-fmt-btns">
+                <button class="ed-fmt-btn on" data-fmt="vertical" onclick="selectFmt(this)">
+                  <span style="font-size:20px">📱</span>
+                  <strong>9:16</strong>
+                  <span>Reels · TikTok · Shorts</span>
+                </button>
+                <button class="ed-fmt-btn" data-fmt="horizontal" onclick="selectFmt(this)">
+                  <span style="font-size:20px">🖥</span>
+                  <strong>16:9</strong>
+                  <span>YouTube · LinkedIn</span>
+                </button>
+                <button class="ed-fmt-btn" data-fmt="both" onclick="selectFmt(this)">
+                  <span style="font-size:20px">⚡</span>
+                  <strong>Both</strong>
+                  <span>All platforms</span>
+                </button>
               </div>
             </div>
 
             <!-- Export -->
-            <button id="ed-export-btn" onclick="editorExport()" style="width:100%;padding:14px;background:var(--lime);color:#000;border:none;border-radius:var(--r);font-family:var(--font-head);font-size:15px;font-weight:800;cursor:pointer;transition:all .2s;letter-spacing:-.3px">
-              ✂ Trim, caption & export →
+            <button id="ed-export-btn" onclick="editorExport()" class="ed-export-btn">
+              ✂ &nbsp;Trim, caption & export
             </button>
-            <div id="ed-export-status" style="display:none;margin-top:12px"></div>
-          </div>
-        </div>
-      </div>
+            <div id="ed-export-status" style="margin-top:12px"></div>
 
-      <!-- Empty state -->
-      <div id="ed-empty" class="a-card" style="text-align:center;padding:48px;color:var(--ink2)">
-        <div style="font-size:36px;margin-bottom:12px">✏</div>
-        <div style="font-family:var(--font-head);font-size:16px;font-weight:800;margin-bottom:6px">Load a video to start editing</div>
-        <div style="font-size:13px">Paste a YouTube URL above, or process a clip in the Clips tab then click "Edit this clip"</div>
-      </div>
+          </div><!-- /ed-right -->
+        </div><!-- /ed-columns -->
+      </div><!-- /ed-workspace -->
     </div>
 
     <!-- POSTS -->
@@ -1010,7 +1171,7 @@ function toggleFaq(el){
 
 // ── App tabs ──────────────────────────────────────────────────────────────────
 function switchTab(t){
-  const tabs=['clips','posts','connect'];
+  const tabs=['clips','editor','posts','connect'];
   document.querySelectorAll('.app-tab').forEach((b,i)=>b.classList.toggle('on',tabs[i]===t));
   document.querySelectorAll('.app-panel').forEach(p=>p.classList.remove('on'));
   document.getElementById('tab-'+t).classList.add('on');
@@ -1309,192 +1470,282 @@ async function doCopy(btn){
   setTimeout(()=>{btn.textContent='Copy';btn.style.color='';},2000);
 }
 // ── EDITOR ────────────────────────────────────────────────────────────────────
-let edVideoUrl='', edStart=0, edEnd=0, edDuration=0, edCapStyle='bold', edFmt='vertical';
-
-// Toggle logo opts visibility
-document.getElementById('ed-logo-on').addEventListener('change',function(){
-  document.getElementById('ed-logo-opts').style.display=this.checked?'block':'none';
-});
-document.getElementById('ed-captions').addEventListener('change',function(){
-  document.getElementById('ed-caption-opts').style.display=this.checked?'block':'none';
-});
+let edVideoUrl='', edStart=0, edEnd=0, edDuration=0;
+let edCapStyle='bold', edCapSize='medium', edFmt='vertical', edLogoPos='top-right';
 
 function selectCapStyle(btn){
-  document.querySelectorAll('.cap-style-btn[data-style]').forEach(b=>b.classList.remove('on'));
+  document.querySelectorAll('.ed-style-btn[data-style]').forEach(b=>b.classList.remove('on'));
   btn.classList.add('on'); edCapStyle=btn.dataset.style;
+  updateCapPreview();
+}
+function selectCapSize(btn){
+  document.querySelectorAll('.cap-style-btn[data-size]').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on'); edCapSize=btn.dataset.size;
 }
 function selectFmt(btn){
-  document.querySelectorAll('.cap-style-btn[data-fmt]').forEach(b=>b.classList.remove('on'));
+  document.querySelectorAll('.ed-fmt-btn[data-fmt]').forEach(b=>b.classList.remove('on'));
   btn.classList.add('on'); edFmt=btn.dataset.fmt;
+  const box=$('ed-preview-box');
+  box.classList.toggle('fmt-vertical', edFmt==='vertical');
+  $('ed-fmt-badge').textContent=edFmt==='vertical'?'📱 9:16':edFmt==='horizontal'?'🖥 16:9':'⚡ Both';
+}
+function selectLogoPos(btn){
+  document.querySelectorAll('.ed-pos-btn[data-pos]').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on'); edLogoPos=btn.dataset.pos;
+}
+function edLogoSelected(inp){
+  $('ed-logo-name').textContent=inp.files[0]?inp.files[0].name:'Click to upload PNG / JPG';
+}
+document.getElementById('ed-captions').addEventListener('change',function(){
+  $('ed-caption-opts').style.display=this.checked?'block':'none';
+  $('ed-cap-preview').style.display=this.checked?'block':'none';
+});
+
+function updateCapPreview(){
+  const p=$('ed-cap-preview');
+  const styles={
+    bold:'color:#fff;font-weight:900;text-shadow:2px 2px 0 #000,-2px -2px 0 #000,2px -2px 0 #000,-2px 2px 0 #000',
+    outline:'color:#fff;-webkit-text-stroke:1.5px #000',
+    box:'background:rgba(0,0,0,.8);color:#fff;padding:4px 10px;border-radius:4px',
+    lime:'color:#c8ff00;font-weight:900;text-shadow:1px 1px 0 #000'
+  };
+  p.style.cssText='position:absolute;bottom:12%;left:0;right:0;text-align:center;padding:0 16px;pointer-events:none;font-family:var(--font-head);font-size:16px;line-height:1.4;display:block';
+  p.innerHTML=`<span style="${styles[edCapStyle]||styles.bold}">Your captions will appear here</span>`;
 }
 
 async function editorLoadUrl(){
   const raw=$('ed-url').value.trim();
-  if(!raw){alert('Paste a URL first');return;}
-  // If YouTube URL — analyse it first to get a streamable source
+  if(!raw){showErr('Paste a URL first');return;}
+  const btn=$('ed-load-btn'); btn.disabled=true; btn.textContent='Loading...';
+  await _editorLoad(raw);
+  btn.disabled=false; btn.textContent='Load video →';
+}
+async function editorLoadUrlTop(){
+  const raw=$('ed-url-top').value.trim();
+  if(!raw) return;
+  await _editorLoad(raw);
+}
+async function _editorLoad(raw){
   const ytMatch=raw.match(/(?:v=|youtu\.be\/|\/shorts\/)([A-Za-z0-9_-]{11})/);
   if(ytMatch){
-    $('ed-url').disabled=true;
     try{
       const d=await apiFetch('/analyse',{url:raw});
       currentVideoId=d.videoId; currentTitle=d.title;
-      // Use a proxy play URL via backend
       editorMount(`${API}/stream/${d.videoId}`, d.duration, d.title);
-    }catch(e){alert('Could not load video: '+e.message);}
-    finally{$('ed-url').disabled=false;}
+    }catch(e){showErr('Could not load: '+e.message);}
   } else {
-    // Direct video URL (e.g. from processed clip)
-    editorMount(raw, null, raw.split('/').pop());
+    editorMount(raw, null, raw.split('/').pop().split('?')[0]);
   }
 }
 
-// Called from renderDownloads "Edit" button
 function editorOpen(videoUrl, dur, title){
   switchTab('editor');
-  $('ed-url').value=videoUrl;
   editorMount(videoUrl, dur, title);
 }
 
 function editorMount(url, dur, title){
   edVideoUrl=url;
   const vid=$('ed-video');
-  vid.src=url;
-  vid.load();
-  $('ed-preview-wrap').style.display='block';
+  vid.src=url; vid.load();
   $('ed-empty').style.display='none';
-  $('ed-export-status').style.display='none';
+  $('ed-workspace').style.display='block';
+  $('ed-title-lbl').textContent=title||'Clip Editor';
+  $('ed-export-status').innerHTML='';
+  updateCapPreview();
 
   vid.onloadedmetadata=()=>{
-    edDuration = dur || vid.duration;
+    edDuration=dur||vid.duration;
     edStart=0; edEnd=edDuration;
+    buildWaveform();
+    buildRuler();
     updateHandles();
-    updateLabels();
+    updateTimeInputs();
   };
-
-  // Playhead sync
   vid.ontimeupdate=()=>{
+    if(!edDuration) return;
     const pct=(vid.currentTime/edDuration)*100;
     $('ed-playhead').style.left=pct+'%';
+    $('ed-time-cur').textContent=fmtTime(vid.currentTime);
+    // loop within trim range
+    if(vid.currentTime>=edEnd) vid.currentTime=edStart;
+    // update waveform highlight
+    const bars=document.querySelectorAll('.wv-bar');
+    bars.forEach((b,i)=>{
+      const t=(i/bars.length)*edDuration;
+      b.classList.toggle('sel', t>=edStart && t<=edEnd);
+    });
   };
+  vid.onloadeddata=()=>{ $('ed-time-tot').textContent=fmtTime(edDuration); };
 
   // Timeline click to seek
   $('ed-timeline').onclick=function(e){
+    if(e.target.classList.contains('ed-handle')||e.target.classList.contains('ed-handle-grip')) return;
     const rect=this.getBoundingClientRect();
-    const pct=(e.clientX-rect.left)/rect.width;
+    const pct=Math.max(0,Math.min(1,(e.clientX-rect.left)/rect.width));
     vid.currentTime=pct*edDuration;
   };
 
-  // Drag handles
-  initHandleDrag('ed-handle-start', v=>{ edStart=Math.min(v, edEnd-1); updateHandles(); updateLabels(); vid.currentTime=edStart; });
-  initHandleDrag('ed-handle-end',   v=>{ edEnd=Math.max(v, edStart+1); updateHandles(); updateLabels(); vid.currentTime=edEnd; });
+  initHandleDrag('ed-handle-start', v=>{
+    edStart=Math.max(0,Math.min(v, edEnd-1));
+    updateHandles(); updateTimeInputs(); vid.currentTime=edStart;
+  });
+  initHandleDrag('ed-handle-end', v=>{
+    edEnd=Math.max(edStart+1,Math.min(v,edDuration));
+    updateHandles(); updateTimeInputs(); vid.currentTime=edEnd;
+  });
 }
 
+function edPlayPause(){
+  const vid=$('ed-video'), btn=$('ed-play-btn');
+  if(vid.paused){ vid.play(); btn.textContent='⏸'; }
+  else{ vid.pause(); btn.textContent='▶'; }
+}
+function edSkip(s){ const v=$('ed-video'); v.currentTime=Math.max(edStart,Math.min(edEnd,v.currentTime+s)); }
+function edMute(){ const v=$('ed-video'); v.muted=!v.muted; $('ed-mute-btn').textContent=v.muted?'🔇':'🔊'; }
+function fmtTime(s){ const m=Math.floor(s/60); return m+':'+(Math.floor(s%60)+'').padStart(2,'0'); }
+
+function edStartInput(){
+  const v=parseFloat($('ed-start-in').value)||0;
+  edStart=Math.max(0,Math.min(v,edEnd-1));
+  updateHandles(); updateTimeInputs();
+  $('ed-video').currentTime=edStart;
+}
+function edEndInput(){
+  const v=parseFloat($('ed-end-in').value)||edDuration;
+  edEnd=Math.max(edStart+1,Math.min(v,edDuration));
+  updateHandles(); updateTimeInputs();
+  $('ed-video').currentTime=edEnd;
+}
+
+function buildWaveform(){
+  const w=$('ed-waveform'); w.innerHTML='';
+  const bars=60;
+  for(let i=0;i<bars;i++){
+    const h=20+Math.random()*60;
+    const d=document.createElement('div');
+    d.className='wv-bar';
+    d.style.height=h+'%';
+    w.appendChild(d);
+  }
+}
+function buildRuler(){
+  const r=$('ed-ruler'); r.innerHTML='';
+  const steps=8;
+  for(let i=0;i<=steps;i++){
+    const t=(i/steps)*edDuration;
+    const s=document.createElement('span');
+    s.textContent=fmtTime(t);
+    s.style.left=(i/steps*100)+'%';
+    r.appendChild(s);
+  }
+}
 function initHandleDrag(handleId, onUpdate){
   const handle=$(handleId);
-  let dragging=false;
   handle.onmousedown=handle.ontouchstart=function(e){
-    e.preventDefault(); dragging=true;
+    e.preventDefault(); e.stopPropagation();
     const tl=$('ed-timeline');
     function move(ev){
-      if(!dragging)return;
       const clientX=ev.touches?ev.touches[0].clientX:ev.clientX;
       const rect=tl.getBoundingClientRect();
       let pct=Math.max(0,Math.min(1,(clientX-rect.left)/rect.width));
       onUpdate(pct*edDuration);
     }
-    function up(){dragging=false;document.removeEventListener('mousemove',move);document.removeEventListener('mouseup',up);document.removeEventListener('touchmove',move);document.removeEventListener('touchend',up);}
+    function up(){
+      document.removeEventListener('mousemove',move);
+      document.removeEventListener('mouseup',up);
+      document.removeEventListener('touchmove',move);
+      document.removeEventListener('touchend',up);
+    }
     document.addEventListener('mousemove',move);
     document.addEventListener('mouseup',up);
     document.addEventListener('touchmove',move,{passive:false});
     document.addEventListener('touchend',up);
   };
 }
-
 function updateHandles(){
-  const startPct=(edStart/edDuration)*100;
-  const endPct=(edEnd/edDuration)*100;
-  $('ed-handle-start').style.left=startPct+'%';
-  $('ed-handle-end').style.left=endPct+'%';
-  $('ed-range-fill').style.left=startPct+'%';
-  $('ed-range-fill').style.width=(endPct-startPct)+'%';
+  if(!edDuration) return;
+  const sp=(edStart/edDuration)*100;
+  const ep=(edEnd/edDuration)*100;
+  $('ed-handle-start').style.left=sp+'%';
+  $('ed-handle-end').style.left=ep+'%';
+  $('ed-range-fill').style.left=sp+'%';
+  $('ed-range-fill').style.width=(ep-sp)+'%';
+  $('ed-shadow-left').style.left='0';
+  $('ed-shadow-left').style.width=sp+'%';
+  $('ed-shadow-right').style.left=ep+'%';
+  $('ed-shadow-right').style.width=(100-ep)+'%';
+  $('ed-dur-lbl').textContent=((edEnd-edStart).toFixed(1))+'s';
 }
-function updateLabels(){
-  $('ed-start-lbl').textContent=edStart.toFixed(1)+'s';
-  $('ed-end-lbl').textContent=edEnd.toFixed(1)+'s';
-  $('ed-dur-lbl').textContent='Duration: '+(edEnd-edStart).toFixed(1)+'s';
+function updateTimeInputs(){
+  $('ed-start-in').value=edStart.toFixed(1);
+  $('ed-end-in').value=edEnd.toFixed(1);
+  $('ed-dur-lbl').textContent=((edEnd-edStart).toFixed(1))+'s';
 }
 
 async function editorExport(){
-  if(!edVideoUrl){alert('Load a video first');return;}
+  if(!edVideoUrl){showErr('Load a video first');return;}
   const captions=$('ed-captions').checked;
   const logoOn=$('ed-logo-on').checked;
   const logoFile=logoOn?$('ed-logo-file').files[0]:null;
-  const logoPos=$('ed-logo-pos').value;
+  const opacity=parseInt($('ed-logo-opacity').value)||80;
 
   const btn=$('ed-export-btn');
   btn.disabled=true; btn.textContent='⏳ Processing...';
   const status=$('ed-export-status');
-  status.style.display='block';
-  status.innerHTML=`<div style="background:var(--bg3);border-radius:var(--r);padding:12px;border:1px solid var(--border)">
-    <div style="height:3px;background:var(--border);border-radius:2px;overflow:hidden;margin-bottom:8px"><div id="ed-pbar" style="height:100%;background:var(--lime);border-radius:2px;transition:width .4s;width:5%"></div></div>
+  status.innerHTML=`<div style="background:var(--bg3);border-radius:var(--r2);padding:14px;border:1px solid var(--border)">
+    <div style="height:4px;background:var(--border);border-radius:2px;overflow:hidden;margin-bottom:10px"><div id="ed-pbar" style="height:100%;background:var(--lime);border-radius:2px;transition:width .4s;width:5%"></div></div>
     <div style="font-size:11px;font-family:var(--font-mono);color:var(--ink2)" id="ed-pmsg">Sending to backend...</div>
   </div>`;
-
   try{
-    let body;
+    let respBody;
     if(logoFile){
       const fd=new FormData();
-      fd.append('video_url', edVideoUrl);
-      fd.append('start', edStart);
-      fd.append('end', edEnd);
-      fd.append('captions', captions);
-      fd.append('caption_style', edCapStyle);
-      fd.append('formats', edFmt);
-      fd.append('logo_position', logoPos);
-      fd.append('logo', logoFile);
-      if(currentVideoId) fd.append('videoId', currentVideoId);
-      const r=await fetch(`${API}/editor-export`, {method:'POST', body:fd});
-      if(!r.ok)throw new Error(await r.text());
-      body=await r.json();
+      fd.append('video_url',edVideoUrl);
+      fd.append('start',edStart); fd.append('end',edEnd);
+      fd.append('captions',captions);
+      fd.append('caption_style',edCapStyle);
+      fd.append('caption_size',edCapSize);
+      fd.append('formats',edFmt);
+      fd.append('logo_position',edLogoPos);
+      fd.append('logo_opacity',opacity);
+      fd.append('logo',logoFile);
+      if(currentVideoId) fd.append('videoId',currentVideoId);
+      const r=await fetch(`${API}/editor-export`,{method:'POST',body:fd});
+      if(!r.ok) throw new Error(await r.text());
+      respBody=await r.json();
     } else {
-      body=await apiFetch('/editor-export',{
-        video_url: edVideoUrl,
-        start: edStart, end: edEnd,
-        captions, caption_style: edCapStyle,
-        formats: edFmt,
-        videoId: currentVideoId||undefined
+      respBody=await apiFetch('/editor-export',{
+        video_url:edVideoUrl, start:edStart, end:edEnd,
+        captions, caption_style:edCapStyle, caption_size:edCapSize,
+        formats:edFmt, videoId:currentVideoId||undefined
       });
     }
-
-    // Poll job
-    pollEditorJob(body.jobId);
+    pollEditorJob(respBody.jobId);
   }catch(e){
-    btn.disabled=false; btn.textContent='✂ Trim, caption & export →';
+    btn.disabled=false; btn.textContent='✂  Trim, caption & export';
     status.innerHTML=`<div class="err2" style="display:block">⚠ ${esc(e.message)}</div>`;
   }
 }
-
 function pollEditorJob(jid){
   const iv=setInterval(async()=>{
     try{
-      const r=await fetch(`${API}/job/${jid}`);const j=await r.json();
-      const pbar=$('ed-pbar'),pmsg=$('ed-pmsg');
-      if(pbar)pbar.style.width=j.progress+'%';
-      if(pmsg)pmsg.textContent=j.message||'Processing...';
+      const r=await fetch(`${API}/job/${jid}`); const j=await r.json();
+      const pb=$('ed-pbar'),pm=$('ed-pmsg');
+      if(pb) pb.style.width=j.progress+'%';
+      if(pm) pm.textContent=j.message||'Processing...';
       if(j.status==='done'){
         clearInterval(iv);
-        const btn=$('ed-export-btn');
-        btn.disabled=false; btn.textContent='✂ Trim, caption & export →';
+        $('ed-export-btn').disabled=false; $('ed-export-btn').textContent='✂  Trim, caption & export';
         const btns=Object.entries(j.files||{}).map(([fmt,info])=>
           `<a href="${API}${info.downloadUrl}" download class="dl-btn" style="text-decoration:none">⬇ ${fmt==='vertical'?'📱 9:16':'🖥 16:9'} ${info.sizeMb}MB</a>`
         ).join('');
-        $('ed-export-status').innerHTML=`<div style="background:rgba(200,255,0,.05);border:1px solid rgba(200,255,0,.2);border-radius:var(--r);padding:14px">
-          <div style="font-size:12px;font-family:var(--font-mono);color:var(--lime);margin-bottom:10px">✅ Export ready!</div>
+        $('ed-export-status').innerHTML=`<div style="background:rgba(200,255,0,.05);border:1px solid rgba(200,255,0,.3);border-radius:var(--r2);padding:16px">
+          <div style="font-family:var(--font-mono);font-size:12px;color:var(--lime);margin-bottom:12px">✅ Export ready!</div>
           <div style="display:flex;gap:8px;flex-wrap:wrap">${btns}</div>
         </div>`;
       } else if(j.status==='error'){
         clearInterval(iv);
-        $('ed-export-btn').disabled=false; $('ed-export-btn').textContent='✂ Trim, caption & export →';
+        $('ed-export-btn').disabled=false; $('ed-export-btn').textContent='✂  Trim, caption & export';
         $('ed-export-status').innerHTML=`<div class="err2" style="display:block">⚠ ${esc(j.message)}</div>`;
       }
     }catch(e){clearInterval(iv);}
