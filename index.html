@@ -3,811 +3,941 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>VidPost AI — The Smarter Alternative to Opus Clip</title>
-<meta name="description" content="AI clips, captions, text posts and auto-posting to 7 platforms. No credit limits. No clunky editor. Built by creators, for creators.">
+<title>VidPost AI — Turn Any Video Into Viral Content Automatically</title>
+<meta name="description" content="AI clips your YouTube videos, writes platform-native captions, and auto-posts to LinkedIn, YouTube, Instagram, TikTok, X and Facebook. Zero manual work.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Syne+Mono&family=Outfit:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
-:root{--lime:#c8ff00;--lime2:#a8d400;--lime3:#e8ff80;--r:8px;--r2:16px;--fh:'Syne',sans-serif;--fb:'Outfit',sans-serif;--fm:'Syne Mono',monospace}
-[data-theme="dark"]{--bg:#080808;--bg2:#0f0f0f;--bg3:#181818;--bg4:#222;--ink:#f0f0f0;--ink2:#888;--ink3:#444;--border:#1e1e1e;--border2:#2a2a2a;--card:#111;--card2:#161616;--glow:rgba(200,255,0,.1)}
-[data-theme="light"]{--bg:#fafafa;--bg2:#f4f4f4;--bg3:#ececec;--bg4:#e0e0e0;--ink:#0a0a0a;--ink2:#555;--ink3:#aaa;--border:#e4e4e4;--border2:#d8d8d8;--card:#fff;--card2:#f8f8f8;--glow:rgba(168,212,0,.12)}
+/* ── Tokens ──────────────────────────────────────────────────────────────── */
+:root {
+  --lime:#c8ff00; --lime2:#a8d400; --lime3:#e8ff80;
+  --r:8px; --r2:16px;
+  --font-head:'Syne',sans-serif;
+  --font-body:'Outfit',sans-serif;
+  --font-mono:'Syne Mono',monospace;
+}
+[data-theme="dark"] {
+  --bg:#080808; --bg2:#111; --bg3:#181818; --bg4:#222;
+  --ink:#f0f0f0; --ink2:#aaa; --ink3:#555;
+  --border:#2a2a2a; --border2:#333;
+  --card:#111; --card2:#161616;
+  --glow:rgba(200,255,0,.12);
+}
+[data-theme="light"] {
+  --bg:#fafafa; --bg2:#f0f0f0; --bg3:#e8e8e8; --bg4:#ddd;
+  --ink:#0a0a0a; --ink2:#555; --ink3:#aaa;
+  --border:#e0e0e0; --border2:#d0d0d0;
+  --card:#fff; --card2:#f8f8f8;
+  --glow:rgba(168,212,0,.15);
+}
+
+/* ── Reset ───────────────────────────────────────────────────────────────── */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html{scroll-behavior:smooth}
-body{font-family:var(--fb);background:var(--bg);color:var(--ink);min-height:100vh;overflow-x:hidden;transition:background .3s,color .3s}
+body{font-family:var(--font-body);background:var(--bg);color:var(--ink);min-height:100vh;overflow-x:hidden;transition:background .3s,color .3s}
 ::selection{background:var(--lime);color:#000}
-body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.025'/%3E%3C/svg%3E");background-size:200px;opacity:.5}
-::-webkit-scrollbar{width:3px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
 
-/* NAV */
-nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:0 48px;height:64px;background:rgba(8,8,8,.85);backdrop-filter:blur(24px);border-bottom:1px solid var(--border);transition:all .3s}
-[data-theme="light"] nav{background:rgba(250,250,250,.9)}
-.logo{font-family:var(--fh);font-size:19px;font-weight:800;letter-spacing:-.5px;color:var(--ink);text-decoration:none;display:flex;align-items:center;gap:8px}
-.logo-dot{width:7px;height:7px;border-radius:50%;background:var(--lime);display:inline-block;animation:blink 3s infinite}
-@keyframes blink{0%,90%,100%{opacity:1}95%{opacity:.2}}
-.nav-center{display:flex;gap:2px}
-.nav-link{font-size:13px;color:var(--ink2);text-decoration:none;padding:6px 14px;border-radius:20px;transition:all .2s;font-family:var(--fh);font-weight:600;letter-spacing:-.2px}
+/* ── Noise overlay ───────────────────────────────────────────────────────── */
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+  background-size:200px;opacity:.4}
+
+/* ── Scrollbar ───────────────────────────────────────────────────────────── */
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+
+/* ── Nav ─────────────────────────────────────────────────────────────────── */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:16px 48px;
+  background:rgba(8,8,8,.8);
+  backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--border);
+  transition:background .3s}
+[data-theme="light"] nav{background:rgba(250,250,250,.85)}
+.nav-logo{font-family:var(--font-head);font-size:20px;font-weight:800;letter-spacing:-0.5px;color:var(--ink);text-decoration:none;display:flex;align-items:center;gap:8px}
+.nav-logo .logo-dot{width:8px;height:8px;border-radius:50%;background:var(--lime);display:inline-block}
+.nav-links{display:flex;align-items:center;gap:8px}
+.nav-link{font-size:13px;color:var(--ink2);text-decoration:none;padding:6px 14px;border-radius:20px;transition:all .2s;font-family:var(--font-head);font-weight:500}
 .nav-link:hover{color:var(--ink);background:var(--bg3)}
-.nav-right{display:flex;align-items:center;gap:8px}
-.theme-btn{width:34px;height:34px;border-radius:50%;border:1px solid var(--border2);background:var(--bg3);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:15px;transition:all .2s;color:var(--ink)}
-.theme-btn:hover{border-color:var(--lime)}
-.btn-nav-ghost{font-size:13px;color:var(--ink2);background:transparent;border:1px solid var(--border2);padding:7px 16px;border-radius:20px;cursor:pointer;font-family:var(--fh);font-weight:600;transition:all .2s}
-.btn-nav-ghost:hover{border-color:var(--ink2);color:var(--ink)}
-.btn-nav-cta{background:var(--lime);color:#000;font-size:13px;font-weight:800;padding:8px 20px;border-radius:20px;border:none;cursor:pointer;font-family:var(--fh);transition:all .2s}
-.btn-nav-cta:hover{background:var(--lime3);transform:translateY(-1px)}
+.nav-cta{background:var(--lime);color:#000;font-size:13px;font-weight:700;padding:8px 20px;border-radius:20px;text-decoration:none;font-family:var(--font-head);transition:all .2s;border:none;cursor:pointer}
+.nav-cta:hover{background:var(--lime3);transform:translateY(-1px)}
+.theme-btn{width:36px;height:36px;border-radius:50%;border:1px solid var(--border2);background:var(--bg3);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px;transition:all .2s;color:var(--ink)}
+.theme-btn:hover{border-color:var(--lime);background:var(--glow)}
 
-/* HERO */
-.hero{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:100px 24px 80px;position:relative;z-index:1}
-.hero-eyebrow{display:inline-flex;align-items:center;gap:8px;padding:5px 14px;border-radius:20px;border:1px solid var(--border2);background:var(--bg3);font-family:var(--fm);font-size:11px;color:var(--ink2);margin-bottom:28px;letter-spacing:.06em}
-.hero-eyebrow .dot{width:5px;height:5px;border-radius:50%;background:var(--lime);animation:pulse 2s infinite}
-@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.8)}}
-h1.hero-title{font-family:var(--fh);font-size:clamp(52px,8vw,100px);line-height:.92;font-weight:800;letter-spacing:-4px;margin-bottom:20px;max-width:1000px}
-.hero-title .a{color:var(--lime)}
-.hero-title .d{color:var(--ink3)}
-.hero-sub{font-size:clamp(15px,2vw,19px);color:var(--ink2);line-height:1.65;max-width:540px;margin-bottom:44px;font-weight:300}
-.hero-btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-bottom:60px}
-.btn-hero-primary{padding:14px 32px;border-radius:var(--r2);font-family:var(--fh);font-size:15px;font-weight:800;cursor:pointer;background:var(--lime);color:#000;border:none;box-shadow:0 0 60px var(--glow);transition:all .25s;display:inline-flex;align-items:center;gap:8px;text-decoration:none;letter-spacing:-.3px}
-.btn-hero-primary:hover{background:var(--lime3);transform:translateY(-3px);box-shadow:0 12px 60px var(--glow)}
-.btn-hero-secondary{padding:14px 32px;border-radius:var(--r2);font-family:var(--fh);font-size:15px;font-weight:700;cursor:pointer;background:transparent;color:var(--ink2);border:1.5px solid var(--border2);transition:all .25s;display:inline-flex;align-items:center;gap:8px;text-decoration:none}
-.btn-hero-secondary:hover{border-color:var(--lime);color:var(--lime)}
-.hero-social-proof{display:flex;align-items:center;gap:20px;flex-wrap:wrap;justify-content:center;margin-bottom:60px}
-.sp-stat{text-align:center}
-.sp-num{font-family:var(--fh);font-size:28px;font-weight:800;color:var(--ink);letter-spacing:-1px}
-.sp-lbl{font-size:11px;color:var(--ink2);font-family:var(--fm);margin-top:2px;letter-spacing:.05em}
-.sp-div{width:1px;height:32px;background:var(--border2)}
-.platform-pills{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
-.pp{display:flex;align-items:center;gap:6px;padding:7px 14px;border-radius:20px;border:1px solid var(--border);background:var(--bg3);font-size:12px;font-family:var(--fh);font-weight:600;color:var(--ink2);transition:all .2s}
-.pp:hover{border-color:var(--lime);color:var(--lime);background:var(--glow)}
-.pp .c{width:7px;height:7px;border-radius:50%}
+/* ── Hero ────────────────────────────────────────────────────────────────── */
+.hero{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:120px 24px 80px;position:relative;z-index:1}
+.hero-badge{display:inline-flex;align-items:center;gap:8px;padding:6px 16px;border-radius:20px;border:1px solid var(--border2);background:var(--bg3);font-family:var(--font-mono);font-size:11px;color:var(--ink2);margin-bottom:32px;letter-spacing:.08em}
+.hero-badge span{width:6px;height:6px;border-radius:50%;background:var(--lime);display:inline-block;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.hero h1{font-family:var(--font-head);font-size:clamp(48px,7vw,96px);line-height:.95;font-weight:800;letter-spacing:-3px;margin-bottom:24px;max-width:900px}
+.hero h1 .accent{color:var(--lime)}
+.hero h1 .dim{color:var(--ink3)}
+.hero-sub{font-size:clamp(16px,2vw,20px);color:var(--ink2);line-height:1.6;max-width:560px;margin-bottom:48px;font-weight:300}
+.hero-actions{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-bottom:64px}
+.btn-hero{padding:14px 32px;border-radius:var(--r2);font-family:var(--font-head);font-size:15px;font-weight:700;cursor:pointer;transition:all .2s;text-decoration:none;display:inline-flex;align-items:center;gap:8px}
+.btn-hero.primary{background:var(--lime);color:#000;border:2px solid var(--lime);box-shadow:0 0 40px var(--glow)}
+.btn-hero.primary:hover{background:var(--lime3);transform:translateY(-2px);box-shadow:0 8px 40px var(--glow)}
+.btn-hero.secondary{background:transparent;color:var(--ink);border:2px solid var(--border2)}
+.btn-hero.secondary:hover{border-color:var(--lime);color:var(--lime)}
 
-/* SECTIONS */
-.section{padding:100px 48px;position:relative;z-index:1;max-width:1200px;margin:0 auto}
-.section-full{padding:100px 0;position:relative;z-index:1;background:var(--bg2);border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
-.section-full .inner{max-width:1200px;margin:0 auto;padding:0 48px}
-.label{font-family:var(--fm);font-size:11px;letter-spacing:.15em;text-transform:uppercase;color:var(--lime);margin-bottom:14px}
-.title{font-family:var(--fh);font-size:clamp(32px,4.5vw,60px);font-weight:800;letter-spacing:-2px;line-height:.95;margin-bottom:16px}
-.subtitle{font-size:17px;color:var(--ink2);line-height:1.65;font-weight:300;max-width:560px}
+/* ── Platform logos strip ─────────────────────────────────────────────────── */
+.platform-strip{display:flex;gap:16px;align-items:center;justify-content:center;flex-wrap:wrap}
+.plat-badge{display:flex;align-items:center;gap:6px;padding:8px 16px;border-radius:20px;border:1px solid var(--border);background:var(--bg3);font-size:12px;font-family:var(--font-head);font-weight:600;color:var(--ink2);transition:all .2s}
+.plat-badge:hover{border-color:var(--lime);color:var(--lime);background:var(--glow)}
+.plat-badge .dot{width:8px;height:8px;border-radius:50%}
 
-/* CARDS */
-.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:60px}
-.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:60px}
-.grid-2{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-top:60px}
-@media(max-width:1000px){.grid-4{grid-template-columns:repeat(2,1fr)}}
-@media(max-width:700px){.grid-4,.grid-3,.grid-2{grid-template-columns:1fr}}
-.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);padding:28px;transition:all .3s;position:relative;overflow:hidden}
-.card:hover{border-color:var(--border2);transform:translateY(-3px)}
-.card::after{content:'';position:absolute;inset:0;border-radius:var(--r2);border:1px solid transparent;background:linear-gradient(135deg,rgba(200,255,0,.06),transparent) border-box;-webkit-mask:linear-gradient(#fff 0 0) padding-box,linear-gradient(#fff 0 0);-webkit-mask-composite:destination-out;mask-composite:exclude;opacity:0;transition:opacity .3s}
-.card:hover::after{opacity:1}
-.card.lime{background:var(--lime);border-color:var(--lime)}
-.card.lime .card-title,.card.lime .card-desc{color:#000}
-.card-icon{font-size:28px;margin-bottom:16px}
-.card-title{font-family:var(--fh);font-size:16px;font-weight:700;margin-bottom:8px;letter-spacing:-.3px}
-.card-desc{font-size:13px;color:var(--ink2);line-height:1.65}
-.card-tag{display:inline-block;font-family:var(--fm);font-size:10px;padding:3px 10px;border-radius:20px;background:rgba(200,255,0,.08);color:var(--lime);border:1px solid rgba(200,255,0,.15);margin-top:10px}
+/* ── Section ─────────────────────────────────────────────────────────────── */
+section{padding:100px 48px;position:relative;z-index:1;max-width:1200px;margin:0 auto}
+.section-label{font-family:var(--font-mono);font-size:11px;letter-spacing:.15em;text-transform:uppercase;color:var(--lime);margin-bottom:16px}
+.section-title{font-family:var(--font-head);font-size:clamp(32px,4vw,56px);font-weight:800;letter-spacing:-2px;line-height:1;margin-bottom:16px}
+.section-sub{font-size:17px;color:var(--ink2);line-height:1.65;max-width:560px;font-weight:300}
 
-/* STEP CARDS */
-.step-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);padding:32px;transition:all .3s}
-.step-card:hover{border-color:var(--lime);transform:translateY(-4px);box-shadow:0 20px 60px rgba(200,255,0,.05)}
-.step-n{font-family:var(--fm);font-size:11px;color:var(--lime);margin-bottom:20px;letter-spacing:.12em}
-.step-icon{font-size:36px;margin-bottom:16px}
-.step-title{font-family:var(--fh);font-size:17px;font-weight:700;margin-bottom:10px;letter-spacing:-.3px}
-.step-desc{font-size:13px;color:var(--ink2);line-height:1.65}
+/* ── How it works ────────────────────────────────────────────────────────── */
+.steps-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:64px}
+@media(max-width:900px){.steps-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:500px){.steps-grid{grid-template-columns:1fr}}
+.step-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);padding:28px;position:relative;overflow:hidden;transition:all .3s}
+.step-card:hover{border-color:var(--lime);transform:translateY(-4px);box-shadow:0 20px 60px rgba(200,255,0,.06)}
+.step-num{font-family:var(--font-mono);font-size:11px;color:var(--lime);margin-bottom:16px;letter-spacing:.1em}
+.step-icon{font-size:32px;margin-bottom:14px}
+.step-title{font-family:var(--font-head);font-size:16px;font-weight:700;margin-bottom:8px}
+.step-desc{font-size:13px;color:var(--ink2);line-height:1.6}
+.step-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--lime),transparent);opacity:0;transition:opacity .3s}
+.step-card:hover::before{opacity:1}
 
-/* PLATFORMS */
-.plat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:48px}
-@media(max-width:700px){.plat-grid{grid-template-columns:repeat(2,1fr)}}
-.plat-row{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);padding:20px 24px;display:flex;align-items:center;gap:16px;transition:all .3s}
-.plat-row:hover{border-color:var(--border2);transform:translateX(4px)}
-.plat-em{font-size:26px;flex-shrink:0}
-.plat-name{font-family:var(--fh);font-size:14px;font-weight:700}
-.plat-sub{font-size:11px;color:var(--ink2);margin-top:2px}
-.pill-live{font-family:var(--fm);font-size:10px;padding:3px 10px;border-radius:20px;background:rgba(200,255,0,.08);color:var(--lime);border:1px solid rgba(200,255,0,.2);margin-left:auto;flex-shrink:0}
-.pill-soon{font-family:var(--fm);font-size:10px;padding:3px 10px;border-radius:20px;background:var(--bg3);color:var(--ink3);border:1px solid var(--border);margin-left:auto;flex-shrink:0}
+/* ── Features grid ───────────────────────────────────────────────────────── */
+.features-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:64px}
+@media(max-width:900px){.features-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:500px){.features-grid{grid-template-columns:1fr}}
+.feature-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);padding:32px;transition:all .3s}
+.feature-card:hover{border-color:var(--border2);transform:translateY(-2px)}
+.feature-card.highlight{background:var(--lime);border-color:var(--lime)}
+.feature-card.highlight .feat-title,.feature-card.highlight .feat-desc{color:#000}
+.feat-icon{font-size:28px;margin-bottom:16px}
+.feat-title{font-family:var(--font-head);font-size:17px;font-weight:700;margin-bottom:8px}
+.feat-desc{font-size:13px;color:var(--ink2);line-height:1.65}
 
-/* COMPARE */
-.cmp-wrap{overflow-x:auto;margin-top:48px}
-.cmp{width:100%;border-collapse:collapse;min-width:600px}
-.cmp th{font-family:var(--fh);font-size:13px;font-weight:700;padding:16px 20px;text-align:center;border-bottom:2px solid var(--border);letter-spacing:-.2px}
-.cmp th:first-child{text-align:left}
-.cmp th.us-col{color:var(--lime)}
-.cmp td{padding:14px 20px;border-bottom:1px solid var(--border);font-size:13px;color:var(--ink2);text-align:center}
-.cmp td:first-child{text-align:left;color:var(--ink);font-weight:500}
-.cmp tr:hover td{background:var(--bg3)}
-.cmp .yes{color:var(--lime);font-family:var(--fh);font-weight:700}
-.cmp .no{color:var(--ink3)}
-.cmp .us-val{color:var(--lime);font-family:var(--fh);font-weight:700}
-.cmp .best{background:rgba(200,255,0,.03)}
+/* ── Platform section ────────────────────────────────────────────────────── */
+.platforms-full{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:48px}
+@media(max-width:700px){.platforms-full{grid-template-columns:repeat(2,1fr)}}
+.plat-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);padding:24px;display:flex;align-items:center;gap:16px;transition:all .3s}
+.plat-card:hover{border-color:var(--border2);transform:translateX(4px)}
+.plat-emoji{font-size:28px;flex-shrink:0}
+.plat-info{}
+.plat-name{font-family:var(--font-head);font-size:15px;font-weight:700;margin-bottom:4px}
+.plat-type{font-size:12px;color:var(--ink2)}
+.plat-status-badge{margin-left:auto;font-family:var(--font-mono);font-size:10px;padding:3px 10px;border-radius:20px;flex-shrink:0}
+.live{background:rgba(200,255,0,.1);color:var(--lime);border:1px solid rgba(200,255,0,.2)}
+.soon{background:var(--bg3);color:var(--ink3);border:1px solid var(--border)}
 
-/* PRICING */
-.price-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:60px}
-@media(max-width:800px){.price-grid{grid-template-columns:1fr}}
+/* ── Pricing ─────────────────────────────────────────────────────────────── */
+.pricing-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:64px}
+@media(max-width:800px){.pricing-grid{grid-template-columns:1fr}}
 .price-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);padding:36px;transition:all .3s;position:relative}
-.price-card.pop{border-color:var(--lime);background:linear-gradient(135deg,rgba(200,255,0,.04),transparent)}
-.price-card.pop::before{content:'Most popular';position:absolute;top:-13px;left:50%;transform:translateX(-50%);background:var(--lime);color:#000;font-family:var(--fm);font-size:10px;padding:4px 14px;border-radius:20px;font-weight:700;letter-spacing:.05em;white-space:nowrap}
-.price-tier{font-family:var(--fm);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink2);margin-bottom:16px}
-.price-num{font-family:var(--fh);font-size:56px;font-weight:800;letter-spacing:-3px;line-height:1}
-.price-mo{font-size:16px;color:var(--ink2);margin-bottom:8px;margin-top:4px}
-.price-save{font-family:var(--fm);font-size:10px;color:var(--lime);background:rgba(200,255,0,.08);border:1px solid rgba(200,255,0,.2);padding:3px 10px;border-radius:20px;display:inline-block;margin-bottom:24px}
-.price-list{list-style:none;margin-bottom:32px}
-.price-list li{font-size:13px;color:var(--ink2);padding:9px 0;border-bottom:1px solid var(--border);display:flex;gap:10px;line-height:1.45}
-.price-list li::before{content:'→';color:var(--lime);flex-shrink:0;font-family:var(--fm)}
-.btn-price{width:100%;padding:13px;border-radius:var(--r);font-family:var(--fh);font-size:14px;font-weight:800;cursor:pointer;transition:all .2s;border:1.5px solid var(--border2);background:transparent;color:var(--ink);letter-spacing:-.3px}
+.price-card.popular{border-color:var(--lime);background:var(--card2)}
+.price-card.popular::before{content:'Most Popular';position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:var(--lime);color:#000;font-family:var(--font-mono);font-size:10px;padding:4px 14px;border-radius:20px;font-weight:700;letter-spacing:.05em}
+.price-tier{font-family:var(--font-mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink2);margin-bottom:16px}
+.price-amount{font-family:var(--font-head);font-size:52px;font-weight:800;letter-spacing:-2px;margin-bottom:4px}
+.price-period{font-size:13px;color:var(--ink2);margin-bottom:24px}
+.price-features{list-style:none;margin-bottom:32px}
+.price-features li{font-size:13px;color:var(--ink2);padding:8px 0;border-bottom:1px solid var(--border);display:flex;gap:10px;align-items:flex-start;line-height:1.4}
+.price-features li::before{content:'→';color:var(--lime);flex-shrink:0;font-family:var(--font-mono)}
+.btn-price{width:100%;padding:13px;border-radius:var(--r);font-family:var(--font-head);font-size:14px;font-weight:700;cursor:pointer;transition:all .2s;border:2px solid var(--border2);background:transparent;color:var(--ink)}
 .btn-price:hover{border-color:var(--lime);color:var(--lime)}
-.price-card.pop .btn-price{background:var(--lime);color:#000;border-color:var(--lime)}
-.price-card.pop .btn-price:hover{background:var(--lime3)}
+.price-card.popular .btn-price{background:var(--lime);color:#000;border-color:var(--lime)}
+.price-card.popular .btn-price:hover{background:var(--lime3)}
 
-/* TESTIMONIALS */
-.testi-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:48px}
-@media(max-width:800px){.testi-grid{grid-template-columns:1fr}}
-.testi{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);padding:28px;transition:all .3s}
-.testi:hover{border-color:var(--border2)}
-.testi-stars{color:var(--lime);font-size:14px;margin-bottom:14px;letter-spacing:2px}
-.testi-text{font-size:14px;line-height:1.75;color:var(--ink2);margin-bottom:20px}
-.testi-auth{display:flex;align-items:center;gap:12px}
-.testi-av{width:36px;height:36px;border-radius:50%;background:var(--lime);display:flex;align-items:center;justify-content:center;font-family:var(--fh);font-size:14px;font-weight:800;color:#000;flex-shrink:0}
-.testi-name{font-family:var(--fh);font-size:13px;font-weight:700;letter-spacing:-.2px}
-.testi-role{font-size:11px;color:var(--ink3);font-family:var(--fm)}
+/* ── Compare table ───────────────────────────────────────────────────────── */
+.compare-table{width:100%;border-collapse:collapse;margin-top:48px}
+.compare-table th{font-family:var(--font-head);font-size:14px;font-weight:700;padding:16px;text-align:center;border-bottom:2px solid var(--border)}
+.compare-table th:first-child{text-align:left}
+.compare-table td{padding:14px 16px;border-bottom:1px solid var(--border);font-size:13px;color:var(--ink2);text-align:center}
+.compare-table td:first-child{text-align:left;color:var(--ink);font-weight:500}
+.compare-table .us{color:var(--lime);font-weight:700;font-family:var(--font-head)}
+.compare-table tr:hover td{background:var(--bg3)}
+.check{color:var(--lime)}
+.cross{color:var(--ink3)}
 
-/* FAQ */
-.faq{margin-top:48px;display:flex;flex-direction:column;gap:8px}
-.faq-item{background:var(--card);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;transition:border-color .2s}
-.faq-item.open{border-color:var(--border2)}
-.faq-q{padding:20px 24px;font-family:var(--fh);font-size:15px;font-weight:700;cursor:pointer;display:flex;justify-content:space-between;align-items:center;transition:background .2s;letter-spacing:-.3px}
+/* ── Testimonials ────────────────────────────────────────────────────────── */
+.testimonials-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:48px}
+@media(max-width:800px){.testimonials-grid{grid-template-columns:1fr}}
+.testi-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);padding:28px;transition:all .3s}
+.testi-card:hover{border-color:var(--border2)}
+.testi-text{font-size:14px;line-height:1.7;color:var(--ink2);margin-bottom:20px;font-style:italic}
+.testi-text::before{content:'"';font-family:var(--font-head);font-size:40px;color:var(--lime);line-height:.5;display:block;margin-bottom:8px}
+.testi-author{display:flex;align-items:center;gap:12px}
+.testi-avatar{width:36px;height:36px;border-radius:50%;background:var(--lime);display:flex;align-items:center;justify-content:center;font-family:var(--font-head);font-size:14px;font-weight:800;color:#000;flex-shrink:0}
+.testi-name{font-family:var(--font-head);font-size:13px;font-weight:700}
+.testi-role{font-size:11px;color:var(--ink3);font-family:var(--font-mono)}
+
+/* ── FAQ ─────────────────────────────────────────────────────────────────── */
+.faq-list{margin-top:48px;display:flex;flex-direction:column;gap:8px}
+.faq-item{background:var(--card);border:1px solid var(--border);border-radius:var(--r);overflow:hidden}
+.faq-q{padding:20px 24px;font-family:var(--font-head);font-size:15px;font-weight:700;cursor:pointer;display:flex;justify-content:space-between;align-items:center;transition:background .2s}
 .faq-q:hover{background:var(--bg3)}
-.faq-ic{font-size:20px;color:var(--lime);transition:transform .3s;flex-shrink:0}
-.faq-item.open .faq-ic{transform:rotate(45deg)}
-.faq-a{display:none;padding:0 24px 20px;font-size:14px;color:var(--ink2);line-height:1.75}
+.faq-arrow{font-size:18px;color:var(--lime);transition:transform .3s;flex-shrink:0}
+.faq-item.open .faq-arrow{transform:rotate(45deg)}
+.faq-a{display:none;padding:0 24px 20px;font-size:14px;color:var(--ink2);line-height:1.7}
 .faq-item.open .faq-a{display:block}
 
-/* CTA BANNER */
-.cta-banner{text-align:center;padding:120px 48px;position:relative;z-index:1;background:var(--bg2);border-top:1px solid var(--border)}
-.cta-banner h2{font-family:var(--fh);font-size:clamp(36px,6vw,76px);font-weight:800;letter-spacing:-3px;line-height:.95;margin-bottom:20px}
-.cta-banner p{font-size:18px;color:var(--ink2);margin-bottom:40px;font-weight:300}
+/* ── CTA section ─────────────────────────────────────────────────────────── */
+.cta-section{text-align:center;padding:120px 48px;background:var(--bg2);border-top:1px solid var(--border);border-bottom:1px solid var(--border);position:relative;z-index:1}
+.cta-section h2{font-family:var(--font-head);font-size:clamp(36px,5vw,72px);font-weight:800;letter-spacing:-2px;margin-bottom:20px}
+.cta-section p{font-size:18px;color:var(--ink2);margin-bottom:40px;font-weight:300}
 
-/* FOOTER */
+/* ── Footer ──────────────────────────────────────────────────────────────── */
 footer{padding:60px 48px 40px;border-top:1px solid var(--border);position:relative;z-index:1}
-.footer-grid{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:40px;margin-bottom:48px}
-@media(max-width:800px){.footer-grid{grid-template-columns:1fr 1fr}}
-.footer-brand{font-family:var(--fh);font-size:20px;font-weight:800;margin-bottom:10px;letter-spacing:-.5px}
-.footer-tagline{font-size:13px;color:var(--ink2);line-height:1.65;max-width:260px}
-.footer-col-h{font-family:var(--fh);font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ink2);margin-bottom:16px}
+.footer-top{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:40px;margin-bottom:48px}
+@media(max-width:800px){.footer-top{grid-template-columns:1fr 1fr}}
+.footer-brand{font-family:var(--font-head);font-size:20px;font-weight:800;margin-bottom:12px}
+.footer-tagline{font-size:13px;color:var(--ink2);line-height:1.6;max-width:280px}
+.footer-col-title{font-family:var(--font-head);font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink2);margin-bottom:16px}
 .footer-links{list-style:none;display:flex;flex-direction:column;gap:10px}
 .footer-links a{font-size:13px;color:var(--ink2);text-decoration:none;transition:color .2s}
 .footer-links a:hover{color:var(--lime)}
 .footer-bottom{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;padding-top:32px;border-top:1px solid var(--border)}
-.footer-copy{font-size:12px;color:var(--ink3);font-family:var(--fm)}
-.footer-leg{display:flex;gap:20px}
-.footer-leg a{font-size:12px;color:var(--ink3);text-decoration:none;transition:color .2s}
-.footer-leg a:hover{color:var(--ink2)}
+.footer-copy{font-size:12px;color:var(--ink3);font-family:var(--font-mono)}
+.footer-legal{display:flex;gap:20px}
+.footer-legal a{font-size:12px;color:var(--ink3);text-decoration:none;transition:color .2s}
+.footer-legal a:hover{color:var(--ink2)}
 
-/* APP */
-.app-wrap{padding:0 48px 80px;max-width:1200px;margin:0 auto}
-@media(max-width:600px){.app-wrap{padding:0 16px 60px}}
-.app-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;padding-top:24px}
-.app-title{font-family:var(--fh);font-size:26px;font-weight:800;letter-spacing:-1px}
-.app-user{font-size:12px;color:var(--ink2);font-family:var(--fm);margin-top:3px}
-.app-tabs{display:flex;gap:4px;background:var(--bg3);padding:5px;border-radius:var(--r2);width:fit-content;margin-bottom:20px}
-.app-tab{padding:8px 18px;border-radius:var(--r);font-family:var(--fh);font-size:13px;font-weight:700;cursor:pointer;border:none;background:transparent;color:var(--ink2);transition:all .2s;letter-spacing:-.2px}
+/* ── App section ─────────────────────────────────────────────────────────── */
+.app-section{padding:80px 48px;position:relative;z-index:1;max-width:1200px;margin:0 auto}
+.app-tabs{display:flex;gap:6px;margin-bottom:24px;background:var(--bg3);padding:6px;border-radius:var(--r2);width:fit-content}
+.app-tab{padding:8px 20px;border-radius:var(--r);font-family:var(--font-head);font-size:13px;font-weight:600;cursor:pointer;border:none;background:transparent;color:var(--ink2);transition:all .2s}
 .app-tab.on{background:var(--lime);color:#000}
 .app-panel{display:none}.app-panel.on{display:block}
-.a-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);padding:24px;margin-bottom:14px}
 
 /* Inputs */
-input[type=text],input[type=email],input[type=password],input[type=number],textarea{font-family:var(--fm);font-size:13px;padding:11px 14px;border:1.5px solid var(--border2);border-radius:var(--r);background:var(--bg3);color:var(--ink);outline:none;transition:border-color .2s;width:100%}
+input[type=text],input[type=email],input[type=password],input[type=number],textarea{
+  font-family:var(--font-mono);font-size:13px;padding:12px 16px;border:1.5px solid var(--border);
+  border-radius:var(--r);background:var(--bg3);color:var(--ink);outline:none;
+  transition:border-color .2s;width:100%}
 input:focus,textarea:focus{border-color:var(--lime)}
 input::placeholder,textarea::placeholder{color:var(--ink3)}
-.row{display:flex;gap:10px;margin-bottom:12px}
-.btn-go{padding:11px 22px;background:var(--lime);color:#000;border:none;border-radius:var(--r);font-family:var(--fh);font-size:13px;font-weight:800;cursor:pointer;white-space:nowrap;transition:all .2s;letter-spacing:-.2px}
+
+.url-row{display:flex;gap:10px;margin-bottom:14px}
+.btn-go{padding:12px 24px;background:var(--lime);color:#000;border:none;border-radius:var(--r);font-family:var(--font-head);font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap;transition:all .2s}
 .btn-go:hover{background:var(--lime3)}
-.btn-go:disabled{opacity:.35;cursor:not-allowed}
-.chip{padding:5px 12px;border-radius:20px;border:1px solid var(--border2);font-size:11px;font-family:var(--fh);font-weight:700;cursor:pointer;transition:all .15s;color:var(--ink2);letter-spacing:-.2px}
-.chip.on{background:var(--lime);color:#000;border-color:var(--lime)}
-.chip.dis{opacity:.3;cursor:not-allowed}
+.btn-go:disabled{opacity:.4;cursor:not-allowed}
+
+/* Cards in app */
+.a-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);padding:24px;margin-bottom:14px}
 
 /* Clip cards */
-.clip-c{background:var(--card2);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:10px;transition:all .2s}
-.clip-c.sel{border-color:var(--lime)}
-.clip-h{display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;transition:background .15s}
-.clip-h:hover{background:var(--bg3)}
-.clip-badge{width:26px;height:26px;border-radius:50%;background:var(--lime);color:#000;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:var(--fm)}
-.clip-inf{flex:1}
-.clip-t{font-family:var(--fh);font-size:13px;font-weight:700;letter-spacing:-.2px}
-.clip-m{font-size:11px;color:var(--ink2);font-family:var(--fm);margin-top:2px}
-.s-dots{display:flex;gap:3px}
-.sd{width:5px;height:5px;border-radius:50%;background:var(--border2)}
-.sd.on{background:var(--lime)}
-.clip-b{display:none;padding:14px 16px;border-top:1px solid var(--border)}
-.clip-c.sel .clip-b{display:block}
-.clip-grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px}
-@media(max-width:500px){.clip-grid3{grid-template-columns:1fr}}
-.f-label{font-size:10px;font-family:var(--fm);letter-spacing:.08em;text-transform:uppercase;color:var(--ink3);display:block;margin-bottom:5px}
-.process-btn{width:100%;padding:12px;background:var(--lime);color:#000;border:none;border-radius:var(--r);font-family:var(--fh);font-size:14px;font-weight:800;cursor:pointer;transition:all .2s;letter-spacing:-.3px}
-.process-btn:hover{background:var(--lime3);transform:translateY(-1px)}
+.clip-card2{background:var(--card2);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:10px;transition:all .2s}
+.clip-card2.sel{border-color:var(--lime)}
+.clip-head{display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer}
+.clip-head:hover{background:var(--bg3)}
+.clip-n{width:26px;height:26px;border-radius:50%;background:var(--lime);color:#000;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:var(--font-mono)}
+.clip-info2{flex:1}
+.clip-t{font-family:var(--font-head);font-size:13px;font-weight:700}
+.clip-m{font-size:11px;color:var(--ink2);font-family:var(--font-mono);margin-top:2px}
+.clip-score{display:flex;gap:2px}
+.sdot{width:5px;height:5px;border-radius:50%;background:var(--border)}
+.sdot.on{background:var(--lime)}
+.clip-body2{display:none;padding:14px 16px;border-top:1px solid var(--border)}
+.clip-card2.sel .clip-body2{display:block}
+
+/* Platform toggles */
+.plat-toggles2{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.pt{padding:5px 12px;border-radius:20px;border:1px solid var(--border);font-size:11px;font-family:var(--font-head);font-weight:600;cursor:pointer;transition:all .15s;color:var(--ink2)}
+.pt.on{background:var(--lime);color:#000;border-color:var(--lime)}
+.pt.disabled{opacity:.3;cursor:not-allowed}
 
 /* Status */
-.sb{display:none;align-items:center;gap:12px;padding:11px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);font-family:var(--fm);font-size:12px;margin-bottom:12px;color:var(--ink2)}
-.spin{width:14px;height:14px;border:2px solid var(--border2);border-top-color:var(--lime);border-radius:50%;animation:sp .65s linear infinite;flex-shrink:0}
-@keyframes sp{to{transform:rotate(360deg)}}
-.err{display:none;padding:11px 14px;background:rgba(220,50,50,.07);border:1px solid rgba(220,50,50,.25);border-radius:var(--r);font-size:12px;color:#ff6b6b;margin-bottom:12px;font-family:var(--fm)}
-.ok{display:none;padding:11px 14px;background:rgba(200,255,0,.07);border:1px solid rgba(200,255,0,.2);border-radius:var(--r);font-size:12px;color:var(--lime);margin-bottom:12px;font-family:var(--fm)}
+.status-bar2{display:none;align-items:center;gap:12px;padding:12px 16px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);font-family:var(--font-mono);font-size:12px;margin-bottom:14px;color:var(--ink2)}
+.spin2{width:14px;height:14px;border:2px solid var(--border2);border-top-color:var(--lime);border-radius:50%;animation:spin .65s linear infinite;flex-shrink:0}
+@keyframes spin{to{transform:rotate(360deg)}}
+.err2{display:none;padding:12px 16px;background:rgba(220,50,50,.08);border:1px solid rgba(220,50,50,.3);border-radius:var(--r);font-size:12px;color:#ff6b6b;margin-bottom:12px;font-family:var(--font-mono)}
+.ok2{display:none;padding:12px 16px;background:rgba(200,255,0,.08);border:1px solid rgba(200,255,0,.2);border-radius:var(--r);font-size:12px;color:var(--lime);margin-bottom:12px;font-family:var(--font-mono)}
 
-/* Download */
-.dl-btn{padding:9px 16px;background:var(--lime);color:#000;border:none;border-radius:var(--r);font-size:12px;font-family:var(--fh);font-weight:800;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:6px;transition:all .2s;letter-spacing:-.2px}
+/* Download btn */
+.dl-btn{padding:10px 18px;background:var(--lime);color:#000;border:none;border-radius:var(--r);font-size:12px;font-family:var(--font-head);font-weight:700;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:6px;transition:all .2s}
 .dl-btn:hover{background:var(--lime3)}
 
-/* Connect */
-.conn-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
-.conn-c{background:var(--card);border:1.5px solid var(--border);border-radius:var(--r2);padding:20px;text-align:center;transition:all .2s}
-.conn-c.connected{border-color:var(--lime);background:rgba(200,255,0,.03)}
-.conn-icon{font-size:24px;margin-bottom:8px}
-.conn-name{font-family:var(--fh);font-size:13px;font-weight:700;letter-spacing:-.2px;margin-bottom:4px}
-.conn-st{font-family:var(--fm);font-size:10px;color:var(--ink3);margin-bottom:12px}
-.conn-c.connected .conn-st{color:var(--lime)}
-.btn-conn{width:100%;padding:8px;border-radius:var(--r);font-family:var(--fh);font-size:12px;font-weight:700;cursor:pointer;border:1.5px solid var(--border2);background:transparent;color:var(--ink);transition:all .2s;letter-spacing:-.2px}
+/* Connect platform cards */
+.connect-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
+.conn-card{background:var(--card);border:1.5px solid var(--border);border-radius:var(--r2);padding:20px;text-align:center;transition:all .2s}
+.conn-card.connected{border-color:var(--lime);background:rgba(200,255,0,.04)}
+.conn-icon{font-size:26px;margin-bottom:8px}
+.conn-name{font-family:var(--font-head);font-size:13px;font-weight:700;margin-bottom:4px}
+.conn-status{font-family:var(--font-mono);font-size:10px;color:var(--ink3);margin-bottom:12px}
+.conn-card.connected .conn-status{color:var(--lime)}
+.btn-conn{width:100%;padding:8px;border-radius:var(--r);font-family:var(--font-head);font-size:12px;font-weight:700;cursor:pointer;border:1.5px solid var(--border2);background:transparent;color:var(--ink);transition:all .2s}
 .btn-conn:hover{border-color:var(--lime);color:var(--lime)}
 .btn-conn.on{background:var(--lime);color:#000;border-color:var(--lime)}
 
-/* Posts grid */
-.posts-out{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
-@media(max-width:600px){.posts-out{grid-template-columns:1fr}}
-
 /* Auth modal */
-#auth-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:300;align-items:center;justify-content:center;backdrop-filter:blur(12px)}
+#auth-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:200;align-items:center;justify-content:center;backdrop-filter:blur(8px)}
 #auth-modal.open{display:flex}
-.auth-box{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r2);padding:40px;width:100%;max-width:400px;margin:20px}
-.auth-box h2{font-family:var(--fh);font-size:28px;font-weight:800;letter-spacing:-1.5px;margin-bottom:6px}
+.auth-box{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r2);padding:40px;width:100%;max-width:420px;margin:20px}
+.auth-box h2{font-family:var(--font-head);font-size:26px;font-weight:800;margin-bottom:6px;letter-spacing:-1px}
 .auth-box p{font-size:13px;color:var(--ink2);margin-bottom:28px}
-.auth-lbl{font-family:var(--fm);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink2);display:block;margin-bottom:6px;margin-top:16px}
-.auth-acts{display:flex;gap:10px;margin-top:24px}
-.btn-auth{flex:1;padding:13px;background:var(--lime);color:#000;border:none;border-radius:var(--r);font-family:var(--fh);font-size:14px;font-weight:800;cursor:pointer;letter-spacing:-.3px}
-.btn-ghost3{padding:13px 18px;background:transparent;color:var(--ink2);border:1.5px solid var(--border2);border-radius:var(--r);font-family:var(--fh);font-size:13px;cursor:pointer;transition:all .2s;letter-spacing:-.2px}
-.btn-ghost3:hover{border-color:var(--lime);color:var(--lime)}
+.auth-label{font-family:var(--font-mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink2);display:block;margin-bottom:6px;margin-top:16px}
+.auth-actions{display:flex;gap:10px;margin-top:24px}
+.btn-auth{flex:1;padding:13px;background:var(--lime);color:#000;border:none;border-radius:var(--r);font-family:var(--font-head);font-size:14px;font-weight:800;cursor:pointer;transition:all .2s}
+.btn-auth:hover{background:var(--lime3)}
+.btn-ghost2{padding:13px 18px;background:transparent;color:var(--ink);border:1.5px solid var(--border2);border-radius:var(--r);font-family:var(--font-head);font-size:13px;cursor:pointer;transition:all .2s}
+.btn-ghost2:hover{border-color:var(--lime);color:var(--lime)}
 
-/* Legal */
-.legal-pg{max-width:760px;margin:0 auto;padding:120px 48px 80px;display:none;position:relative;z-index:1}
-.legal-pg.active{display:block}
-.legal-pg h1{font-family:var(--fh);font-size:48px;font-weight:800;letter-spacing:-2px;margin-bottom:6px}
-.legal-pg .upd{font-family:var(--fm);font-size:11px;color:var(--ink3);margin-bottom:44px}
-.legal-pg h2{font-family:var(--fh);font-size:20px;font-weight:700;margin:32px 0 10px;letter-spacing:-.5px}
-.legal-pg p,.legal-pg li{font-size:15px;color:var(--ink2);line-height:1.8;margin-bottom:10px}
-.legal-pg ul{padding-left:20px;margin-bottom:14px}
-.legal-pg a{color:var(--lime)}
-.back-link{font-family:var(--fm);font-size:12px;color:var(--lime);text-decoration:none;display:inline-block;margin-bottom:24px}
+/* Legal pages */
+.legal-page{max-width:800px;margin:0 auto;padding:120px 48px 80px;display:none;position:relative;z-index:1}
+.legal-page.active{display:block}
+.legal-page h1{font-family:var(--font-head);font-size:48px;font-weight:800;letter-spacing:-2px;margin-bottom:8px}
+.legal-page .updated{font-family:var(--font-mono);font-size:12px;color:var(--ink3);margin-bottom:48px}
+.legal-page h2{font-family:var(--font-head);font-size:22px;font-weight:700;margin:36px 0 12px;letter-spacing:-.5px}
+.legal-page p,.legal-page li{font-size:15px;color:var(--ink2);line-height:1.75;margin-bottom:12px}
+.legal-page ul{padding-left:20px;margin-bottom:16px}
+.legal-page a{color:var(--lime)}
 
-/* Views */
-#v-landing{display:block}
-#v-app{display:none}
+/* Main landing */
+#landing{display:block}
+#app-view{display:none}
 
+/* Responsive */
 @media(max-width:768px){
-  nav{padding:0 20px}
-  .nav-center{display:none}
-  .section,.section-full .inner{padding-left:20px;padding-right:20px}
-  .app-wrap{padding-left:16px;padding-right:16px}
-  .cta-banner{padding:80px 24px}
+  nav{padding:14px 20px}
+  .nav-links .nav-link{display:none}
+  section{padding:60px 20px}
+  .app-section{padding:40px 20px}
+  .features-grid{grid-template-columns:1fr}
+  .pricing-grid{grid-template-columns:1fr}
+  .footer-top{grid-template-columns:1fr}
+  .compare-table{font-size:11px}
+  .compare-table th,.compare-table td{padding:10px 8px}
+  .cta-section{padding:80px 24px}
   footer{padding:40px 20px}
-  .legal-pg{padding:100px 20px 60px}
-  .footer-grid{grid-template-columns:1fr 1fr}
+  .legal-page{padding:100px 20px 60px}
 }
 </style>
 </head>
 <body>
 
-<nav>
-  <a class="logo" href="#" onclick="goLanding();return false"><span class="logo-dot"></span>VidPost <span style="color:var(--lime)">AI</span></a>
-  <div class="nav-center">
-    <a class="nav-link" href="#how">How it works</a>
-    <a class="nav-link" href="#features">Features</a>
-    <a class="nav-link" href="#platforms">Platforms</a>
-    <a class="nav-link" href="#pricing">Pricing</a>
-  </div>
-  <div class="nav-right">
-    <button class="theme-btn" id="theme-btn" onclick="toggleTheme()">🌙</button>
-    <button class="btn-nav-ghost" onclick="goApp();openAuth()">Sign in</button>
-    <button class="btn-nav-cta" onclick="goApp()">Start free →</button>
+<!-- ── Navigation ──────────────────────────────────────────────────────────── -->
+<nav id="main-nav">
+  <a href="#" class="nav-logo" onclick="showLanding()">
+    <span class="logo-dot"></span>
+    VidPost AI
+  </a>
+  <div class="nav-links">
+    <a href="#how" class="nav-link">How it works</a>
+    <a href="#platforms" class="nav-link">Platforms</a>
+    <a href="#pricing" class="nav-link">Pricing</a>
+    <a href="#faq" class="nav-link">FAQ</a>
+    <button class="theme-btn" onclick="toggleTheme()" id="theme-btn" title="Toggle theme">🌙</button>
+    <button class="nav-cta" onclick="showApp()">Start free →</button>
   </div>
 </nav>
 
-<!-- ══ LANDING ════════════════════════════════════════════════════════════════ -->
-<div id="v-landing">
+<!-- ── Landing Page ────────────────────────────────────────────────────────── -->
+<div id="landing">
 
-<!-- HERO -->
-<div class="hero">
-  <div class="hero-eyebrow"><span class="dot"></span>The Opus Clip killer — built by a 15-year-old</div>
-  <h1 class="hero-title">One video.<br><span class="a">Every platform.</span><br><span class="d">Fully automatic.</span></h1>
-  <p class="hero-sub">AI clips your videos, writes captions, and auto-posts to LinkedIn, YouTube, Instagram, TikTok, X, and Snapchat. While you sleep.</p>
-  <div class="hero-btns">
-    <a href="#" class="btn-hero-primary" onclick="goApp();return false">Start free — no card needed →</a>
-    <a href="#how" class="btn-hero-secondary">See how it works</a>
-  </div>
-  <div class="hero-social-proof">
-    <div class="sp-stat"><div class="sp-num">7</div><div class="sp-lbl">Platforms</div></div>
-    <div class="sp-div"></div>
-    <div class="sp-stat"><div class="sp-num">&lt;60s</div><div class="sp-lbl">Per video</div></div>
-    <div class="sp-div"></div>
-    <div class="sp-stat"><div class="sp-num">$0</div><div class="sp-lbl">To start</div></div>
-    <div class="sp-div"></div>
-    <div class="sp-stat"><div class="sp-num">∞</div><div class="sp-lbl">Clip limits</div></div>
-  </div>
-  <div class="platform-pills">
-    <div class="pp"><div class="c" style="background:#0a66c2"></div>LinkedIn</div>
-    <div class="pp"><div class="c" style="background:#ff0000"></div>YouTube</div>
-    <div class="pp"><div class="c" style="background:#e1306c"></div>Instagram</div>
-    <div class="pp"><div class="c" style="background:#ff0050"></div>TikTok</div>
-    <div class="pp"><div class="c" style="background:#1da1f2"></div>X / Twitter</div>
-    <div class="pp"><div class="c" style="background:#fffc00"></div>Snapchat</div>
-    <div class="pp"><div class="c" style="background:#0866ff"></div>Facebook</div>
-  </div>
-</div>
-
-<!-- HOW IT WORKS -->
-<div class="section" id="how">
-  <div class="label">How it works</div>
-  <div class="title">Four steps.<br>Infinite content.</div>
-  <div class="grid-4" style="margin-top:52px">
-    <div class="step-card"><div class="step-n">01 / UPLOAD</div><div class="step-icon">🎬</div><div class="step-title">Paste URL or upload</div><div class="step-desc">Drop any YouTube URL or upload a video file up to 500MB. We accept MP4, MOV, AVI and more.</div></div>
-    <div class="step-card"><div class="step-n">02 / DETECT</div><div class="step-icon">🧠</div><div class="step-title">AI finds viral moments</div><div class="step-desc">Our AI scores every segment for hook strength, emotion, pacing and virality. Top 5 clips selected automatically.</div></div>
-    <div class="step-card"><div class="step-n">03 / CREATE</div><div class="step-icon">✂️</div><div class="step-title">Clips + copy generated</div><div class="step-desc">Clips cut to 9:16 and 16:9. LinkedIn posts, Twitter threads, Instagram captions, TikTok scripts — all written.</div></div>
-    <div class="step-card"><div class="step-n">04 / POST</div><div class="step-icon">🚀</div><div class="step-title">Auto-post everywhere</div><div class="step-desc">One click posts to every connected platform at once. Or schedule for AI-optimised peak times.</div></div>
-  </div>
-</div>
-
-<!-- FEATURES -->
-<div class="section-full" id="features">
-  <div class="inner">
-    <div class="label">Features</div>
-    <div class="title">Everything Opus Clip<br>should have built.</div>
-    <div class="grid-3" style="margin-top:52px">
-      <div class="card lime"><div class="card-icon">🧠</div><div class="card-title">AI that learns YOUR audience</div><div class="card-desc">After 30 days, our AI knows which hooks, pacing and styles work for your specific audience. Personalised. Competitors can't copy this retroactively.</div></div>
-      <div class="card"><div class="card-icon">✍️</div><div class="card-title">Text posts included — always</div><div class="card-desc">LinkedIn posts, Twitter threads, Instagram captions and TikTok scripts from every video. Opus Clip charges extra. We include it on every plan.</div><div class="card-tag">OPUS CLIP: NOT AVAILABLE</div></div>
-      <div class="card"><div class="card-icon">📱</div><div class="card-title">9:16 + 16:9 auto-conversion</div><div class="card-desc">Every clip converted to perfect vertical and horizontal formats simultaneously. No cropping, no manual work, no clunky editor.</div></div>
-      <div class="card"><div class="card-icon">🚀</div><div class="card-title">Auto-post to 7 platforms</div><div class="card-desc">LinkedIn, YouTube, Instagram, TikTok, X, Snapchat and Facebook. Opus Clip only does 2 on their cheapest plan. We do all 7.</div><div class="card-tag">OPUS CLIP: 2 PLATFORMS ON STARTER</div></div>
-      <div class="card"><div class="card-icon">📅</div><div class="card-title">Smart scheduling — free</div><div class="card-desc">AI picks the optimal posting time per platform based on your audience. Schedule a full week in 2 minutes. Not locked behind Pro.</div><div class="card-tag">OPUS CLIP: PRO ONLY</div></div>
-      <div class="card"><div class="card-icon">📊</div><div class="card-title">Analytics feedback loop</div><div class="card-desc">We pull real engagement data from every platform and feed it back into the AI. Over time your clips get better, your posts get sharper.</div><div class="card-tag">OPUS CLIP: ZERO ANALYTICS</div></div>
-      <div class="card"><div class="card-icon">🏢</div><div class="card-title">Agency white-label</div><div class="card-desc">Manage 10+ clients from one dashboard. White-label the platform with your brand. Client approval workflow. All included in Agency plan.</div></div>
-      <div class="card"><div class="card-icon">♾️</div><div class="card-title">No credit system</div><div class="card-desc">Opus Clip charges 1 credit per minute of video regardless of how many clips come out. We charge a flat monthly fee. Unlimited clips.</div><div class="card-tag">OPUS CLIP: CREDIT CAPS</div></div>
-      <div class="card"><div class="card-icon">💬</div><div class="card-title">Real human support</div><div class="card-desc">Not automated replies. Real responses within 24 hours. Opus Clip's support is notoriously bad — we made that our competitive advantage.</div><div class="card-tag">OPUS CLIP: KNOWN SUPPORT ISSUES</div></div>
+  <!-- Hero -->
+  <div class="hero">
+    <div class="hero-badge"><span></span> AI-powered content repurposing</div>
+    <h1>One video.<br><span class="accent">Every platform.</span><br><span class="dim">Zero effort.</span></h1>
+    <p class="hero-sub">Upload any video → AI finds viral moments, cuts clips, writes captions, and auto-posts to all your social accounts. While you sleep.</p>
+    <div class="hero-actions">
+      <a href="#" class="btn-hero primary" onclick="showApp();return false">Try free — no card needed →</a>
+      <a href="#how" class="btn-hero secondary">See how it works</a>
+    </div>
+    <div class="platform-strip">
+      <div class="plat-badge"><div class="dot" style="background:#0a66c2"></div>LinkedIn</div>
+      <div class="plat-badge"><div class="dot" style="background:#ff0000"></div>YouTube</div>
+      <div class="plat-badge"><div class="dot" style="background:#e1306c"></div>Instagram</div>
+      <div class="plat-badge"><div class="dot" style="background:#ff0050"></div>TikTok</div>
+      <div class="plat-badge"><div class="dot" style="background:#000"></div>X / Twitter</div>
+      <div class="plat-badge"><div class="dot" style="background:#1877f2"></div>Facebook</div>
     </div>
   </div>
-</div>
 
-<!-- PLATFORMS -->
-<div class="section" id="platforms">
-  <div class="label">Platforms</div>
-  <div class="title">Post everywhere.<br>From one place.</div>
-  <p class="subtitle" style="margin-top:14px">Connect once. Every video automatically becomes native content for every platform.</p>
-  <div class="plat-grid">
-    <div class="plat-row"><div class="plat-em">💼</div><div><div class="plat-name">LinkedIn</div><div class="plat-sub">Text posts + video</div></div><span class="pill-live">Live</span></div>
-    <div class="plat-row"><div class="plat-em">▶</div><div><div class="plat-name">YouTube Shorts</div><div class="plat-sub">Video upload</div></div><span class="pill-live">Live</span></div>
-    <div class="plat-row"><div class="plat-em">📸</div><div><div class="plat-name">Instagram</div><div class="plat-sub">Reels + carousels</div></div><span class="pill-live">Live</span></div>
-    <div class="plat-row"><div class="plat-em">🎵</div><div><div class="plat-name">TikTok</div><div class="plat-sub">Video + captions</div></div><span class="pill-live">Live</span></div>
-    <div class="plat-row"><div class="plat-em">𝕏</div><div><div class="plat-name">X / Twitter</div><div class="plat-sub">Threads + video</div></div><span class="pill-soon">Coming soon</span></div>
-    <div class="plat-row"><div class="plat-em">👻</div><div><div class="plat-name">Snapchat</div><div class="plat-sub">Spotlight + Stories</div></div><span class="pill-soon">Coming soon</span></div>
-  </div>
-</div>
+  <!-- How it works -->
+  <section id="how">
+    <div class="section-label">How it works</div>
+    <h2 class="section-title">Four steps.<br>Infinite content.</h2>
+    <p class="section-sub">From a single video to a full week of platform-native content in under 60 seconds.</p>
+    <div class="steps-grid">
+      <div class="step-card">
+        <div class="step-num">01</div>
+        <div class="step-icon">🎬</div>
+        <div class="step-title">Paste URL or upload</div>
+        <div class="step-desc">Drop a YouTube URL or upload any video file up to 500MB. We handle the rest.</div>
+      </div>
+      <div class="step-card">
+        <div class="step-num">02</div>
+        <div class="step-icon">🤖</div>
+        <div class="step-title">AI detects viral moments</div>
+        <div class="step-desc">Our AI scores every segment for hook strength, emotion, and virality. Picks the top 5 clips automatically.</div>
+      </div>
+      <div class="step-card">
+        <div class="step-num">03</div>
+        <div class="step-icon">✂️</div>
+        <div class="step-title">Clips + captions generated</div>
+        <div class="step-desc">Clips cut to 9:16 and 16:9. Platform-native captions, threads, scripts written for each channel.</div>
+      </div>
+      <div class="step-card">
+        <div class="step-num">04</div>
+        <div class="step-icon">🚀</div>
+        <div class="step-title">Auto-post everywhere</div>
+        <div class="step-desc">One click posts to all connected platforms simultaneously. Or schedule for optimal times.</div>
+      </div>
+    </div>
+  </section>
 
-<!-- COMPARE -->
-<div class="section-full">
-  <div class="inner">
-    <div class="label">Comparison</div>
-    <div class="title">Why creators leave<br>Opus Clip for us.</div>
-    <div class="cmp-wrap">
-      <table class="cmp">
+  <!-- Features -->
+  <section id="features" style="background:var(--bg2);max-width:100%;border-top:1px solid var(--border);border-bottom:1px solid var(--border)">
+    <div style="max-width:1200px;margin:0 auto">
+      <div class="section-label">Features</div>
+      <h2 class="section-title">Built to beat<br>Opus Clip & Ocoya.</h2>
+      <div class="features-grid">
+        <div class="feature-card highlight">
+          <div class="feat-icon">🧠</div>
+          <div class="feat-title">AI that learns your audience</div>
+          <div class="feat-desc">After 30 days, our AI knows which hooks work for your specific audience. No competitor can copy this personalisation.</div>
+        </div>
+        <div class="feature-card">
+          <div class="feat-icon">📱</div>
+          <div class="feat-title">9:16 + 16:9 auto-conversion</div>
+          <div class="feat-desc">Every clip converted to perfect vertical and horizontal formats simultaneously. No manual cropping ever.</div>
+        </div>
+        <div class="feature-card">
+          <div class="feat-icon">✍️</div>
+          <div class="feat-title">Platform-native copy</div>
+          <div class="feat-desc">LinkedIn posts, Twitter threads, Instagram captions, TikTok scripts — each written for that platform's unique style.</div>
+        </div>
+        <div class="feature-card">
+          <div class="feat-icon">📅</div>
+          <div class="feat-title">Smart scheduling</div>
+          <div class="feat-desc">Post now or schedule at AI-recommended optimal times per platform. Full content calendar view.</div>
+        </div>
+        <div class="feature-card">
+          <div class="feat-icon">📊</div>
+          <div class="feat-title">Cross-platform analytics</div>
+          <div class="feat-desc">Views, likes, and reach across all platforms in one dashboard. See exactly what's working.</div>
+        </div>
+        <div class="feature-card">
+          <div class="feat-icon">🏢</div>
+          <div class="feat-title">Agency white-label</div>
+          <div class="feat-desc">Manage 10+ clients from one dashboard. White-label with your brand. Client approval workflow included.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Platforms -->
+  <section id="platforms">
+    <div class="section-label">Platforms</div>
+    <h2 class="section-title">Post everywhere.<br>From one place.</h2>
+    <p class="section-sub">Connect once. Every video automatically becomes content for every platform.</p>
+    <div class="platforms-full">
+      <div class="plat-card"><div class="plat-emoji">💼</div><div class="plat-info"><div class="plat-name">LinkedIn</div><div class="plat-type">Text posts + video</div></div><span class="plat-status-badge live">Live</span></div>
+      <div class="plat-card"><div class="plat-emoji">▶</div><div class="plat-info"><div class="plat-name">YouTube Shorts</div><div class="plat-type">Video upload</div></div><span class="plat-status-badge live">Live</span></div>
+      <div class="plat-card"><div class="plat-emoji">📸</div><div class="plat-info"><div class="plat-name">Instagram</div><div class="plat-type">Reels + captions</div></div><span class="plat-status-badge live">Live</span></div>
+      <div class="plat-card"><div class="plat-emoji">🎵</div><div class="plat-info"><div class="plat-name">TikTok</div><div class="plat-type">Video + captions</div></div><span class="plat-status-badge live">Live</span></div>
+      <div class="plat-card"><div class="plat-emoji">𝕏</div><div class="plat-info"><div class="plat-name">X / Twitter</div><div class="plat-type">Threads + video</div></div><span class="plat-status-badge live">Live</span></div>
+      <div class="plat-card"><div class="plat-emoji">👍</div><div class="plat-info"><div class="plat-name">Facebook</div><div class="plat-type">Page posts + video</div></div><span class="plat-status-badge live">Live</span></div>
+    </div>
+  </section>
+
+  <!-- Compare -->
+  <section style="background:var(--bg2);max-width:100%;border-top:1px solid var(--border);border-bottom:1px solid var(--border)">
+    <div style="max-width:1200px;margin:0 auto">
+      <div class="section-label">Comparison</div>
+      <h2 class="section-title">Why creators<br>switch to VidPost.</h2>
+      <table class="compare-table">
         <thead>
           <tr>
             <th>Feature</th>
-            <th class="us-col">VidPost AI</th>
+            <th class="us">VidPost AI</th>
             <th>Opus Clip</th>
-            <th>Vizard</th>
+            <th>Ocoya</th>
           </tr>
         </thead>
         <tbody>
-          <tr class="best"><td>AI clip detection</td><td class="us-val">✓ Advanced + learning</td><td>✓ Good</td><td>✓ Good</td></tr>
-          <tr><td>Text post generation</td><td class="us-val">✓ All 5 platforms</td><td class="no">✗ None</td><td class="no">✗ None</td></tr>
-          <tr class="best"><td>Auto-posting platforms</td><td class="us-val">✓ 7 platforms</td><td>2 (Starter) / 6 (Pro)</td><td>✓ 6 platforms</td></tr>
-          <tr><td>Analytics feedback loop</td><td class="us-val">✓ AI learns from data</td><td class="no">✗ None</td><td class="no">✗ None</td></tr>
-          <tr class="best"><td>Credit / clip limits</td><td class="us-val">✓ Unlimited, flat fee</td><td class="no">✗ 1 credit = 1 min</td><td class="no">✗ Minute credits</td></tr>
-          <tr><td>Scheduling on all plans</td><td class="us-val">✓ All plans</td><td class="no">✗ Pro only</td><td>✓ Paid plans</td></tr>
-          <tr class="best"><td>Agency white-label</td><td class="us-val">✓ $99/mo</td><td class="no">✗ Not available</td><td class="no">✗ Not available</td></tr>
-          <tr><td>Starting price</td><td class="us-val">$0 (real free tier)</td><td>$15/mo</td><td>$14.5/mo</td></tr>
-          <tr class="best"><td>X / Snapchat support</td><td class="us-val">✓ Coming soon</td><td class="no">✗ No</td><td>✓ Twitter only</td></tr>
+          <tr><td>AI clip detection</td><td class="us check">✓ Advanced</td><td>✓ Basic</td><td class="cross">✗</td></tr>
+          <tr><td>Text post generation</td><td class="us check">✓ All platforms</td><td class="cross">✗</td><td>✓ Limited</td></tr>
+          <tr><td>Auto-posting</td><td class="us check">✓ 6 platforms</td><td>✓ 2 platforms</td><td>✓ 3 platforms</td></tr>
+          <tr><td>Analytics feedback loop</td><td class="us check">✓ AI learns</td><td class="cross">✗</td><td class="cross">✗</td></tr>
+          <tr><td>Agency white-label</td><td class="us check">✓ Included</td><td class="cross">✗ Extra cost</td><td>✓ Enterprise only</td></tr>
+          <tr><td>Starting price</td><td class="us">$19/mo</td><td>$19/mo</td><td>$15/mo</td></tr>
+          <tr><td>Clip limits</td><td class="us check">✓ Unlimited</td><td class="cross">✗ Capped</td><td class="cross">✗ Capped</td></tr>
+          <tr><td>Facebook + X support</td><td class="us check">✓ Live now</td><td class="cross">✗</td><td class="cross">✗</td></tr>
         </tbody>
       </table>
     </div>
-  </div>
-</div>
+  </section>
 
-<!-- PRICING -->
-<div class="section" id="pricing">
-  <div class="label">Pricing</div>
-  <div class="title">Transparent pricing.<br>No credit traps.</div>
-  <p class="subtitle" style="margin-top:14px">Flat monthly fee. Unlimited clips. No hidden costs. Cancel anytime.</p>
-  <div class="price-grid">
-    <div class="price-card">
-      <div class="price-tier">Free forever</div>
-      <div class="price-num">$0</div>
-      <div class="price-mo">forever free</div>
-      <ul class="price-list">
-        <li>5 videos per month</li>
-        <li>LinkedIn + YouTube only</li>
-        <li>Text post generation</li>
-        <li>Watermarked clips</li>
-      </ul>
-      <button class="btn-price" onclick="goApp()">Start for free</button>
-    </div>
-    <div class="price-card pop">
-      <div class="price-tier">Creator</div>
-      <div class="price-num">$19</div>
-      <div class="price-mo">per month</div>
-      <div class="price-save">Save vs Opus Clip Pro ($29/mo)</div>
-      <ul class="price-list">
-        <li>Unlimited videos</li>
-        <li>All 7 platforms</li>
-        <li>No watermark ever</li>
-        <li>Smart scheduling</li>
-        <li>Analytics dashboard</li>
-        <li>Text posts included</li>
-      </ul>
-      <button class="btn-price" onclick="goApp()">Start Creator plan</button>
-    </div>
-    <div class="price-card">
-      <div class="price-tier">Agency</div>
-      <div class="price-num">$99</div>
-      <div class="price-mo">per month</div>
-      <ul class="price-list">
-        <li>10 client workspaces</li>
-        <li>White-label dashboard</li>
-        <li>Client approval flow</li>
-        <li>Priority support</li>
-        <li>Custom domain</li>
-        <li>Everything in Creator</li>
-      </ul>
-      <button class="btn-price" onclick="goApp()">Start Agency plan</button>
-    </div>
-  </div>
-</div>
-
-<!-- TESTIMONIALS -->
-<div class="section-full">
-  <div class="inner">
-    <div class="label">What creators say</div>
-    <div class="title">Built by a 15-year-old.<br>Used by real creators.</div>
-    <div class="testi-grid">
-      <div class="testi">
-        <div class="testi-stars">★★★★★</div>
-        <div class="testi-text">Switched from Opus Clip because VidPost also generates LinkedIn posts and Twitter threads. One video = a full week of content. Game changer for my workflow.</div>
-        <div class="testi-auth"><div class="testi-av">R</div><div><div class="testi-name">Rahul M.</div><div class="testi-role">Finance creator · 45k subscribers</div></div></div>
+  <!-- Pricing -->
+  <section id="pricing">
+    <div class="section-label">Pricing</div>
+    <h2 class="section-title">Simple pricing.<br>No surprises.</h2>
+    <p class="section-sub">All plans include unlimited clip processing. No hidden fees.</p>
+    <div class="pricing-grid">
+      <div class="price-card">
+        <div class="price-tier">Free</div>
+        <div class="price-amount">$0</div>
+        <div class="price-period">forever</div>
+        <ul class="price-features">
+          <li>5 videos per month</li>
+          <li>LinkedIn + YouTube only</li>
+          <li>Watermarked clips</li>
+          <li>Text posts included</li>
+        </ul>
+        <button class="btn-price" onclick="showApp()">Get started free</button>
       </div>
-      <div class="testi">
-        <div class="testi-stars">★★★★★</div>
-        <div class="testi-text">The unlimited clips thing sold me instantly. Opus charges per minute of video processed. VidPost just charges a flat fee. I process 20+ videos a week now.</div>
-        <div class="testi-auth"><div class="testi-av">P</div><div><div class="testi-name">Priya S.</div><div class="testi-role">Tech creator · 28k followers</div></div></div>
+      <div class="price-card popular">
+        <div class="price-tier">Creator</div>
+        <div class="price-amount">$19</div>
+        <div class="price-period">per month</div>
+        <ul class="price-features">
+          <li>Unlimited videos</li>
+          <li>All 6 platforms</li>
+          <li>No watermark</li>
+          <li>Auto-scheduling</li>
+          <li>Analytics dashboard</li>
+        </ul>
+        <button class="btn-price" onclick="showApp()">Start Creator plan</button>
       </div>
-      <div class="testi">
-        <div class="testi-stars">★★★★★</div>
-        <div class="testi-text">Managing 8 clients with the agency dashboard. White-label means they think it's our own platform. Saved us $2k/month vs hiring a VA to do this manually.</div>
-        <div class="testi-auth"><div class="testi-av">A</div><div><div class="testi-name">Arjun T.</div><div class="testi-role">Agency owner · 8 clients</div></div></div>
+      <div class="price-card">
+        <div class="price-tier">Agency</div>
+        <div class="price-amount">$99</div>
+        <div class="price-period">per month</div>
+        <ul class="price-features">
+          <li>10 client workspaces</li>
+          <li>White-label dashboard</li>
+          <li>Client approval flow</li>
+          <li>Priority support</li>
+          <li>Custom domain</li>
+        </ul>
+        <button class="btn-price" onclick="showApp()">Start Agency plan</button>
       </div>
     </div>
-  </div>
-</div>
+  </section>
 
-<!-- FAQ -->
-<div class="section" id="faq">
-  <div class="label">FAQ</div>
-  <div class="title">Questions?<br>Real answers.</div>
-  <div class="faq">
-    <div class="faq-item"><div class="faq-q" onclick="togFaq(this)">How is VidPost different from Opus Clip? <span class="faq-ic">+</span></div><div class="faq-a">Opus Clip only does video clips — and charges by the minute. VidPost does video clips PLUS text posts for LinkedIn, Twitter, Instagram, TikTok and YouTube Shorts, all from the same video. Plus auto-posting to 7 platforms, smart scheduling, and an analytics loop that makes your clips better over time. Flat monthly fee, no credit traps.</div></div>
-    <div class="faq-item"><div class="faq-q" onclick="togFaq(this)">Does it work with any YouTube video? <span class="faq-ic">+</span></div><div class="faq-a">Yes — paste any public YouTube URL or upload a video file directly (MP4, MOV, AVI up to 500MB). We fetch the transcript automatically for AI clip detection.</div></div>
-    <div class="faq-item"><div class="faq-q" onclick="togFaq(this)">Is there really no clip limit? <span class="faq-ic">+</span></div><div class="faq-a">Yes. Unlike Opus Clip which charges 1 credit per minute of video (so a 60-minute podcast costs 60 credits), VidPost charges a flat monthly fee. Process 1 video or 1,000 — same price.</div></div>
-    <div class="faq-item"><div class="faq-q" onclick="togFaq(this)">Is my content private and secure? <span class="faq-ic">+</span></div><div class="faq-a">Yes. Uploaded videos are deleted from our servers within 1 hour of processing. We never store your video content permanently. OAuth tokens are encrypted in our database using industry-standard encryption.</div></div>
-    <div class="faq-item"><div class="faq-q" onclick="togFaq(this)">Can I cancel anytime? <span class="faq-ic">+</span></div><div class="faq-a">Yes, cancel anytime with one click. Unlike Opus Clip (which has documented difficulty removing payment methods), we make cancellation instant. No questions asked. 7-day money-back guarantee on all paid plans.</div></div>
-    <div class="faq-item"><div class="faq-q" onclick="togFaq(this)">Who built this? <span class="faq-ic">+</span></div><div class="faq-a">VidPost AI was built by a 15-year-old developer from Jodhpur, India. What started as a weekend project grew into a product after frustration with Opus Clip's pricing and limitations. We're a lean team obsessed with helping creators spend less time on distribution.</div></div>
-  </div>
-</div>
+  <!-- Testimonials -->
+  <section style="background:var(--bg2);max-width:100%;border-top:1px solid var(--border)">
+    <div style="max-width:1200px;margin:0 auto">
+      <div class="section-label">What creators say</div>
+      <h2 class="section-title">Built by a creator.<br>For creators.</h2>
+      <div class="testimonials-grid">
+        <div class="testi-card">
+          <div class="testi-text">I was spending 3 hours a week repurposing my YouTube content. VidPost cut that to literally zero. The AI captions are actually good.</div>
+          <div class="testi-author"><div class="testi-avatar">R</div><div><div class="testi-name">Rahul M.</div><div class="testi-role">Finance YouTuber · 45k subs</div></div></div>
+        </div>
+        <div class="testi-card">
+          <div class="testi-text">Switched from Opus Clip because VidPost also writes my LinkedIn posts. One video = full week of content across all my channels.</div>
+          <div class="testi-author"><div class="testi-avatar">P</div><div><div class="testi-name">Priya S.</div><div class="testi-role">Tech creator · 28k followers</div></div></div>
+        </div>
+        <div class="testi-card">
+          <div class="testi-text">Managing 8 clients with VidPost's agency dashboard. Saved us 20 hours a week. The white-label feature is exactly what we needed.</div>
+          <div class="testi-author"><div class="testi-avatar">A</div><div><div class="testi-name">Arjun T.</div><div class="testi-role">Social media agency owner</div></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
 
-<!-- CTA -->
-<div class="cta-banner">
-  <h2>Stop paying by the minute.<br>Start posting <span style="color:var(--lime)">everywhere.</span></h2>
-  <p>Free forever. No credit card. Setup in 30 seconds.</p>
-  <a href="#" class="btn-hero-primary" onclick="goApp();return false">Start for free →</a>
-</div>
+  <!-- FAQ -->
+  <section id="faq">
+    <div class="section-label">FAQ</div>
+    <h2 class="section-title">Questions?<br>Answered.</h2>
+    <div class="faq-list">
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">Does it work with any YouTube video? <span class="faq-arrow">+</span></div>
+        <div class="faq-a">Yes — paste any public YouTube URL or upload a video file directly (MP4, MOV, AVI up to 500MB). We fetch the transcript automatically for AI clip detection.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">How is VidPost different from Opus Clip? <span class="faq-arrow">+</span></div>
+        <div class="faq-a">Opus Clip only does video clips. VidPost also generates LinkedIn posts, Twitter threads, Instagram captions, TikTok scripts, and YouTube Shorts scripts from the same video — and auto-posts all of them. Plus our AI learns from your analytics to improve over time.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">Is my content safe and private? <span class="faq-arrow">+</span></div>
+        <div class="faq-a">Yes. Uploaded videos are deleted from our servers within 1 hour of processing. We never store your video content permanently. Your OAuth tokens are encrypted in our database and never shared with third parties.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">Which platforms can I auto-post to? <span class="faq-arrow">+</span></div>
+        <div class="faq-a">Currently live: LinkedIn, YouTube Shorts, Instagram Reels, TikTok, X/Twitter, and Facebook Pages. Connect accounts in the "Connect Accounts" tab inside the dashboard.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">Can I cancel anytime? <span class="faq-arrow">+</span></div>
+        <div class="faq-a">Yes — cancel anytime with one click, no questions asked. You keep access until the end of your billing period.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">Who built this? <span class="faq-arrow">+</span></div>
+        <div class="faq-a">VidPost AI was built by a 15-year-old developer from Jodhpur, India. It started as a weekend project and grew into a full product. We're a small team obsessed with helping creators spend less time on distribution and more time creating.</div>
+      </div>
+    </div>
+  </section>
 
-<!-- FOOTER -->
-<footer>
-  <div class="footer-grid">
-    <div>
-      <div class="footer-brand">VidPost <span style="color:var(--lime)">AI</span></div>
-      <div class="footer-tagline">Turn any video into viral content for every platform. Automatically. No credit limits.</div>
-    </div>
-    <div>
-      <div class="footer-col-h">Product</div>
-      <ul class="footer-links">
-        <li><a href="#how">How it works</a></li>
-        <li><a href="#features">Features</a></li>
-        <li><a href="#pricing">Pricing</a></li>
-        <li><a href="#" onclick="goApp();return false">Open app</a></li>
-      </ul>
-    </div>
-    <div>
-      <div class="footer-col-h">Platforms</div>
-      <ul class="footer-links">
-        <li><a href="#">LinkedIn</a></li>
-        <li><a href="#">YouTube Shorts</a></li>
-        <li><a href="#">Instagram Reels</a></li>
-        <li><a href="#">TikTok</a></li>
-        <li><a href="#">X / Twitter</a></li>
-        <li><a href="#">Snapchat</a></li>
-      </ul>
-    </div>
-    <div>
-      <div class="footer-col-h">Legal</div>
-      <ul class="footer-links">
-        <li><a href="#" onclick="goLegal('privacy');return false">Privacy Policy</a></li>
-        <li><a href="#" onclick="goLegal('terms');return false">Terms of Service</a></li>
-        <li><a href="#" onclick="goLegal('refund');return false">Refund Policy</a></li>
-        <li><a href="mailto:hello@vidpostai.com">Contact Us</a></li>
-      </ul>
-    </div>
+  <!-- CTA -->
+  <div class="cta-section">
+    <h2>Start turning videos<br>into <span style="color:var(--lime)">viral content</span> today.</h2>
+    <p>Free forever. No credit card. Takes 30 seconds to set up.</p>
+    <a href="#" class="btn-hero primary" onclick="showApp();return false" style="display:inline-flex">Start for free →</a>
   </div>
-  <div class="footer-bottom">
-    <div class="footer-copy">© 2025 VidPost AI · Built by a 15-year-old founder from India 🇮🇳</div>
-    <div class="footer-leg">
-      <a href="#" onclick="goLegal('privacy');return false">Privacy</a>
-      <a href="#" onclick="goLegal('terms');return false">Terms</a>
-      <a href="#" onclick="goLegal('refund');return false">Refunds</a>
+
+  <!-- Footer -->
+  <footer>
+    <div class="footer-top">
+      <div>
+        <div class="footer-brand">VidPost <span style="color:var(--lime)">AI</span></div>
+        <div class="footer-tagline">Turn any video into viral content for every platform. Automatically.</div>
+      </div>
+      <div>
+        <div class="footer-col-title">Product</div>
+        <ul class="footer-links">
+          <li><a href="#how">How it works</a></li>
+          <li><a href="#features">Features</a></li>
+          <li><a href="#pricing">Pricing</a></li>
+          <li><a href="#" onclick="showApp();return false">Launch app</a></li>
+        </ul>
+      </div>
+      <div>
+        <div class="footer-col-title">Platforms</div>
+        <ul class="footer-links">
+          <li><a href="#">LinkedIn</a></li>
+          <li><a href="#">YouTube Shorts</a></li>
+          <li><a href="#">Instagram Reels</a></li>
+          <li><a href="#">TikTok</a></li>
+          <li><a href="#">X / Twitter</a></li>
+          <li><a href="#">Snapchat</a></li>
+        </ul>
+      </div>
+      <div>
+        <div class="footer-col-title">Legal</div>
+        <ul class="footer-links">
+          <li><a href="#" onclick="showLegal('privacy');return false">Privacy Policy</a></li>
+          <li><a href="#" onclick="showLegal('terms');return false">Terms of Service</a></li>
+          <li><a href="#" onclick="showLegal('refund');return false">Refund Policy</a></li>
+          <li><a href="mailto:hello@vidpostai.com">Contact Us</a></li>
+        </ul>
+      </div>
     </div>
-  </div>
-</footer>
+    <div class="footer-bottom">
+      <div class="footer-copy">© 2025 VidPost AI. Built with ❤️ by a 15-year-old founder.</div>
+      <div class="footer-legal">
+        <a href="#" onclick="showLegal('privacy');return false">Privacy</a>
+        <a href="#" onclick="showLegal('terms');return false">Terms</a>
+        <a href="#" onclick="showLegal('refund');return false">Refunds</a>
+      </div>
+    </div>
+  </footer>
+
 </div><!-- /landing -->
 
-<!-- ══ LEGAL ════════════════════════════════════════════════════════════════ -->
-<div class="legal-pg" id="lg-privacy">
-  <a class="back-link" href="#" onclick="goLanding();return false">← Back to home</a>
+<!-- ── Legal Pages ─────────────────────────────────────────────────────────── -->
+<div class="legal-page" id="legal-privacy">
+  <a href="#" onclick="showLanding();return false" style="font-family:var(--font-mono);font-size:12px;color:var(--lime);text-decoration:none;display:block;margin-bottom:24px">← Back to home</a>
   <h1>Privacy Policy</h1>
-  <div class="upd">Last updated: May 19, 2025</div>
-  <p>VidPost AI ("we", "us") operates vidpost-ai.vercel.app. This Privacy Policy explains how we collect, use, and protect your information.</p>
-  <h2>What we collect</h2>
-  <ul><li><strong>Account:</strong> Email and password when you sign up.</li><li><strong>OAuth tokens:</strong> Access tokens from connected platforms. Encrypted at rest. Never shared.</li><li><strong>Video content:</strong> Files you upload. Deleted within 1 hour of processing.</li><li><strong>Usage data:</strong> Clips created, posts published, analytics pulled from platforms.</li></ul>
-  <h2>How we use it</h2>
-  <ul><li>To provide clip generation and auto-posting</li><li>To improve AI clip scoring over time</li><li>Service-related emails only — no marketing spam</li><li>Fraud prevention and security</li></ul>
-  <h2>Data storage</h2>
-  <p>All data stored in Supabase (PostgreSQL) with row-level security. OAuth tokens encrypted at rest. Video files stored temporarily on Railway and deleted within 1 hour. We never sell your data.</p>
-  <h2>Your rights</h2>
-  <p>Request full deletion of your account and data at any time: <a href="mailto:hello@vidpostai.com">hello@vidpostai.com</a>. Processed within 30 days.</p>
+  <div class="updated">Last updated: May 19, 2025</div>
+  <p>VidPost AI ("we", "us", "our") operates vidpost-ai.vercel.app. This Privacy Policy explains how we collect, use, and protect your information.</p>
+  <h2>Information We Collect</h2>
+  <ul>
+    <li><strong>Account information:</strong> Email address and password when you create an account.</li>
+    <li><strong>OAuth tokens:</strong> Access tokens from LinkedIn, YouTube, Instagram, and TikTok when you connect your accounts. These are encrypted and stored securely.</li>
+    <li><strong>Video content:</strong> Videos you upload for processing. These are deleted from our servers within 1 hour of processing completion.</li>
+    <li><strong>Usage data:</strong> Information about how you use our service, including clips created and posts published.</li>
+  </ul>
+  <h2>How We Use Your Information</h2>
+  <ul>
+    <li>To provide clip generation and auto-posting services</li>
+    <li>To improve our AI models and clip detection accuracy</li>
+    <li>To send service-related emails (no marketing without consent)</li>
+    <li>To prevent fraud and ensure security</li>
+  </ul>
+  <h2>Data Storage and Security</h2>
+  <p>Your data is stored on Supabase (PostgreSQL) with row-level security enabled. OAuth tokens are encrypted at rest. Video files are stored temporarily on Railway servers and deleted within 1 hour.</p>
+  <h2>Third-Party Services</h2>
+  <p>We use: Supabase (database), Railway (backend hosting), Vercel (frontend hosting), Groq (AI generation), Supadata (transcript fetching). Each has their own privacy policy.</p>
+  <h2>Your Rights</h2>
+  <p>You can request deletion of your account and all associated data at any time by emailing hello@vidpostai.com. We will process deletion requests within 30 days.</p>
+  <h2>OAuth Permissions</h2>
+  <p>We request only the minimum permissions needed to post content on your behalf. We never read your private messages, contacts, or personal data from connected platforms.</p>
   <h2>Contact</h2>
-  <p><a href="mailto:hello@vidpostai.com">hello@vidpostai.com</a></p>
+  <p>Questions about privacy? Email us at <a href="mailto:hello@vidpostai.com">hello@vidpostai.com</a></p>
 </div>
 
-<div class="legal-pg" id="lg-terms">
-  <a class="back-link" href="#" onclick="goLanding();return false">← Back to home</a>
+<div class="legal-page" id="legal-terms">
+  <a href="#" onclick="showLanding();return false" style="font-family:var(--font-mono);font-size:12px;color:var(--lime);text-decoration:none;display:block;margin-bottom:24px">← Back to home</a>
   <h1>Terms of Service</h1>
-  <div class="upd">Last updated: May 19, 2025</div>
-  <p>By using VidPost AI you agree to these terms.</p>
-  <h2>Acceptable use</h2>
-  <p>Do not use VidPost AI to post content that violates platform terms, distribute copyrighted content without permission, spam, harass, or engage in any illegal activity.</p>
-  <h2>Content ownership</h2>
-  <p>You own all content you upload and generate. By using VidPost you grant us a temporary license to process your content for clip generation and posting.</p>
-  <h2>Platform compliance</h2>
-  <p>You are responsible for compliance with each platform's terms. We are not liable for account suspensions on connected platforms resulting from policy violations.</p>
-  <h2>Billing</h2>
-  <p>Monthly billing. Cancel anytime. See our Refund Policy for details.</p>
-  <h2>Limitation of liability</h2>
-  <p>VidPost AI is provided "as is". We are not liable for indirect, incidental, or consequential damages.</p>
+  <div class="updated">Last updated: May 19, 2025</div>
+  <p>By using VidPost AI, you agree to these Terms of Service. Please read them carefully.</p>
+  <h2>Acceptable Use</h2>
+  <p>You agree not to use VidPost AI to:</p>
+  <ul>
+    <li>Post content that violates the terms of service of any connected platform</li>
+    <li>Upload or distribute copyrighted content without permission</li>
+    <li>Spam or harass other users on any platform</li>
+    <li>Attempt to reverse engineer or circumvent our systems</li>
+    <li>Use the service for any illegal purpose</li>
+  </ul>
+  <h2>Content Ownership</h2>
+  <p>You retain full ownership of all videos you upload and content you generate. By using our service, you grant us a temporary license to process your content for the purpose of generating clips and posts.</p>
+  <h2>Service Availability</h2>
+  <p>We aim for 99% uptime but do not guarantee uninterrupted service. We are not liable for any losses resulting from service downtime.</p>
+  <h2>Platform Compliance</h2>
+  <p>You are responsible for ensuring your use of auto-posting complies with each platform's terms of service. We are not responsible for account suspensions resulting from policy violations on connected platforms.</p>
+  <h2>Subscriptions and Billing</h2>
+  <p>Paid plans are billed monthly. You can cancel at any time. No refunds for partial months except as described in our Refund Policy.</p>
+  <h2>Limitation of Liability</h2>
+  <p>VidPost AI is provided "as is". We are not liable for any indirect, incidental, or consequential damages arising from your use of the service.</p>
+  <h2>Changes to Terms</h2>
+  <p>We may update these terms. We will notify users by email of material changes. Continued use after changes constitutes acceptance.</p>
   <h2>Contact</h2>
-  <p><a href="mailto:hello@vidpostai.com">hello@vidpostai.com</a></p>
+  <p>Questions? Email <a href="mailto:hello@vidpostai.com">hello@vidpostai.com</a></p>
 </div>
 
-<div class="legal-pg" id="lg-refund">
-  <a class="back-link" href="#" onclick="goLanding();return false">← Back to home</a>
+<div class="legal-page" id="legal-refund">
+  <a href="#" onclick="showLanding();return false" style="font-family:var(--font-mono);font-size:12px;color:var(--lime);text-decoration:none;display:block;margin-bottom:24px">← Back to home</a>
   <h1>Refund Policy</h1>
-  <div class="upd">Last updated: May 19, 2025</div>
-  <h2>7-day money-back guarantee</h2>
-  <p>Not satisfied within the first 7 days of a paid plan? Email us for a full refund — no questions asked.</p>
-  <h2>After 7 days</h2>
-  <p>Handled case-by-case. Technical issues preventing use qualify for a prorated refund.</p>
-  <h2>How to request</h2>
-  <p>Email <a href="mailto:hello@vidpostai.com">hello@vidpostai.com</a> with your account email. Processed within 5 business days.</p>
+  <div class="updated">Last updated: May 19, 2025</div>
+  <p>We want you to be happy with VidPost AI. Here's our refund policy:</p>
+  <h2>7-Day Money-Back Guarantee</h2>
+  <p>If you're not satisfied within the first 7 days of your paid subscription, contact us at hello@vidpostai.com for a full refund. No questions asked.</p>
+  <h2>After 7 Days</h2>
+  <p>After the first 7 days, refunds are handled on a case-by-case basis. If you experienced a technical issue that prevented you from using the service, we will issue a prorated refund.</p>
+  <h2>Cancellations</h2>
+  <p>You can cancel your subscription at any time. You will retain access until the end of your current billing period. No refund is issued for the remaining period unless under the 7-day guarantee.</p>
+  <h2>How to Request a Refund</h2>
+  <p>Email <a href="mailto:hello@vidpostai.com">hello@vidpostai.com</a> with your account email and reason. We process all refund requests within 5 business days.</p>
 </div>
 
-<!-- ══ APP ══════════════════════════════════════════════════════════════════ -->
-<div id="v-app" style="padding-top:64px">
-  <div class="app-wrap">
-    <div class="app-header">
+<!-- ── App View ─────────────────────────────────────────────────────────────── -->
+<div id="app-view">
+  <div class="app-section">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:10px">
       <div>
-        <div class="app-title">Dashboard</div>
-        <div class="app-user" id="app-user-display"></div>
+        <h2 style="font-family:var(--font-head);font-size:28px;font-weight:800;letter-spacing:-1px">Dashboard</h2>
+        <p style="font-size:13px;color:var(--ink2);margin-top:4px" id="user-display-app"></p>
       </div>
-      <div style="display:flex;gap:8px;align-items:center">
-        <button onclick="goLanding()" style="padding:7px 14px;border-radius:20px;border:1px solid var(--border2);background:transparent;color:var(--ink2);font-size:12px;cursor:pointer;font-family:var(--fh);font-weight:600">← Home</button>
-        <button id="app-auth-btn" onclick="openAuth()" style="padding:7px 14px;border-radius:20px;border:1px solid var(--border2);background:transparent;color:var(--ink);font-size:12px;cursor:pointer;font-family:var(--fh);font-weight:700">Sign in</button>
+      <div style="display:flex;gap:8px">
+        <button onclick="showLanding()" style="padding:8px 16px;border-radius:20px;border:1px solid var(--border2);background:transparent;color:var(--ink2);font-size:12px;cursor:pointer;font-family:var(--font-head)">← Back to site</button>
+        <button id="app-auth-btn" onclick="openAuth()" style="padding:8px 16px;border-radius:20px;border:1px solid var(--border2);background:transparent;color:var(--ink);font-size:12px;cursor:pointer;font-family:var(--font-head);font-weight:600">Sign in</button>
       </div>
     </div>
 
     <div class="app-tabs">
-      <button class="app-tab on" onclick="swTab('clips')">✂ Video Clips</button>
-      <button class="app-tab" onclick="swTab('posts')">✍ Text Posts</button>
-      <button class="app-tab" onclick="swTab('connect')">🔗 Connect</button>
+      <button class="app-tab on" onclick="switchTab('clips')">✂ Video Clips</button>
+      <button class="app-tab" onclick="switchTab('posts')">✍ Text Posts</button>
+      <button class="app-tab" onclick="switchTab('connect')">🔗 Connect</button>
     </div>
 
-    <!-- CLIPS TAB -->
+    <!-- CLIPS -->
     <div id="tab-clips" class="app-panel on">
       <div class="a-card">
-        <div style="display:flex;gap:6px;margin-bottom:14px">
-          <button class="chip on" id="src-url-chip" onclick="swSrc('url')">🔗 YouTube URL</button>
-          <button class="chip" id="src-up-chip" onclick="swSrc('upload')">📁 Upload file</button>
-        </div>
-        <div id="src-url-div">
-          <div class="row">
-            <input type="text" id="clip-url" placeholder="https://www.youtube.com/watch?v=..."/>
-            <button class="btn-go" id="an-btn" onclick="doAnalyse()"><span id="an-lbl">Analyse →</span></button>
+        <div style="margin-bottom:14px">
+          <div style="display:flex;gap:6px;margin-bottom:12px">
+            <button class="pt on" id="src-url-btn" onclick="switchSrc('url')">🔗 YouTube URL</button>
+            <button class="pt" id="src-up-btn" onclick="switchSrc('upload')">📁 Upload</button>
+          </div>
+          <div id="src-url-panel">
+            <div class="url-row">
+              <input type="text" id="clip-url" placeholder="https://www.youtube.com/watch?v=..."/>
+              <button class="btn-go" id="analyse-btn" onclick="analyseVideo()"><span id="analyse-lbl">Analyse →</span></button>
+            </div>
+          </div>
+          <div id="src-up-panel" style="display:none">
+            <div style="border:2px dashed var(--border2);border-radius:var(--r);padding:32px;text-align:center;cursor:pointer;transition:all .2s" id="dz" onclick="document.getElementById('fi').click()" ondragover="doDrag(event,true)" ondragleave="doDrag(event,false)" ondrop="doDrop(event)">
+              <input type="file" id="fi" accept="video/*" style="display:none" onchange="doFile(this.files[0])"/>
+              <div style="font-size:28px;margin-bottom:8px">🎬</div>
+              <div style="font-family:var(--font-head);font-size:14px;font-weight:700;margin-bottom:4px" id="dz-title">Drop video or click to browse</div>
+              <div style="font-size:12px;color:var(--ink2)" id="dz-sub">MP4, MOV, AVI — up to 500MB</div>
+            </div>
+            <button class="btn-go" id="up-btn" onclick="analyseUpload()" style="display:none;margin-top:10px"><span id="up-lbl">Analyse video →</span></button>
           </div>
         </div>
-        <div id="src-up-div" style="display:none">
-          <div style="border:2px dashed var(--border2);border-radius:var(--r);padding:28px;text-align:center;cursor:pointer;transition:all .2s" id="dz" onclick="document.getElementById('fi').click()" ondragover="onDrag(event,true)" ondragleave="onDrag(event,false)" ondrop="onDrop(event)">
-            <input type="file" id="fi" accept="video/*" style="display:none" onchange="onFile(this.files[0])"/>
-            <div style="font-size:26px;margin-bottom:8px">🎬</div>
-            <div style="font-family:var(--fh);font-size:14px;font-weight:700;margin-bottom:4px" id="dz-t">Drop video here or click to browse</div>
-            <div style="font-size:12px;color:var(--ink2)" id="dz-s">MP4, MOV, AVI — up to 500MB</div>
-          </div>
-          <button class="btn-go" id="up-btn" onclick="doUpload()" style="display:none;margin-top:10px"><span id="up-lbl">Analyse uploaded video →</span></button>
-        </div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:14px">
-          <span style="font-size:12px;color:var(--ink2);align-self:center;font-family:var(--fm)">Tone:</span>
-          <button class="chip on" data-tone="professional">Professional</button>
-          <button class="chip" data-tone="casual">Casual</button>
-          <button class="chip" data-tone="bold">Bold</button>
-          <button class="chip" data-tone="storytelling">Storytelling</button>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <span style="font-size:12px;color:var(--ink2);align-self:center;font-family:var(--font-mono)">Tone:</span>
+          <button class="pt on" data-tone="professional">Professional</button>
+          <button class="pt" data-tone="casual">Casual</button>
+          <button class="pt" data-tone="bold">Bold</button>
+          <button class="pt" data-tone="storytelling">Storytelling</button>
         </div>
       </div>
-      <div class="sb" id="sb"><div class="spin"></div><span id="st">Working...</span></div>
-      <div class="err" id="eb"></div>
-      <div class="ok" id="ob"></div>
+
+      <div class="status-bar2" id="sb"><div class="spin2"></div><span id="st">Analysing...</span></div>
+      <div class="err2" id="eb"></div>
+      <div class="ok2" id="ob"></div>
+
       <div id="clips-out" style="display:none">
-        <div style="display:flex;gap:16px;flex-wrap:wrap;padding:10px 14px;background:var(--bg3);border-radius:var(--r);font-size:11px;font-family:var(--fm);color:var(--ink2);margin-bottom:14px" id="vm"></div>
+        <div style="display:flex;gap:16px;flex-wrap:wrap;padding:10px 14px;background:var(--bg3);border-radius:var(--r);font-size:11px;font-family:var(--font-mono);color:var(--ink2);margin-bottom:14px" id="vm"></div>
         <div id="cg"></div>
       </div>
     </div>
 
-    <!-- POSTS TAB -->
+    <!-- POSTS -->
     <div id="tab-posts" class="app-panel">
       <div class="a-card">
-        <div class="row">
+        <div class="url-row">
           <input type="text" id="post-url" placeholder="https://www.youtube.com/watch?v=..."/>
-          <button class="btn-go" id="post-btn" onclick="doPosts()"><span id="post-lbl">Generate →</span></button>
+          <button class="btn-go" id="post-btn" onclick="genPosts()"><span id="post-lbl">Generate →</span></button>
         </div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">
-          <span style="font-size:12px;color:var(--ink2);align-self:center;font-family:var(--fm)">Platforms:</span>
-          <button class="chip on" data-plat="linkedin">LinkedIn</button>
-          <button class="chip on" data-plat="twitter">Twitter/X</button>
-          <button class="chip on" data-plat="instagram">Instagram</button>
-          <button class="chip on" data-plat="tiktok">TikTok</button>
-          <button class="chip on" data-plat="youtube_short">YT Shorts</button>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+          <span style="font-size:12px;color:var(--ink2);align-self:center;font-family:var(--font-mono)">Platforms:</span>
+          <button class="pt on" data-plat="linkedin">LinkedIn</button>
+          <button class="pt on" data-plat="twitter">Twitter/X</button>
+          <button class="pt on" data-plat="instagram">Instagram</button>
+          <button class="pt on" data-plat="tiktok">TikTok</button>
+          <button class="pt on" data-plat="youtube_short">YT Shorts</button>
+          <button class="pt on" data-plat="facebook">Facebook</button>
         </div>
       </div>
-      <div id="post-sb" style="display:none;align-items:center;gap:10px;padding:10px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);font-family:var(--fm);font-size:12px;margin-bottom:12px;color:var(--ink2)">
-        <div class="spin"></div><span id="post-st">Generating...</span>
+      <div id="post-status" style="display:none;align-items:center;gap:10px;padding:10px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);font-family:var(--font-mono);font-size:12px;margin-bottom:12px;color:var(--ink2)">
+        <div class="spin2"></div><span id="post-st">Generating...</span>
       </div>
-      <div class="err" id="post-eb"></div>
-      <div class="posts-out" id="posts-out"></div>
+      <div class="err2" id="post-eb"></div>
+      <div id="posts-out" style="display:grid;grid-template-columns:repeat(2,1fr);gap:14px"></div>
     </div>
 
-    <!-- CONNECT TAB -->
+    <!-- CONNECT -->
     <div id="tab-connect" class="app-panel">
-      <div id="conn-gate" style="display:none">
+      <div id="connect-gate-app" style="display:none">
         <div class="a-card" style="text-align:center;padding:40px">
-          <div style="font-size:36px;margin-bottom:12px">🔐</div>
-          <div style="font-family:var(--fh);font-size:20px;font-weight:800;letter-spacing:-1px;margin-bottom:8px">Sign in to connect accounts</div>
-          <div style="font-size:13px;color:var(--ink2);margin-bottom:20px;max-width:400px;margin-left:auto;margin-right:auto">Connect your social accounts once and VidPost will auto-post every clip automatically.</div>
+          <div style="font-size:32px;margin-bottom:12px">🔐</div>
+          <div style="font-family:var(--font-head);font-size:18px;font-weight:800;margin-bottom:8px">Sign in to connect accounts</div>
+          <div style="font-size:13px;color:var(--ink2);margin-bottom:20px">Connect once and auto-post to all platforms forever.</div>
           <button class="btn-go" onclick="openAuth()">Sign in to continue →</button>
         </div>
       </div>
-      <div id="conn-main" style="display:none">
-        <div class="conn-grid" id="conn-grid"></div>
-        <div style="margin-top:14px;padding:14px;background:var(--bg3);border-radius:var(--r);font-size:12px;color:var(--ink2);line-height:1.6;font-family:var(--fm)">
-          X/Twitter and Snapchat integrations coming very soon. <span style="color:var(--lime)">You'll be notified by email when live.</span>
-        </div>
+      <div id="connect-main" style="display:none">
+        <div class="connect-grid" id="cg-platforms"></div>
       </div>
     </div>
   </div>
 </div>
 
-<!-- AUTH MODAL -->
-<div id="auth-modal" onclick="onAuthBg(event)">
+<!-- ── Auth Modal ──────────────────────────────────────────────────────────── -->
+<div id="auth-modal" onclick="handleAuthBg(event)">
   <div class="auth-box">
-    <h2>Welcome.</h2>
-    <p>Sign in or create your free account to start.</p>
-    <label class="auth-lbl">Email</label>
+    <h2>Welcome back.</h2>
+    <p>Sign in or create your free account.</p>
+    <label class="auth-label">Email</label>
     <input type="email" id="ae" placeholder="you@example.com"/>
-    <label class="auth-lbl">Password</label>
+    <label class="auth-label">Password</label>
     <input type="password" id="ap" placeholder="••••••••" autocomplete="current-password"/>
-    <div class="auth-acts">
-      <button class="btn-auth" onclick="doIn()">Sign in</button>
-      <button class="btn-ghost3" onclick="doUp()">Create account</button>
+    <div class="auth-actions">
+      <button class="btn-auth" onclick="doSignIn()">Sign in</button>
+      <button class="btn-ghost2" onclick="doSignUp()">Create account</button>
     </div>
-    <div style="font-size:11px;color:var(--ink3);margin-top:14px;text-align:center;font-family:var(--fm)" id="am"></div>
+    <div style="font-size:11px;color:var(--ink3);margin-top:12px;text-align:center;font-family:var(--font-mono)" id="am"></div>
   </div>
 </div>
 
 <script>
 // ── Config ────────────────────────────────────────────────────────────────────
 const API = '/api';
-const SB_URL  = 'https://kwkrmnkqrwxyltxbmaru.supabase.co/';
-const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt3a3Jtbmtxcnd4eWx0eGJtYXJ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkwMTc5NjMsImV4cCI6MjA5NDU5Mzk2M30.qEGsRpTmv2jDSznmTiHZB8EHTYohGUQbGRB_7jjGe4I
-';
+const SUPABASE_URL  = 'YOUR_SUPABASE_URL';
+const SUPABASE_ANON = 'YOUR_SUPABASE_ANON_KEY';
 const RAILWAY = 'https://vidpost-ai-production.up.railway.app';
 
 // ── State ─────────────────────────────────────────────────────────────────────
-let U=null, vidId='', upPath='', vidTitle='', tone='professional';
-let plats=['linkedin','twitter','instagram','tiktok','youtube_short'];
-let selFile=null, connPlats=[], dark=true;
-
-// ── Init ──────────────────────────────────────────────────────────────────────
-window.addEventListener('DOMContentLoaded',()=>{
-  const t=localStorage.getItem('vp_theme')||'dark';
-  dark=t==='dark';
-  document.documentElement.setAttribute('data-theme',t);
-  document.getElementById('theme-btn').textContent=dark?'🌙':'☀️';
-
-  const p=new URLSearchParams(location.search);
-  if(p.get('connected')){ goApp(); swTab('connect'); showOk('✅ '+p.get('connected')+' connected successfully!'); history.replaceState({},'','/'); }
-  if(p.get('error')){ goApp(); showErr('Connection failed: '+p.get('error')); history.replaceState({},'','/'); }
-
-  const saved=localStorage.getItem('vp_u');
-  if(saved){ try{ U=JSON.parse(saved); updAuth(); loadConn(); }catch(e){} }
-
-  document.querySelectorAll('[data-tone]').forEach(b=>b.addEventListener('click',()=>{
-    document.querySelectorAll('[data-tone]').forEach(x=>x.classList.remove('on'));
-    b.classList.add('on'); tone=b.dataset.tone;
-  }));
-  document.querySelectorAll('[data-plat]').forEach(b=>b.addEventListener('click',()=>{
-    b.classList.toggle('on');
-    plats=[...document.querySelectorAll('[data-plat].on')].map(x=>x.dataset.plat);
-  }));
-  document.getElementById('clip-url').addEventListener('keydown',e=>{if(e.key==='Enter')doAnalyse();});
-  document.getElementById('post-url').addEventListener('keydown',e=>{if(e.key==='Enter')doPosts();});
-});
+let currentUser=null, currentVideoId='', currentUploadPath='', currentTitle='';
+let selectedTone='professional', selectedPlats=['linkedin','twitter','instagram','tiktok','youtube_short','facebook'];
+let selectedFile=null, connectedPlats=[], isDark=true;
 
 // ── Theme ─────────────────────────────────────────────────────────────────────
 function toggleTheme(){
-  dark=!dark;
-  document.documentElement.setAttribute('data-theme',dark?'dark':'light');
-  document.getElementById('theme-btn').textContent=dark?'🌙':'☀️';
-  localStorage.setItem('vp_theme',dark?'dark':'light');
+  isDark=!isDark;
+  document.documentElement.setAttribute('data-theme', isDark?'dark':'light');
+  document.getElementById('theme-btn').textContent = isDark?'🌙':'☀️';
+  localStorage.setItem('vp_theme', isDark?'dark':'light');
 }
 
-// ── Views ─────────────────────────────────────────────────────────────────────
-function goLanding(){ $('v-landing').style.display='block'; $('v-app').style.display='none'; document.querySelectorAll('.legal-pg').forEach(p=>p.classList.remove('active')); scrollTo(0,0); }
-function goApp(){ $('v-landing').style.display='none'; $('v-app').style.display='block'; document.querySelectorAll('.legal-pg').forEach(p=>p.classList.remove('active')); scrollTo(0,0); if(!U) setTimeout(()=>{ if(!U) openAuth(); },400); }
-function goLegal(k){ $('v-landing').style.display='none'; $('v-app').style.display='none'; document.querySelectorAll('.legal-pg').forEach(p=>p.classList.remove('active')); $('lg-'+k).classList.add('active'); scrollTo(0,0); }
-function togFaq(el){ el.parentElement.classList.toggle('open'); }
+// ── Nav ───────────────────────────────────────────────────────────────────────
+function showLanding(){
+  document.getElementById('landing').style.display='block';
+  document.getElementById('app-view').style.display='none';
+  document.querySelectorAll('.legal-page').forEach(p=>p.classList.remove('active'));
+  window.scrollTo(0,0);
+}
+function showApp(){
+  document.getElementById('landing').style.display='none';
+  document.getElementById('app-view').style.display='block';
+  document.querySelectorAll('.legal-page').forEach(p=>p.classList.remove('active'));
+  window.scrollTo(0,0);
+  if(!currentUser) setTimeout(()=>{ if(!currentUser) openAuth(); }, 500);
+}
+function showLegal(page){
+  document.getElementById('landing').style.display='none';
+  document.getElementById('app-view').style.display='none';
+  document.querySelectorAll('.legal-page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('legal-'+page).classList.add('active');
+  window.scrollTo(0,0);
+}
 
-// ── App nav ───────────────────────────────────────────────────────────────────
-function swTab(t){
-  const ts=['clips','posts','connect'];
-  document.querySelectorAll('.app-tab').forEach((b,i)=>b.classList.toggle('on',ts[i]===t));
+// ── FAQ ───────────────────────────────────────────────────────────────────────
+function toggleFaq(el){
+  const item=el.parentElement;
+  item.classList.toggle('open');
+}
+
+// ── App tabs ──────────────────────────────────────────────────────────────────
+function switchTab(t){
+  const tabs=['clips','posts','connect'];
+  document.querySelectorAll('.app-tab').forEach((b,i)=>b.classList.toggle('on',tabs[i]===t));
   document.querySelectorAll('.app-panel').forEach(p=>p.classList.remove('on'));
-  $('tab-'+t).classList.add('on');
-  if(t==='connect') renderConn();
-}
-function swSrc(s){
-  $('src-url-div').style.display=s==='url'?'block':'none';
-  $('src-up-div').style.display=s==='upload'?'block':'none';
-  $('src-url-chip').classList.toggle('on',s==='url');
-  $('src-up-chip').classList.toggle('on',s==='upload');
+  document.getElementById('tab-'+t).classList.add('on');
+  if(t==='connect') renderConnect();
 }
 
-// ── Utils ─────────────────────────────────────────────────────────────────────
+function switchSrc(s){
+  document.getElementById('src-url-panel').style.display=s==='url'?'block':'none';
+  document.getElementById('src-up-panel').style.display=s==='upload'?'block':'none';
+  document.getElementById('src-url-btn').classList.toggle('on',s==='url');
+  document.getElementById('src-up-btn').classList.toggle('on',s==='upload');
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded',()=>{
+  const savedTheme=localStorage.getItem('vp_theme')||'dark';
+  isDark=savedTheme==='dark';
+  document.documentElement.setAttribute('data-theme',savedTheme);
+  document.getElementById('theme-btn').textContent=isDark?'🌙':'☀️';
+
+  const params=new URLSearchParams(window.location.search);
+  if(params.get('connected')){ showOk('✅ '+params.get('connected')+' connected!'); switchTab('connect'); showApp(); window.history.replaceState({},'','/'); }
+  if(params.get('error')){ showErr('Connection failed: '+params.get('error')); showApp(); window.history.replaceState({},'','/'); }
+
+  const saved=localStorage.getItem('vp_user');
+  if(saved){ try{ currentUser=JSON.parse(saved); updateAuthUI(); loadConnections(); }catch(e){} }
+
+  // Tone chips
+  document.querySelectorAll('[data-tone]').forEach(b=>{
+    b.addEventListener('click',()=>{
+      document.querySelectorAll('[data-tone]').forEach(x=>x.classList.remove('on'));
+      b.classList.add('on'); selectedTone=b.dataset.tone;
+    });
+  });
+
+  // Platform chips
+  document.querySelectorAll('[data-plat]').forEach(b=>{
+    b.addEventListener('click',()=>{
+      b.classList.toggle('on');
+      selectedPlats=[...document.querySelectorAll('[data-plat].on')].map(x=>x.dataset.plat);
+    });
+  });
+
+  document.getElementById('clip-url').addEventListener('keydown',e=>{if(e.key==='Enter')analyseVideo();});
+  document.getElementById('post-url').addEventListener('keydown',e=>{if(e.key==='Enter')genPosts();});
+});
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
 const $=id=>document.getElementById(id);
 const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-const fmt=s=>`${Math.floor(s/60)}:${String(Math.round(s%60)).padStart(2,'0')}`;
-function showSb(m){$('sb').style.display='flex';$('st').textContent=m;}
-function hideSb(){$('sb').style.display='none';}
+const fmt=s=>{const m=Math.floor(s/60);return `${m}:${String(Math.round(s%60)).padStart(2,'0')}`};
+function showSt(m){$('sb').style.display='flex';$('st').textContent=m;}
+function hideSt(){$('sb').style.display='none';}
 function showErr(m){$('eb').textContent='⚠ '+m;$('eb').style.display='block';}
 function hideErr(){$('eb').style.display='none';}
 function showOk(m){$('ob').textContent=m;$('ob').style.display='block';}
-async function aFetch(path,body,fd=false){
+function hideOk(){$('ob').style.display='none';}
+async function apiFetch(path,body,fd=false){
   const o={method:'POST'};
   if(fd){o.body=body;}else{o.headers={'Content-Type':'application/json'};o.body=JSON.stringify(body);}
-  const r=await fetch(API+path,o); const d=await r.json();
+  const r=await fetch(API+path,o);
+  const d=await r.json();
   if(!r.ok) throw new Error(d.error||`Error ${r.status}`);
   return d;
 }
@@ -815,101 +945,115 @@ async function aFetch(path,body,fd=false){
 // ── Auth ──────────────────────────────────────────────────────────────────────
 function openAuth(){$('auth-modal').classList.add('open');}
 function closeAuth(){$('auth-modal').classList.remove('open');}
-function onAuthBg(e){if(e.target===$('auth-modal'))closeAuth();}
-async function sbR(path,method,body){
-  const r=await fetch(`${SB_URL}/auth/v1${path}`,{method,headers:{'Content-Type':'application/json','apikey':SB_ANON,'Authorization':`Bearer ${SB_ANON}`},body:body?JSON.stringify(body):null});
+function handleAuthBg(e){if(e.target===$('auth-modal'))closeAuth();}
+async function sbReq(path,method='GET',body=null){
+  const r=await fetch(`${SUPABASE_URL}/auth/v1${path}`,{method,headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON,'Authorization':`Bearer ${SUPABASE_ANON}`},body:body?JSON.stringify(body):null});
   return r.json();
 }
-async function doIn(){
-  const em=$('ae').value.trim(),pw=$('ap').value;
-  if(!em||!pw){$('am').textContent='Enter email and password';return;}
+async function doSignIn(){
+  const email=$('ae').value.trim(),pass=$('ap').value;
+  if(!email||!pass){$('am').textContent='Enter email and password';return;}
   $('am').textContent='Signing in...';
-  const d=await sbR('/token?grant_type=password','POST',{email:em,password:pw});
-  if(d.access_token){U={id:d.user.id,email:d.user.email};localStorage.setItem('vp_u',JSON.stringify(U));updAuth();closeAuth();loadConn();}
+  const d=await sbReq('/token?grant_type=password','POST',{email,password:pass});
+  if(d.access_token){currentUser={id:d.user.id,email:d.user.email,token:d.access_token};localStorage.setItem('vp_user',JSON.stringify(currentUser));updateAuthUI();closeAuth();loadConnections();}
   else $('am').textContent=d.error_description||'Sign in failed';
 }
-async function doUp(){
-  const em=$('ae').value.trim(),pw=$('ap').value;
-  if(!em||!pw){$('am').textContent='Enter email and password';return;}
-  if(pw.length<6){$('am').textContent='Password must be 6+ characters';return;}
+async function doSignUp(){
+  const email=$('ae').value.trim(),pass=$('ap').value;
+  if(!email||!pass){$('am').textContent='Enter email and password';return;}
+  if(pass.length<6){$('am').textContent='Password must be 6+ characters';return;}
   $('am').textContent='Creating account...';
-  const d=await sbR('/signup','POST',{email:em,password:pw});
-  $('am').textContent=(d.id||d.access_token)?'✅ Check your email to confirm, then sign in.':d.error_description||d.msg||'Sign up failed';
+  const d=await sbReq('/signup','POST',{email,password:pass});
+  if(d.id||d.access_token) $('am').textContent='✅ Account created! Check email to confirm, then sign in.';
+  else $('am').textContent=d.error_description||d.msg||'Sign up failed';
 }
-function signOut(){U=null;connPlats=[];localStorage.removeItem('vp_u');updAuth();}
-function updAuth(){
-  const btn=$('app-auth-btn'),disp=$('app-user-display');
-  if(U){disp.textContent=U.email;btn.textContent='Sign out';btn.onclick=signOut;}
+function signOut(){currentUser=null;connectedPlats=[];localStorage.removeItem('vp_user');updateAuthUI();}
+function updateAuthUI(){
+  const btn=$('app-auth-btn'),disp=$('user-display-app');
+  if(currentUser){disp.textContent=currentUser.email;btn.textContent='Sign out';btn.onclick=signOut;}
   else{disp.textContent='';btn.textContent='Sign in';btn.onclick=openAuth;}
-  renderConn();
+  renderConnect();
 }
 
-// ── Connections ───────────────────────────────────────────────────────────────
-const PLATS_DEF=[
-  {id:'linkedin',name:'LinkedIn',icon:'💼',route:'linkedin'},
-  {id:'youtube',name:'YouTube',icon:'▶',route:'google'},
-  {id:'instagram',name:'Instagram',icon:'📸',route:'instagram'},
-  {id:'tiktok',name:'TikTok',icon:'🎵',route:'tiktok'},
-  {id:'twitter',name:'X / Twitter',icon:'𝕏',route:'twitter',soon:true},
-  {id:'snapchat',name:'Snapchat',icon:'👻',route:'snapchat',soon:true},
+// ── Platform connections ───────────────────────────────────────────────────────
+const PLATS=[
+  {id:'linkedin',  name:'LinkedIn',   icon:'💼', route:'linkedin'},
+  {id:'youtube',   name:'YouTube',    icon:'▶',  route:'google'},
+  {id:'instagram', name:'Instagram',  icon:'📸', route:'instagram'},
+  {id:'tiktok',    name:'TikTok',     icon:'🎵', route:'tiktok'},
+  {id:'twitter',   name:'X / Twitter',icon:'✕',  route:'twitter'},
+  {id:'facebook',  name:'Facebook',   icon:'👍', route:'facebook'},
 ];
-async function loadConn(){
-  if(!U)return;
-  try{const r=await fetch(`${API}/connections?user_id=${U.id}`);const d=await r.json();connPlats=d.connected||[];}catch(e){connPlats=[];}
-  renderConn();
+async function loadConnections(){
+  if(!currentUser)return;
+  try{const r=await fetch(`${API}/connections?user_id=${currentUser.id}`);const d=await r.json();connectedPlats=d.connected||[];}catch(e){connectedPlats=[];}
+  renderConnect();
 }
-function renderConn(){
-  const gate=$('conn-gate'),main=$('conn-main');
-  if(!U){gate.style.display='block';main.style.display='none';return;}
+function renderConnect(){
+  const gate=$('connect-gate-app'),main=$('connect-main');
+  if(!currentUser){gate.style.display='block';main.style.display='none';return;}
   gate.style.display='none';main.style.display='block';
-  $('conn-grid').innerHTML=PLATS_DEF.map(p=>{
-    const on=connPlats.includes(p.id);
-    const disabled=p.soon&&!on;
-    return `<div class="conn-c${on?' connected':''}">
+  const grid=$('cg-platforms');
+  grid.innerHTML=PLATS.map(p=>{
+    const on=connectedPlats.includes(p.id);
+    return `<div class="conn-card${on?' connected':''}">
       <div class="conn-icon">${p.icon}</div>
       <div class="conn-name">${p.name}</div>
-      <div class="conn-st">${on?'✓ Connected':p.soon?'Coming soon':'Not connected'}</div>
-      <button class="btn-conn${on?' on':''}" ${disabled?'disabled style="opacity:.3;cursor:not-allowed"':''} onclick="${on?`dcPlat('${p.id}')`:disabled?'':` ccPlat('${p.id}','${p.route}')`}">
-        ${on?'Disconnect':p.soon?'Soon':'Connect'}
+      <div class="conn-status">${on?'✓ Connected':'Not connected'}</div>
+      <button class="btn-conn${on?' on':''}" onclick="${on?`disconnPlat('${p.id}')`:`connPlat('${p.id}','${p.route}')`}">
+        ${on?'Disconnect':'Connect'}
       </button>
     </div>`;
   }).join('');
 }
-function ccPlat(id,route){if(!U){openAuth();return;}location.href=`${RAILWAY}/auth/${route}?user_id=${encodeURIComponent(U.id)}`;}
-async function dcPlat(id){if(!confirm('Disconnect '+id+'?'))return;await fetch(`${API}/disconnect`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({user_id:U.id,platform:id})});connPlats=connPlats.filter(p=>p!==id);renderConn();}
+function connPlat(id,route){
+  if(!currentUser){openAuth();return;}
+  window.location.href=`${RAILWAY}/auth/${route}?user_id=${encodeURIComponent(currentUser.id)}`;
+}
+async function disconnPlat(id){
+  if(!confirm('Disconnect '+id+'?'))return;
+  await fetch(`${API}/disconnect`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({user_id:currentUser.id,platform:id})});
+  connectedPlats=connectedPlats.filter(p=>p!==id);renderConnect();
+}
 
 // ── File upload ───────────────────────────────────────────────────────────────
-function onDrag(e,on){e.preventDefault();$('dz').style.borderColor=on?'var(--lime)':'var(--border2)';}
-function onDrop(e){e.preventDefault();$('dz').style.borderColor='var(--border2)';onFile(e.dataTransfer.files[0]);}
-function onFile(f){if(!f)return;if(f.size>500*1024*1024){showErr('Max 500MB');return;}selFile=f;$('dz-t').textContent=f.name;$('dz-s').textContent=(f.size/(1024*1024)).toFixed(1)+'MB';$('up-btn').style.display='inline-flex';}
+function doDrag(e,on){e.preventDefault();$('dz').style.borderColor=on?'var(--lime)':'var(--border2)';}
+function doDrop(e){e.preventDefault();$('dz').style.borderColor='var(--border2)';doFile(e.dataTransfer.files[0]);}
+function doFile(f){
+  if(!f)return;
+  if(f.size>500*1024*1024){showErr('Max 500MB');return;}
+  selectedFile=f;$('dz-title').textContent=f.name;$('dz-sub').textContent=(f.size/(1024*1024)).toFixed(1)+'MB';$('up-btn').style.display='inline-flex';
+}
 
 // ── Analyse URL ───────────────────────────────────────────────────────────────
-async function doAnalyse(){
-  hideErr();$('ob').style.display='none';$('clips-out').style.display='none';
+async function analyseVideo(){
+  hideErr();hideOk();$('clips-out').style.display='none';
   const url=$('clip-url').value.trim();
-  if(!url){showErr('Paste a YouTube URL first');return;}
-  $('an-btn').disabled=true;$('an-lbl').textContent='Analysing...';showSb('Fetching video and detecting best clips...');
+  if(!url){showErr('Paste a YouTube URL');return;}
+  $('analyse-btn').disabled=true;$('analyse-lbl').textContent='Analysing...';
+  showSt('Fetching video and detecting clips...');
   try{
-    const d=await aFetch('/analyse',{url});
-    vidId=d.videoId;upPath='';vidTitle=d.title;
-    $('vm').innerHTML=`<span><strong>${esc(d.title)}</strong></span><span>Duration: <strong>${fmt(d.duration)}</strong></span><span>Transcript: <strong>${d.transcriptLength} words</strong></span><span>Clips: <strong>${d.clips.length}</strong></span>`;
-    renderClips(d.clips,d.duration);$('clips-out').style.display='block';hideSb();$('clips-out').scrollIntoView({behavior:'smooth',block:'start'});
-  }catch(e){hideSb();showErr(e.message);}
-  finally{$('an-btn').disabled=false;$('an-lbl').textContent='Analyse →';}
+    const d=await apiFetch('/analyse',{url});
+    currentVideoId=d.videoId;currentUploadPath='';currentTitle=d.title;
+    $('vm').innerHTML=`<span><strong>${esc(d.title)}</strong></span><span>Duration: <strong>${fmt(d.duration)}</strong></span><span>Transcript: <strong>${d.transcriptLength} words</strong></span>`;
+    renderClips(d.clips,d.duration);$('clips-out').style.display='block';$('clips-out').scrollIntoView({behavior:'smooth',block:'start'});hideSt();
+  }catch(e){hideSt();showErr(e.message);}
+  finally{$('analyse-btn').disabled=false;$('analyse-lbl').textContent='Analyse →';}
 }
 
 // ── Analyse upload ────────────────────────────────────────────────────────────
-async function doUpload(){
-  if(!selFile){showErr('Select a file first');return;}
-  hideErr();$('ob').style.display='none';$('clips-out').style.display='none';
-  $('up-btn').disabled=true;$('up-lbl').textContent='Uploading...';showSb('Uploading video and analysing...');
+async function analyseUpload(){
+  if(!selectedFile){showErr('Select a file first');return;}
+  hideErr();hideOk();$('clips-out').style.display='none';
+  $('up-btn').disabled=true;$('up-lbl').textContent='Uploading...';
+  showSt('Uploading and analysing...');
   try{
-    const fd=new FormData();fd.append('video',selFile);
-    const d=await aFetch('/analyse-upload',fd,true);
-    upPath=d.uploadPath;vidId='';vidTitle=d.title;
-    $('vm').innerHTML=`<span><strong>${esc(d.title)}</strong></span><span>Duration: <strong>${fmt(d.duration)}</strong></span><span style="color:var(--lime)">✓ Uploaded file</span>`;
-    renderClips(d.clips,d.duration);$('clips-out').style.display='block';hideSb();
-  }catch(e){hideSb();showErr(e.message);}
+    const fd=new FormData();fd.append('video',selectedFile);
+    const d=await apiFetch('/analyse-upload',fd,true);
+    currentUploadPath=d.uploadPath;currentVideoId='';currentTitle=d.title;
+    $('vm').innerHTML=`<span><strong>${esc(d.title)}</strong></span><span>Duration: <strong>${fmt(d.duration)}</strong></span><span style="color:var(--lime)">✓ Uploaded</span>`;
+    renderClips(d.clips,d.duration);$('clips-out').style.display='block';hideSt();
+  }catch(e){hideSt();showErr(e.message);}
   finally{$('up-btn').disabled=false;$('up-lbl').textContent='Analyse video →';}
 }
 
@@ -918,48 +1062,47 @@ function renderClips(clips,dur){
   const g=$('cg');g.innerHTML='';
   clips.forEach((c,i)=>{
     const el=document.createElement('div');
-    el.className='clip-c';el.id=`cc-${i}`;
-    const dots=Array.from({length:10},(_,d)=>`<div class="sd${d<c.virality_score?' on':''}"></div>`).join('');
+    el.className='clip-card2';el.id=`cc-${i}`;
+    const dots=Array.from({length:10},(_,d)=>`<div class="sdot${d<c.virality_score?' on':''}"></div>`).join('');
     el.innerHTML=`
-      <div class="clip-h" onclick="togClip(${i})">
-        <div class="clip-badge">${i+1}</div>
-        <div class="clip-inf"><div class="clip-t">${esc(c.title)}</div><div class="clip-m">${fmt(c.start)} → ${fmt(c.end)} · ${Math.round(c.end-c.start)}s</div></div>
-        <div style="display:flex;align-items:center;gap:6px"><div class="s-dots">${dots}</div><span style="font-size:11px;font-family:var(--fm);color:var(--ink2)">${c.virality_score}/10</span></div>
+      <div class="clip-head" onclick="togClip(${i})">
+        <div class="clip-n">${i+1}</div>
+        <div class="clip-info2"><div class="clip-t">${esc(c.title)}</div><div class="clip-m">${fmt(c.start)} → ${fmt(c.end)} · ${Math.round(c.end-c.start)}s</div></div>
+        <div style="display:flex;align-items:center;gap:6px"><div class="clip-score">${dots}</div><span style="font-size:11px;font-family:var(--font-mono);color:var(--ink2)">${c.virality_score}/10</span></div>
       </div>
-      <div class="clip-b">
+      <div class="clip-body2">
         <div style="font-size:13px;background:var(--bg3);padding:10px 12px;border-radius:var(--r);border-left:3px solid var(--lime);margin-bottom:10px;font-style:italic;color:var(--ink2)">"${esc(c.hook)}"</div>
-        <div style="font-size:12px;color:var(--ink3);font-style:italic;margin-bottom:12px">${esc(c.reason)}</div>
-        <div class="clip-grid3">
-          <div><label class="f-label">Start (sec)</label><input type="number" id="cs-${i}" value="${c.start}" min="0" max="${dur}"/></div>
-          <div><label class="f-label">End (sec)</label><input type="number" id="ce-${i}" value="${c.end}" min="0" max="${dur}"/></div>
-          <div><label class="f-label">Name</label><input type="text" id="cn-${i}" value="${esc(c.title)}"/></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px">
+          <div><label style="font-size:10px;font-family:var(--font-mono);color:var(--ink3);text-transform:uppercase;letter-spacing:.08em;display:block;margin-bottom:4px">Start</label><input type="number" id="s-${i}" value="${c.start}" min="0" max="${dur}"/></div>
+          <div><label style="font-size:10px;font-family:var(--font-mono);color:var(--ink3);text-transform:uppercase;letter-spacing:.08em;display:block;margin-bottom:4px">End</label><input type="number" id="e-${i}" value="${c.end}" min="0" max="${dur}"/></div>
+          <div><label style="font-size:10px;font-family:var(--font-mono);color:var(--ink3);text-transform:uppercase;letter-spacing:.08em;display:block;margin-bottom:4px">Name</label><input type="text" id="n-${i}" value="${esc(c.title)}"/></div>
         </div>
         <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap">
-          <div class="chip on" data-ci="${i}" data-fmt="vertical" onclick="this.classList.toggle('on')">📱 9:16 Vertical</div>
-          <div class="chip on" data-ci="${i}" data-fmt="horizontal" onclick="this.classList.toggle('on')">🖥 16:9 Horizontal</div>
+          <div class="pt on" data-clip="${i}" data-fmt="vertical" onclick="this.classList.toggle('on')">📱 9:16</div>
+          <div class="pt on" data-clip="${i}" data-fmt="horizontal" onclick="this.classList.toggle('on')">🖥 16:9</div>
         </div>
-        <button class="process-btn" onclick="doClip(${i})">✂ Process this clip</button>
+        <button onclick="processClip(${i})" style="width:100%;padding:12px;background:var(--lime);color:#000;border:none;border-radius:var(--r);font-family:var(--font-head);font-size:14px;font-weight:800;cursor:pointer;transition:all .2s" onmouseover="this.style.background='var(--lime3)'" onmouseout="this.style.background='var(--lime)'">✂ Process this clip</button>
         <div id="jb-${i}"></div>
       </div>`;
     g.appendChild(el);
   });
 }
-function togClip(i){const c=$(`cc-${i}`),w=c.classList.contains('sel');document.querySelectorAll('.clip-c').forEach(x=>x.classList.remove('sel'));if(!w)c.classList.add('sel');}
+function togClip(i){const c=$(`cc-${i}`),was=c.classList.contains('sel');document.querySelectorAll('.clip-card2').forEach(x=>x.classList.remove('sel'));if(!was)c.classList.add('sel');}
 
 // ── Process clip ──────────────────────────────────────────────────────────────
-async function doClip(i){
-  const s=parseFloat($(`cs-${i}`).value),e=parseFloat($(`ce-${i}`).value);
-  const fmts=[...document.querySelectorAll(`.chip.on[data-ci="${i}"]`)].map(f=>f.dataset.fmt);
-  if(!fmts.length){alert('Select at least one format');return;}
-  if(e-s<5){alert('Clip must be at least 5 seconds');return;}
+async function processClip(i){
+  const s=parseFloat($(`s-${i}`).value),e=parseFloat($(`e-${i}`).value);
+  const fmts=[...document.querySelectorAll(`.pt.on[data-clip="${i}"]`)].map(f=>f.dataset.fmt);
+  if(!fmts.length){alert('Select a format');return;}
+  if(e-s<5){alert('Clip too short');return;}
   const jb=$(`jb-${i}`);
-  jb.innerHTML=`<div style="background:var(--bg3);border-radius:var(--r);padding:12px;margin-top:10px"><div style="font-size:11px;font-family:var(--fm);color:var(--ink2);margin-bottom:8px">Processing clip...</div><div style="height:3px;background:var(--border2);border-radius:2px;overflow:hidden;margin-bottom:6px"><div id="pf-${i}" style="height:100%;background:var(--lime);border-radius:2px;transition:width .4s;width:5%"></div></div><div style="font-size:11px;font-family:var(--fm);color:var(--ink3)" id="pm-${i}">Starting...</div></div>`;
+  jb.innerHTML=`<div style="background:var(--bg3);border-radius:var(--r);padding:12px;margin-top:10px"><div style="font-size:11px;font-family:var(--font-mono);color:var(--ink2);margin-bottom:8px">Processing...</div><div style="height:3px;background:var(--border);border-radius:2px;overflow:hidden;margin-bottom:6px"><div id="pf-${i}" style="height:100%;background:var(--lime);border-radius:2px;transition:width .4s;width:5%"></div></div><div style="font-size:11px;font-family:var(--font-mono);color:var(--ink3)" id="pm-${i}">Starting...</div></div>`;
   try{
     const body={start:s,end:e,formats:fmts};
-    if(upPath)body.uploadPath=upPath;else body.videoId=vidId;
-    const d=await aFetch('/clip',body);
+    if(currentUploadPath) body.uploadPath=currentUploadPath; else body.videoId=currentVideoId;
+    const d=await apiFetch('/clip',body);
     pollJob(d.jobId,i);
-  }catch(err){jb.innerHTML=`<div class="err" style="display:block;margin-top:10px">⚠ ${esc(err.message)}</div>`;}
+  }catch(err){jb.innerHTML=`<div class="err2" style="display:block;margin-top:10px">⚠ ${esc(err.message)}</div>`;}
 }
 function pollJob(jid,ci){
   const iv=setInterval(async()=>{
@@ -967,76 +1110,65 @@ function pollJob(jid,ci){
       const r=await fetch(`${API}/job/${jid}`);const j=await r.json();
       const pf=$(`pf-${ci}`),pm=$(`pm-${ci}`);
       if(pf)pf.style.width=j.progress+'%';if(pm)pm.textContent=j.message;
-      if(j.status==='done'){clearInterval(iv);renderDL(jid,ci,j.files);}
-      else if(j.status==='error'){clearInterval(iv);$(`jb-${ci}`).innerHTML=`<div class="err" style="display:block;margin-top:10px">⚠ ${esc(j.message)}</div>`;}
+      if(j.status==='done'){clearInterval(iv);renderDownloads(jid,ci,j.files);}
+      else if(j.status==='error'){clearInterval(iv);$(`jb-${ci}`).innerHTML=`<div class="err2" style="display:block;margin-top:10px">⚠ ${esc(j.message)}</div>`;}
     }catch(e){clearInterval(iv);}
   },2000);
 }
-function renderDL(jid,ci,files){
-  const btns=Object.entries(files).map(([fmt,info])=>`<a href="${API}${info.downloadUrl}" download class="dl-btn">⬇ ${fmt==='vertical'?'9:16 Vertical':'16:9 Horizontal'} · ${info.sizeMb}MB</a>`).join('');
-  const conn=connPlats.filter(p=>['linkedin','youtube','instagram','tiktok'].includes(p));
-  const ap=conn.length>0?`
-    <div style="margin-top:12px;padding:14px;background:var(--bg3);border-radius:var(--r)">
-      <div style="font-family:var(--fh);font-size:13px;font-weight:700;margin-bottom:10px;letter-spacing:-.2px">🚀 Auto-post this clip</div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px" id="apt-${ci}">${conn.map(p=>`<div class="chip on" data-p="${p}" onclick="this.classList.toggle('on')">${p}</div>`).join('')}</div>
-      <div style="display:flex;gap:8px">
-        <input type="text" id="cap-${ci}" placeholder="Caption for this clip..." style="flex:1;font-size:12px;padding:8px 10px"/>
-        <button onclick="doAutoPost(${ci},'${Object.values(files)[0]?.publicUrl||''}')" style="padding:8px 16px;background:var(--lime);color:#000;border:none;border-radius:var(--r);font-family:var(--fh);font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap;letter-spacing:-.2px">Post now →</button>
-      </div>
-    </div>`:U?`<div style="font-size:11px;color:var(--ink3);font-family:var(--fm);margin-top:10px">Connect social accounts to enable auto-posting → <span style="cursor:pointer;color:var(--lime);text-decoration:underline" onclick="swTab('connect')">Connect now</span></div>`:'';
-  $(`jb-${ci}`).innerHTML=`
-    <div style="background:rgba(200,255,0,.05);border:1px solid rgba(200,255,0,.15);border-radius:var(--r);padding:14px;margin-top:10px">
-      <div style="font-size:12px;font-family:var(--fm);color:var(--lime);margin-bottom:10px">✅ Clip ready to download!</div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">${btns}</div>
-      ${ap}
-    </div>`;
+function renderDownloads(jid,ci,files){
+  const btns=Object.entries(files).map(([fmt,info])=>`<a href="${API}${info.downloadUrl}" download class="dl-btn">⬇ ${fmt==='vertical'?'9:16':'16:9'} ${info.sizeMb}MB</a>`).join('');
+  const conn=connectedPlats.filter(p=>['linkedin','youtube','instagram','tiktok','twitter','facebook'].includes(p));
+  const ap=conn.length>0?`<div style="margin-top:12px;padding:14px;background:var(--bg3);border-radius:var(--r)">
+    <div style="font-family:var(--font-head);font-size:13px;font-weight:700;margin-bottom:10px">🚀 Auto-post this clip</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px" id="apt-${ci}">${conn.map(p=>`<div class="pt on" data-plat="${p}" onclick="this.classList.toggle('on')">${p}</div>`).join('')}</div>
+    <div style="display:flex;gap:8px"><input type="text" id="cap-${ci}" placeholder="Caption..." style="flex:1;font-size:12px;padding:8px 10px"/><button onclick="autoPost(${ci},'${Object.values(files)[0]?.publicUrl||''}')" style="padding:8px 16px;background:var(--lime);color:#000;border:none;border-radius:var(--r);font-family:var(--font-head);font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">Post now →</button></div>
+  </div>`:currentUser?`<div style="font-size:11px;color:var(--ink3);font-family:var(--font-mono);margin-top:10px">Connect social accounts to enable auto-posting → <span style="cursor:pointer;color:var(--lime);text-decoration:underline" onclick="switchTab('connect')">Connect now</span></div>`:'';
+  $(`jb-${ci}`).innerHTML=`<div style="background:rgba(200,255,0,.05);border:1px solid rgba(200,255,0,.2);border-radius:var(--r);padding:14px;margin-top:10px"><div style="font-size:12px;font-family:var(--font-mono);color:var(--lime);margin-bottom:10px">✅ Clip ready!</div><div style="display:flex;gap:8px;flex-wrap:wrap">${btns}</div>${ap}</div>`;
 }
-async function doAutoPost(ci,vurl){
-  if(!U){openAuth();return;}
-  const toggles=[...document.querySelectorAll(`#apt-${ci} .chip.on`)].map(t=>t.dataset.p);
+async function autoPost(ci,videoUrl){
+  if(!currentUser){openAuth();return;}
+  const toggles=[...document.querySelectorAll(`#apt-${ci} .pt.on`)].map(t=>t.dataset.plat);
   if(!toggles.length){alert('Select a platform');return;}
-  const cap=$(`cap-${ci}`)?.value||vidTitle;
+  const caption=$(`cap-${ci}`)?.value||currentTitle;
   try{
-    const d=await aFetch('/post',{user_id:U.id,platforms:toggles,text:cap,video_url:vurl});
+    const d=await apiFetch('/post',{user_id:currentUser.id,platforms:toggles,text:caption,video_url:videoUrl});
     const posted=Object.keys(d.results||{}).join(', ');
-    showOk(`✅ Posted to: ${posted||'platforms'}`);
-    $('clips-out').scrollIntoView({behavior:'smooth',block:'start'});
+    showOk(`✅ Posted to: ${posted||'done'}`);
   }catch(e){showErr('Post failed: '+e.message);}
 }
 
 // ── Generate posts ────────────────────────────────────────────────────────────
-async function doPosts(){
+async function genPosts(){
   $('post-eb').style.display='none';$('posts-out').innerHTML='';
   const url=$('post-url').value.trim();
-  if(!url){$('post-eb').textContent='⚠ Paste a YouTube URL';$('post-eb').style.display='block';return;}
-  if(!plats.length){$('post-eb').textContent='⚠ Select at least one platform';$('post-eb').style.display='block';return;}
+  if(!url){$('post-eb').textContent='⚠ Paste a URL';$('post-eb').style.display='block';return;}
   $('post-btn').disabled=true;$('post-lbl').textContent='Generating...';
-  $('post-sb').style.display='flex';$('post-st').textContent='Fetching transcript...';
+  $('post-status').style.display='flex';$('post-st').textContent='Fetching transcript...';
   try{
     const m=url.match(/(?:v=|youtu\.be\/|\/shorts\/)([A-Za-z0-9_-]{11})/);
-    if(!m)throw new Error('Invalid YouTube URL');
-    const t=await aFetch('/transcript',{videoId:m[1]});
+    if(!m)throw new Error('Invalid URL');
+    const t=await apiFetch('/transcript',{videoId:m[1]});
     $('post-st').textContent='Writing posts with AI...';
-    const g=await aFetch('/generate',{transcript:t.transcript,title:t.title,tone,platforms:plats});
-    $('post-sb').style.display='none';
+    const g=await apiFetch('/generate',{transcript:t.transcript,title:t.title,tone:selectedTone,platforms:selectedPlats});
+    $('post-status').style.display='none';
     renderPosts(g.results);
-  }catch(e){$('post-sb').style.display='none';$('post-eb').textContent='⚠ '+esc(e.message);$('post-eb').style.display='block';}
+  }catch(e){$('post-status').style.display='none';$('post-eb').textContent='⚠ '+esc(e.message);$('post-eb').style.display='block';}
   finally{$('post-btn').disabled=false;$('post-lbl').textContent='Generate →';}
 }
-function renderPosts(res){
-  const meta={linkedin:{l:'LinkedIn',c:'#0a66c2'},twitter:{l:'Twitter/X',c:'#1da1f2'},instagram:{l:'Instagram',c:'#e1306c'},tiktok:{l:'TikTok',c:'#ff0050'},youtube_short:{l:'YT Shorts',c:'#ff0000'}};
+function renderPosts(r){
+  const meta={linkedin:{l:'LinkedIn',c:'#0a66c2'},twitter:{l:'Twitter/X',c:'#000'},instagram:{l:'Instagram',c:'#e1306c'},tiktok:{l:'TikTok',c:'#ff0050'},youtube_short:{l:'YT Shorts',c:'#ff0000'},facebook:{l:'Facebook',c:'#1877f2'}};
   const g=$('posts-out');g.style.display='grid';g.innerHTML='';
-  Object.entries(res).forEach(([p,text])=>{
+  Object.entries(r).forEach(([p,text])=>{
     const m=meta[p]||{l:p,c:'#888'};
     const el=document.createElement('div');
     el.style.cssText='background:var(--card);border:1px solid var(--border);border-radius:var(--r2);overflow:hidden';
-    el.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--bg3);border-bottom:1px solid var(--border)"><div style="display:flex;align-items:center;gap:8px;font-family:var(--fh);font-size:13px;font-weight:700;letter-spacing:-.2px"><div style="width:7px;height:7px;border-radius:50%;background:${m.c}"></div>${m.l}</div><button onclick="doCopy(this)" data-t="${esc(text)}" style="font-family:var(--fm);font-size:10px;padding:3px 10px;border:1px solid var(--border2);border-radius:20px;background:transparent;color:var(--ink2);cursor:pointer;transition:all .2s">Copy</button></div><div style="padding:16px;font-size:13px;line-height:1.8;white-space:pre-wrap;color:var(--ink2);max-height:260px;overflow-y:auto">${esc(text)}</div>`;
+    el.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--bg3);border-bottom:1px solid var(--border)"><div style="display:flex;align-items:center;gap:8px;font-family:var(--font-head);font-size:13px;font-weight:700"><div style="width:8px;height:8px;border-radius:50%;background:${m.c}"></div>${m.l}</div><button onclick="doCopy(this)" data-text="${esc(text)}" style="font-family:var(--font-mono);font-size:10px;padding:3px 10px;border:1px solid var(--border2);border-radius:20px;background:transparent;color:var(--ink2);cursor:pointer">Copy</button></div><div style="padding:16px;font-size:13px;line-height:1.8;white-space:pre-wrap;color:var(--ink2);max-height:260px;overflow-y:auto">${esc(text)}</div>`;
     g.appendChild(el);
   });
   g.scrollIntoView({behavior:'smooth',block:'start'});
 }
 async function doCopy(btn){
-  await navigator.clipboard.writeText(btn.dataset.t);
+  await navigator.clipboard.writeText(btn.dataset.text);
   btn.textContent='Copied!';btn.style.color='var(--lime)';
   setTimeout(()=>{btn.textContent='Copy';btn.style.color='';},2000);
 }
