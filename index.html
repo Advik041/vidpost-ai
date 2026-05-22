@@ -1713,12 +1713,6 @@ async function doCopy(btn){
   btn.textContent='Copied!';btn.style.color='var(--lime)';
   setTimeout(()=>{btn.textContent='Copy';btn.style.color='';},2000);
 }
-    });
-  });
-
-  document.getElementById('clip-url').addEventListener('keydown',e=>{if(e.key==='Enter')analyseVideo();});
-  document.getElementById('post-url').addEventListener('keydown',e=>{if(e.key==='Enter')genPosts();});
-});
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const $=id=>document.getElementById(id);
