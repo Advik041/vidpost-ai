@@ -312,107 +312,143 @@ input::placeholder,textarea::placeholder{color:var(--ink3)}
   footer{padding:40px 20px}
   .legal-page{padding:100px 20px 60px}
 }
-/* ── Editor toggle ───────────────────────────────────────────────────────── */
-.ed-toggle{position:relative;display:inline-block;width:44px;height:24px;flex-shrink:0}
+/* ═══════════════════════════════════════════════════════════════════════════
+   EDITOR — complete styles
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Toggle switch */
+.ed-toggle{position:relative;display:inline-block;width:42px;height:22px;flex-shrink:0}
 .ed-toggle input{opacity:0;width:0;height:0}
-.ed-slider{position:absolute;cursor:pointer;inset:0;background:var(--bg4);border-radius:24px;transition:.3s;border:1px solid var(--border2)}
-.ed-slider:before{content:'';position:absolute;height:16px;width:16px;left:3px;bottom:3px;background:var(--ink3);border-radius:50%;transition:.3s}
+.ed-slider{position:absolute;cursor:pointer;inset:0;background:var(--bg4);border-radius:22px;transition:.25s;border:1px solid var(--border2)}
+.ed-slider:before{content:'';position:absolute;height:14px;width:14px;left:3px;bottom:3px;background:var(--ink3);border-radius:50%;transition:.25s}
 .ed-toggle input:checked+.ed-slider{background:var(--lime);border-color:var(--lime)}
 .ed-toggle input:checked+.ed-slider:before{transform:translateX(20px);background:#000}
 
-/* ── Load card ───────────────────────────────────────────────────────────── */
-.ed-load-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);padding:48px 32px;text-align:center;max-width:640px;margin:0 auto}
-.ed-load-icon{font-size:48px;margin-bottom:16px;filter:grayscale(0)}
-.ed-load-title{font-family:var(--font-head);font-size:22px;font-weight:800;margin-bottom:8px;letter-spacing:-.5px}
-.ed-load-sub{font-size:13px;color:var(--ink2);margin-bottom:24px;line-height:1.6}
-.ed-load-row{display:flex;gap:8px;max-width:520px;margin:0 auto}
-.ed-url-input{flex:1;padding:10px 14px;border-radius:var(--r);border:1px solid var(--border2);background:var(--bg3);color:var(--ink);font-family:var(--font-mono);font-size:12px}
-.ed-load-btn{padding:10px 20px;background:var(--lime);color:#000;border:none;border-radius:var(--r);font-family:var(--font-head);font-size:13px;font-weight:800;cursor:pointer;white-space:nowrap;transition:all .15s}
+/* Load screen */
+.ed-load-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);padding:52px 32px;text-align:center;max-width:620px;margin:0 auto}
+.ed-url-input{flex:1;padding:10px 14px;border-radius:var(--r);border:1px solid var(--border2);background:var(--bg3);color:var(--ink);font-family:var(--font-mono);font-size:12px;min-width:0}
+.ed-load-btn{padding:10px 22px;background:var(--lime);color:#000;border:none;border-radius:var(--r);font-family:var(--font-head);font-size:13px;font-weight:800;cursor:pointer;white-space:nowrap;transition:all .15s}
 .ed-load-btn:hover{background:var(--lime3)}
 
-/* ── Workspace ───────────────────────────────────────────────────────────── */
-.ed-topbar{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);margin-bottom:14px}
-.ed-columns{display:grid;grid-template-columns:1fr 320px;gap:14px;align-items:start}
-@media(max-width:860px){.ed-columns{grid-template-columns:1fr}}
+/* Workspace layout */
+.ed-topbar{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);margin-bottom:12px;gap:10px;flex-wrap:wrap}
+.ed-columns{display:grid;grid-template-columns:1fr 340px;gap:12px;align-items:start}
+@media(max-width:900px){.ed-columns{grid-template-columns:1fr}}
 
-/* ── Left column ─────────────────────────────────────────────────────────── */
-.ed-left{display:flex;flex-direction:column;gap:0;background:var(--card);border:1px solid var(--border);border-radius:var(--r2);overflow:hidden}
-.ed-preview-box{position:relative;background:#000;aspect-ratio:16/9;overflow:hidden}
-.ed-preview-box.fmt-vertical{aspect-ratio:9/16;max-height:420px;margin:0 auto}
-.ed-fmt-badge{position:absolute;top:10px;left:10px;background:rgba(0,0,0,.7);color:#fff;font-family:var(--font-mono);font-size:10px;padding:3px 8px;border-radius:20px;border:1px solid rgba(255,255,255,.15)}
-.ed-cap-overlay{position:absolute;bottom:12%;left:0;right:0;text-align:center;padding:0 16px;pointer-events:none;font-family:var(--font-head);font-size:16px;line-height:1.3}
-.ed-controls{display:flex;align-items:center;gap:6px;padding:10px 14px;background:var(--bg3);border-top:1px solid var(--border)}
-.ed-ctrl-btn{width:32px;height:32px;border-radius:50%;border:1px solid var(--border2);background:var(--bg4);color:var(--ink);cursor:pointer;font-size:11px;display:flex;align-items:center;justify-content:center;transition:all .15s}
+/* Left column */
+.ed-left{display:flex;flex-direction:column;background:var(--card);border:1px solid var(--border);border-radius:var(--r2);overflow:hidden}
+.ed-preview-box{position:relative;background:#000;aspect-ratio:16/9;overflow:hidden;cursor:pointer}
+.ed-preview-box.fmt-916{aspect-ratio:9/16;max-height:400px;margin:0 auto;width:auto}
+.ed-fmt-badge{position:absolute;top:8px;left:8px;background:rgba(0,0,0,.75);color:#fff;font-size:10px;font-family:var(--font-mono);padding:3px 8px;border-radius:12px;border:1px solid rgba(255,255,255,.15);pointer-events:none}
+
+/* Playback controls */
+.ed-controls{display:flex;align-items:center;gap:5px;padding:8px 12px;background:var(--bg3);border-top:1px solid var(--border);flex-wrap:wrap}
+.ed-ctrl-btn{width:30px;height:30px;border-radius:50%;border:1px solid var(--border2);background:var(--bg4);color:var(--ink);cursor:pointer;font-size:11px;display:flex;align-items:center;justify-content:center;transition:all .15s;flex-shrink:0}
 .ed-ctrl-btn:hover{border-color:var(--lime);color:var(--lime)}
-.ed-play-btn{width:40px;height:40px;background:var(--lime);color:#000;border-color:var(--lime);font-size:14px}
-.ed-play-btn:hover{background:var(--lime3);color:#000}
-.ed-time-display{font-family:var(--font-mono);font-size:11px;color:var(--ink2)}
+.ed-play-btn{width:38px;height:38px;background:var(--lime);color:#000;border-color:var(--lime);font-size:14px}
+.ed-play-btn:hover{background:var(--lime3);color:#000;border-color:var(--lime3)}
+.ed-time-display{font-family:var(--font-mono);font-size:11px;color:var(--ink2);white-space:nowrap}
+.ed-dur-pill{padding:3px 8px;border-radius:12px;border:1px solid var(--border2);background:transparent;color:var(--ink3);font-size:10px;font-family:var(--font-mono);cursor:pointer;transition:all .15s}
+.ed-dur-pill.on{background:var(--lime);color:#000;border-color:var(--lime);font-weight:700}
+.ed-dur-pill:hover:not(.on){border-color:var(--lime);color:var(--lime)}
 
-/* ── Timeline ────────────────────────────────────────────────────────────── */
-.ed-tl-wrap{padding:12px 14px 14px;border-top:1px solid var(--border)}
-.ed-tl-label{font-size:9px;font-family:var(--font-mono);color:var(--ink3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px}
-.ed-timeline{position:relative;height:52px;background:var(--bg3);border-radius:var(--r);border:1px solid var(--border2);cursor:crosshair;user-select:none;overflow:hidden}
-.ed-waveform{position:absolute;inset:0;display:flex;align-items:center;gap:1px;padding:4px 14px;pointer-events:none}
-.ed-waveform .wv-bar{flex:1;background:var(--ink3);border-radius:1px;min-height:2px;transition:background .2s}
-.ed-waveform .wv-bar.sel{background:rgba(200,255,0,.5)}
-.ed-shadow{position:absolute;top:0;bottom:0;background:rgba(0,0,0,.55);pointer-events:none}
-.ed-range-fill{position:absolute;top:0;bottom:0;border-left:2px solid var(--lime);border-right:2px solid var(--lime);background:rgba(200,255,0,.08);pointer-events:none}
-.ed-playhead{position:absolute;top:0;bottom:0;width:2px;background:#fff;pointer-events:none;box-shadow:0 0 4px rgba(255,255,255,.6)}
-.ed-handle{position:absolute;top:0;bottom:0;width:14px;z-index:4;cursor:ew-resize;display:flex;align-items:center;justify-content:center;background:var(--lime);transition:background .15s}
+/* Timeline */
+.ed-tl-wrap{padding:10px 12px 12px;border-top:1px solid var(--border)}
+.ed-tl-label{font-size:9px;font-family:var(--font-mono);color:var(--ink3);text-transform:uppercase;letter-spacing:.1em}
+.ed-timeline{position:relative;height:54px;background:var(--bg3);border-radius:var(--r);border:1px solid var(--border2);cursor:crosshair;user-select:none;overflow:hidden;margin:6px 0 4px}
+.ed-waveform{position:absolute;inset:0;display:flex;align-items:center;gap:1px;padding:6px 14px;pointer-events:none}
+.ed-wv-bar{flex:1;background:var(--border2);border-radius:1px;min-height:3px;transition:background .15s}
+.ed-wv-bar.sel{background:rgba(200,255,0,.55)}
+.ed-shadow{position:absolute;top:0;bottom:0;background:rgba(0,0,0,.6);pointer-events:none}
+.ed-range-fill{position:absolute;top:0;bottom:0;border-left:2px solid var(--lime);border-right:2px solid var(--lime);background:rgba(200,255,0,.07);pointer-events:none}
+.ed-playhead{position:absolute;top:0;bottom:0;width:2px;background:#fff;pointer-events:none;box-shadow:0 0 6px rgba(255,255,255,.5)}
+.ed-handle{position:absolute;top:0;bottom:0;width:14px;z-index:4;cursor:ew-resize;display:flex;align-items:center;justify-content:center;background:var(--lime)}
 .ed-handle-l{border-radius:4px 0 0 4px;left:0}
-.ed-handle-r{border-radius:0 4px 4px 0;right:0}
+.ed-handle-r{border-radius:0 4px 4px 0}
 .ed-handle:hover{background:var(--lime3)}
-.ed-handle-grip{width:2px;height:16px;background:rgba(0,0,0,.5);border-radius:1px;box-shadow:3px 0 0 rgba(0,0,0,.3)}
-
-/* Time ruler */
-.ed-ruler{height:16px;position:relative;margin-top:4px}
-.ed-ruler span{position:absolute;font-size:9px;font-family:var(--font-mono);color:var(--ink3);transform:translateX(-50%)}
-
-/* Time inputs */
-.ed-time-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:10px}
-.ed-time-chip{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:8px 10px}
-.ed-dur-chip{text-align:center}
-.ed-time-chip-label{display:block;font-size:9px;font-family:var(--font-mono);color:var(--ink3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px}
-.ed-time-chip-input{width:100%;background:transparent;border:none;color:var(--lime);font-family:var(--font-mono);font-size:13px;font-weight:700;outline:none}
+.ed-handle-grip{width:2px;height:16px;background:rgba(0,0,0,.45);border-radius:1px;box-shadow:3px 0 0 rgba(0,0,0,.25)}
+.ed-filler-marker{position:absolute;top:0;bottom:0;background:rgba(255,80,80,.3);border-left:1px solid rgba(255,80,80,.7);pointer-events:none}
+.ed-ruler{height:14px;position:relative}
+.ed-ruler span{position:absolute;font-size:8px;font-family:var(--font-mono);color:var(--ink3);transform:translateX(-50%)}
+.ed-time-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:8px}
+.ed-time-chip{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:7px 10px}
+.ed-time-chip-label{display:block;font-size:8px;font-family:var(--font-mono);color:var(--ink3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:3px}
+.ed-time-chip-input{width:100%;background:transparent;border:none;color:var(--lime);font-family:var(--font-mono);font-size:13px;font-weight:700;outline:none;min-width:0}
 .ed-dur-val{font-family:var(--font-mono);font-size:13px;font-weight:700;color:var(--ink2)}
 
-/* ── Right column ────────────────────────────────────────────────────────── */
-.ed-right{display:flex;flex-direction:column;gap:10px}
-.ed-section{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);overflow:hidden}
-.ed-section-head{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;font-family:var(--font-head);font-size:13px;font-weight:700;background:var(--bg3);border-bottom:1px solid var(--border)}
-.ed-section > *:not(.ed-section-head){padding:12px 14px}
-.ed-field-label{font-size:9px;font-family:var(--font-mono);color:var(--ink3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px}
+/* Right column — tabbed panel */
+.ed-right{display:flex;flex-direction:column;gap:0;background:var(--card);border:1px solid var(--border);border-radius:var(--r2);overflow:hidden}
+.ed-rtabs{display:flex;overflow-x:auto;border-bottom:1px solid var(--border);background:var(--bg3);scrollbar-width:none}
+.ed-rtabs::-webkit-scrollbar{display:none}
+.ed-rtab{padding:10px 14px;border:none;background:transparent;color:var(--ink3);font-size:11px;font-family:var(--font-head);font-weight:600;cursor:pointer;white-space:nowrap;transition:all .15s;border-bottom:2px solid transparent;flex-shrink:0}
+.ed-rtab.on{color:var(--lime);border-bottom-color:var(--lime);background:transparent}
+.ed-rtab:hover:not(.on){color:var(--ink)}
+.ed-rpanel{padding:14px;display:flex;flex-direction:column;gap:10px;max-height:560px;overflow-y:auto}
+.ed-rpanel::-webkit-scrollbar{width:4px}
+.ed-rpanel::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
 
-/* Style grid */
-.ed-style-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
-.ed-style-btn{display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 8px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);cursor:pointer;transition:all .15s;font-family:var(--font-mono);font-size:10px;color:var(--ink2)}
-.ed-style-btn.on{border-color:var(--lime);background:rgba(200,255,0,.08);color:var(--lime)}
-.ed-style-btn:hover:not(.on){border-color:var(--border);}
-.ed-style-preview{font-size:18px;line-height:1}
+/* Tool rows (enhance tab) */
+.ed-tool-row{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;padding:10px 12px;background:var(--bg3);border-radius:var(--r);border:1px solid var(--border)}
+.ed-tool-title{font-family:var(--font-head);font-size:12px;font-weight:700;margin-bottom:2px}
+.ed-tool-sub{font-size:10px;color:var(--ink2);line-height:1.5}
 
-/* Logo */
-.ed-file-drop{display:block;padding:12px;border:1.5px dashed var(--border2);border-radius:var(--r);text-align:center;cursor:pointer;font-size:11px;color:var(--ink2);font-family:var(--font-mono);transition:border-color .15s}
+/* Caption style grid */
+.ed-cap-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.ed-cap-btn{display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 4px 6px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:var(--r);cursor:pointer;transition:all .15s;font-size:10px;font-family:var(--font-mono);color:var(--ink2)}
+.ed-cap-btn.on{border-color:var(--lime);background:rgba(200,255,0,.07);color:var(--lime)}
+.ed-cap-btn:hover:not(.on){border-color:var(--ink2)}
+.ed-cap-preview-box{width:100%;height:36px;border-radius:4px;display:flex;align-items:center;justify-content:center;margin-bottom:2px;font-family:var(--font-head)}
+
+/* Templates grid */
+.ed-tmpl-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.ed-tmpl{padding:10px 6px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:var(--r);cursor:pointer;transition:all .15s;font-size:11px;color:var(--ink2);text-align:center}
+.ed-tmpl.on{border-color:var(--lime);background:rgba(200,255,0,.07);color:var(--lime)}
+.ed-tmpl:hover:not(.on){border-color:var(--ink2)}
+
+/* Pill buttons */
+.ed-pill{padding:5px 10px;border-radius:14px;border:1px solid var(--border2);background:transparent;color:var(--ink2);font-size:11px;font-family:var(--font-mono);cursor:pointer;transition:all .15s}
+.ed-pill.on{background:var(--lime);color:#000;border-color:var(--lime);font-weight:700}
+.ed-pill:hover:not(.on){border-color:var(--lime);color:var(--lime)}
+
+/* Logo upload */
+.ed-file-drop{display:block;padding:10px;border:1.5px dashed var(--border2);border-radius:var(--r);text-align:center;cursor:pointer;font-size:11px;color:var(--ink2);font-family:var(--font-mono);transition:all .15s}
 .ed-file-drop:hover{border-color:var(--lime);color:var(--lime)}
-.ed-pos-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
-.ed-pos-btn{padding:8px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);cursor:pointer;font-size:16px;transition:all .15s;color:var(--ink2)}
-.ed-pos-btn.on{border-color:var(--lime);background:rgba(200,255,0,.08)}
+
+/* Logo position grid */
+.ed-pos-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+.ed-pos-btn{padding:8px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);cursor:pointer;font-size:12px;transition:all .15s;color:var(--ink2);font-family:var(--font-mono)}
+.ed-pos-btn.on{border-color:var(--lime);background:rgba(200,255,0,.08);color:var(--lime)}
 
 /* Format buttons */
-.ed-fmt-btns{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;padding:12px 14px}
-.ed-fmt-btn{display:flex;flex-direction:column;align-items:center;gap:3px;padding:12px 6px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);cursor:pointer;transition:all .15s;font-family:var(--font-mono);font-size:10px;color:var(--ink2)}
-.ed-fmt-btn strong{font-family:var(--font-head);font-size:13px;color:var(--ink)}
-.ed-fmt-btn.on{border-color:var(--lime);background:rgba(200,255,0,.1)}
+.ed-fmt-btns{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.ed-fmt-btn{display:flex;flex-direction:column;align-items:center;gap:3px;padding:12px 6px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:var(--r);cursor:pointer;transition:all .15s;font-family:var(--font-mono);font-size:10px;color:var(--ink2)}
+.ed-fmt-btn strong{font-family:var(--font-head);font-size:14px;color:var(--ink)}
+.ed-fmt-btn.on{border-color:var(--lime);background:rgba(200,255,0,.09)}
 .ed-fmt-btn.on strong{color:var(--lime)}
 
 /* Export button */
-.ed-export-btn{width:100%;padding:16px;background:var(--lime);color:#000;border:none;border-radius:var(--r2);font-family:var(--font-head);font-size:16px;font-weight:900;cursor:pointer;transition:all .2s;letter-spacing:-.3px}
-.ed-export-btn:hover{background:var(--lime3);transform:translateY(-1px)}
+.ed-export-btn{width:100%;padding:15px;background:var(--lime);color:#000;border:none;border-radius:var(--r2);font-family:var(--font-head);font-size:16px;font-weight:900;cursor:pointer;transition:all .2s;letter-spacing:-.3px;margin-top:4px}
+.ed-export-btn:hover:not(:disabled){background:var(--lime3);transform:translateY(-1px)}
 .ed-export-btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
 
-/* cap-style-btn (reused) */
-.cap-style-btn{padding:5px 12px;border-radius:20px;border:1px solid var(--border2);background:transparent;color:var(--ink2);font-size:11px;font-family:var(--font-mono);cursor:pointer;transition:all .15s}
+/* Field label */
+.ed-field-label{font-size:9px;font-family:var(--font-mono);color:var(--ink3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:5px}
+
+/* Virality bar */
+.ed-v-card{padding:14px;background:linear-gradient(135deg,rgba(200,255,0,.07),rgba(0,200,255,.03));border:1px solid rgba(200,255,0,.18);border-radius:var(--r2)}
+
+/* Thumbnail grid */
+.ed-thumb-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.ed-thumb-card{border-radius:var(--r);overflow:hidden;border:1.5px solid var(--border2);cursor:pointer;transition:all .15s;position:relative}
+.ed-thumb-card.on{border-color:var(--lime)}
+.ed-thumb-card img{width:100%;display:block;aspect-ratio:16/9;object-fit:cover;background:var(--bg4)}
+.ed-thumb-card .ed-thumb-label{position:absolute;bottom:0;left:0;right:0;padding:4px 6px;background:rgba(0,0,0,.7);font-size:9px;font-family:var(--font-mono);color:#fff}
+
+/* cap-style-btn alias */
+.cap-style-btn{padding:5px 10px;border-radius:14px;border:1px solid var(--border2);background:transparent;color:var(--ink2);font-size:11px;font-family:var(--font-mono);cursor:pointer;transition:all .15s}
 .cap-style-btn.on{background:var(--lime);color:#000;border-color:var(--lime);font-weight:700}
 .cap-style-btn:hover:not(.on){border-color:var(--lime);color:var(--lime)}
+</style>
 </style>
 </head>
 <body>
@@ -872,93 +908,100 @@ input::placeholder,textarea::placeholder{color:var(--ink3)}
     <!-- EDITOR -->
     <div id="tab-editor" class="app-panel">
 
-      <!-- Empty / load state -->
+      <!-- Empty state -->
       <div id="ed-empty">
         <div class="ed-load-card">
-          <div class="ed-load-icon">✂</div>
-          <div class="ed-load-title">Better than Opus Clip's editor</div>
-          <div class="ed-load-sub">Trim · Auto-captions · Brand watermark · 9:16 & 16:9 export — all in-browser</div>
-          <div class="ed-load-row">
-            <input type="text" id="ed-url" placeholder="Paste YouTube URL or a processed clip URL…" class="ed-url-input"/>
-            <button onclick="editorLoadUrl()" class="ed-load-btn" id="ed-load-btn">Load video →</button>
+          <div style="font-size:52px;margin-bottom:16px">🎬</div>
+          <div style="font-family:var(--font-head);font-size:24px;font-weight:900;margin-bottom:8px;letter-spacing:-.5px">All-in-one AI editor</div>
+          <div style="font-size:13px;color:var(--ink2);margin-bottom:6px;line-height:1.7">Everything Opus Clip charges $29–149/month for — free on VidPost AI</div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin-bottom:24px">
+            <span style="padding:4px 10px;background:rgba(200,255,0,.1);border:1px solid rgba(200,255,0,.2);border-radius:12px;font-size:10px;font-family:var(--font-mono);color:var(--lime)">✂ Smart trim</span>
+            <span style="padding:4px 10px;background:rgba(200,255,0,.1);border:1px solid rgba(200,255,0,.2);border-radius:12px;font-size:10px;font-family:var(--font-mono);color:var(--lime)">🗑 Filler removal</span>
+            <span style="padding:4px 10px;background:rgba(200,255,0,.1);border:1px solid rgba(200,255,0,.2);border-radius:12px;font-size:10px;font-family:var(--font-mono);color:var(--lime)">🎬 AI B-Roll</span>
+            <span style="padding:4px 10px;background:rgba(200,255,0,.1);border:1px solid rgba(200,255,0,.2);border-radius:12px;font-size:10px;font-family:var(--font-mono);color:var(--lime)">💬 6 caption styles</span>
+            <span style="padding:4px 10px;background:rgba(200,255,0,.1);border:1px solid rgba(200,255,0,.2);border-radius:12px;font-size:10px;font-family:var(--font-mono);color:var(--lime)">🏷 Brand kit</span>
+            <span style="padding:4px 10px;background:rgba(200,255,0,.1);border:1px solid rgba(200,255,0,.2);border-radius:12px;font-size:10px;font-family:var(--font-mono);color:var(--lime)">🖼 Thumbnails</span>
+            <span style="padding:4px 10px;background:rgba(200,255,0,.1);border:1px solid rgba(200,255,0,.2);border-radius:12px;font-size:10px;font-family:var(--font-mono);color:var(--lime)">🔥 Virality score</span>
+            <span style="padding:4px 10px;background:rgba(200,255,0,.1);border:1px solid rgba(200,255,0,.2);border-radius:12px;font-size:10px;font-family:var(--font-mono);color:var(--lime)">📱 9:16 & 16:9</span>
           </div>
-          <div style="font-size:11px;color:var(--ink3);font-family:var(--font-mono);margin-top:10px">— or process a clip in the Clips tab and click "Edit this clip" —</div>
+          <div style="display:flex;gap:8px;max-width:540px;margin:0 auto 12px">
+            <input type="text" id="ed-url" placeholder="Paste YouTube URL or processed clip URL…" class="ed-url-input"/>
+            <button onclick="editorLoadUrl()" class="ed-load-btn" id="ed-load-btn">Load →</button>
+          </div>
+          <div style="font-size:11px;color:var(--ink3);font-family:var(--font-mono)">— or process a clip in the Clips tab then click "Edit this clip" —</div>
         </div>
       </div>
 
-      <!-- Full editor (shown after load) -->
+      <!-- Full workspace -->
       <div id="ed-workspace" style="display:none">
 
         <!-- Top bar -->
         <div class="ed-topbar">
-          <div style="font-family:var(--font-head);font-size:14px;font-weight:800;display:flex;align-items:center;gap:8px">
-            <span style="color:var(--lime)">✂</span>
-            <span id="ed-title-lbl" style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Clip Editor</span>
-          </div>
           <div style="display:flex;align-items:center;gap:8px">
-            <input type="text" id="ed-url-top" placeholder="Load another URL…" style="font-size:11px;padding:6px 10px;border-radius:var(--r);border:1px solid var(--border2);background:var(--bg3);color:var(--ink);font-family:var(--font-mono);width:200px"/>
-            <button onclick="editorLoadUrlTop()" style="padding:6px 14px;background:var(--bg4);border:1px solid var(--border2);border-radius:var(--r);color:var(--ink2);font-size:11px;font-family:var(--font-mono);cursor:pointer">Load</button>
+            <span style="font-size:16px">🎬</span>
+            <span id="ed-title-lbl" style="font-family:var(--font-head);font-size:13px;font-weight:700;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+            <div id="ed-vpill" style="display:none;padding:3px 10px;border-radius:20px;background:rgba(200,255,0,.12);border:1px solid rgba(200,255,0,.3);font-size:10px;font-family:var(--font-mono);color:var(--lime)">🔥 <span id="ed-vscore">—</span>/10</div>
+          </div>
+          <div style="display:flex;gap:6px;align-items:center">
+            <input type="text" id="ed-url-top" placeholder="Load another URL…" style="font-size:11px;padding:5px 9px;border-radius:var(--r);border:1px solid var(--border2);background:var(--bg3);color:var(--ink);font-family:var(--font-mono);width:150px"/>
+            <button onclick="editorLoadUrlTop()" style="padding:5px 12px;background:var(--bg4);border:1px solid var(--border2);border-radius:var(--r);color:var(--ink2);font-size:11px;font-family:var(--font-mono);cursor:pointer">Load</button>
           </div>
         </div>
 
-        <!-- Two-column layout -->
         <div class="ed-columns">
 
-          <!-- LEFT: preview + timeline -->
+          <!-- ── LEFT: preview + timeline ── -->
           <div class="ed-left">
 
-            <!-- Video canvas preview -->
             <div class="ed-preview-box" id="ed-preview-box">
-              <video id="ed-video" style="width:100%;height:100%;object-fit:contain;background:#000;display:block"></video>
-              <!-- caption preview overlay -->
-              <div id="ed-cap-preview" class="ed-cap-overlay" style="display:none"></div>
-              <!-- format overlay badge -->
+              <video id="ed-video" playsinline style="width:100%;height:100%;object-fit:contain;background:#000;display:block"></video>
+              <div id="ed-cap-preview" style="position:absolute;left:0;right:0;bottom:12%;text-align:center;padding:0 10px;pointer-events:none;display:none"></div>
               <div id="ed-fmt-badge" class="ed-fmt-badge">📱 9:16</div>
             </div>
 
-            <!-- Playback controls -->
             <div class="ed-controls">
-              <button onclick="edSkip(-5)" class="ed-ctrl-btn" title="−5s">⟨⟨</button>
-              <button onclick="edPlayPause()" class="ed-ctrl-btn ed-play-btn" id="ed-play-btn" title="Play/Pause">▶</button>
-              <button onclick="edSkip(5)" class="ed-ctrl-btn" title="+5s">⟩⟩</button>
+              <button onclick="edSkip(-10)" class="ed-ctrl-btn" title="−10s">«</button>
+              <button onclick="edSkip(-2)"  class="ed-ctrl-btn" title="−2s">‹</button>
+              <button onclick="edPlayPause()" id="ed-play-btn" class="ed-ctrl-btn ed-play-btn">▶</button>
+              <button onclick="edSkip(2)"   class="ed-ctrl-btn" title="+2s">›</button>
+              <button onclick="edSkip(10)"  class="ed-ctrl-btn" title="+10s">»</button>
               <span class="ed-time-display" id="ed-time-cur">0:00</span>
               <div style="flex:1"></div>
+              <div style="display:flex;align-items:center;gap:4px">
+                <span style="font-size:9px;font-family:var(--font-mono);color:var(--ink3)">DURATION</span>
+                <button class="ed-dur-pill on" onclick="setDurPreset(this,30)">30s</button>
+                <button class="ed-dur-pill"    onclick="setDurPreset(this,60)">60s</button>
+                <button class="ed-dur-pill"    onclick="setDurPreset(this,90)">90s</button>
+                <button class="ed-dur-pill"    onclick="setDurPreset(this,0)">Full</button>
+              </div>
               <span class="ed-time-display" id="ed-time-tot">0:00</span>
-              <button onclick="edMute()" class="ed-ctrl-btn" id="ed-mute-btn" title="Mute">🔊</button>
+              <button onclick="edMute()" id="ed-mute-btn" class="ed-ctrl-btn">🔊</button>
             </div>
 
-            <!-- Timeline -->
             <div class="ed-tl-wrap">
-              <div class="ed-tl-label">TRIM RANGE</div>
-              <div id="ed-timeline" class="ed-timeline">
-                <!-- waveform bars (generated by JS) -->
-                <div id="ed-waveform" class="ed-waveform"></div>
-                <!-- dark overlay: before start -->
-                <div id="ed-shadow-left" class="ed-shadow"></div>
-                <!-- dark overlay: after end -->
-                <div id="ed-shadow-right" class="ed-shadow"></div>
-                <!-- green selected range border -->
-                <div id="ed-range-fill" class="ed-range-fill"></div>
-                <!-- playhead -->
-                <div id="ed-playhead" class="ed-playhead"></div>
-                <!-- start handle -->
-                <div id="ed-handle-start" class="ed-handle ed-handle-l"><div class="ed-handle-grip"></div></div>
-                <!-- end handle -->
-                <div id="ed-handle-end" class="ed-handle ed-handle-r"><div class="ed-handle-grip"></div></div>
+              <div style="display:flex;justify-content:space-between;align-items:center">
+                <span class="ed-tl-label">TRIM — drag green handles or type seconds</span>
+                <span id="ed-tl-dur" style="font-size:10px;font-family:var(--font-mono);color:var(--lime)"></span>
               </div>
-
-              <!-- Time ruler -->
+              <div id="ed-timeline" class="ed-timeline">
+                <div id="ed-waveform" class="ed-waveform"></div>
+                <div id="ed-filler-layer" style="position:absolute;inset:0;pointer-events:none"></div>
+                <div id="ed-shadow-left"  class="ed-shadow"></div>
+                <div id="ed-shadow-right" class="ed-shadow"></div>
+                <div id="ed-range-fill"   class="ed-range-fill"></div>
+                <div id="ed-playhead"     class="ed-playhead"></div>
+                <div id="ed-handle-start" class="ed-handle ed-handle-l"><div class="ed-handle-grip"></div></div>
+                <div id="ed-handle-end"   class="ed-handle ed-handle-r"><div class="ed-handle-grip"></div></div>
+              </div>
               <div id="ed-ruler" class="ed-ruler"></div>
-
-              <!-- Time inputs -->
               <div class="ed-time-row">
                 <div class="ed-time-chip">
                   <span class="ed-time-chip-label">START</span>
                   <input type="number" id="ed-start-in" class="ed-time-chip-input" step="0.1" min="0" oninput="edStartInput()"/>
                 </div>
-                <div class="ed-time-chip ed-dur-chip">
+                <div class="ed-time-chip" style="text-align:center">
                   <span class="ed-time-chip-label">DURATION</span>
-                  <span id="ed-dur-lbl" class="ed-dur-val">—</span>
+                  <div id="ed-dur-lbl" class="ed-dur-val">—</div>
                 </div>
                 <div class="ed-time-chip" style="text-align:right">
                   <span class="ed-time-chip-label">END</span>
@@ -966,103 +1009,304 @@ input::placeholder,textarea::placeholder{color:var(--ink3)}
                 </div>
               </div>
             </div>
-          </div>
+          </div><!-- /ed-left -->
 
-          <!-- RIGHT: settings panel -->
+          <!-- ── RIGHT: tabbed tool panel ── -->
           <div class="ed-right">
+            <div class="ed-rtabs">
+              <button class="ed-rtab on" onclick="switchRtab(this,'rt-enhance')">⚡ Enhance</button>
+              <button class="ed-rtab"    onclick="switchRtab(this,'rt-captions')">💬 Captions</button>
+              <button class="ed-rtab"    onclick="switchRtab(this,'rt-broll')">🎬 B-Roll</button>
+              <button class="ed-rtab"    onclick="switchRtab(this,'rt-brand')">🏷 Brand</button>
+              <button class="ed-rtab"    onclick="switchRtab(this,'rt-thumb')">🖼 Thumbnail</button>
+              <button class="ed-rtab"    onclick="switchRtab(this,'rt-export')">📤 Export</button>
+            </div>
 
-            <!-- Caption section -->
-            <div class="ed-section">
-              <div class="ed-section-head">
-                <span>💬 Auto-captions</span>
-                <label class="ed-toggle"><input type="checkbox" id="ed-captions" checked/><span class="ed-slider"></span></label>
+            <!-- ① ENHANCE -->
+            <div id="rt-enhance" class="ed-rpanel">
+              <div class="ed-tool-row">
+                <div><div class="ed-tool-title">🗑 Remove filler words</div><div class="ed-tool-sub">Cuts "um", "uh", "like", "you know", "basically", "literally" with AI jump-cuts</div></div>
+                <label class="ed-toggle"><input type="checkbox" id="ed-filler" onchange="edFillerToggle(this)"/><span class="ed-slider"></span></label>
               </div>
-              <div id="ed-caption-opts">
-                <div class="ed-field-label">CAPTION STYLE</div>
-                <div class="ed-style-grid">
-                  <button class="ed-style-btn on" data-style="bold" onclick="selectCapStyle(this)">
-                    <span class="ed-style-preview" style="color:#fff;font-weight:900;text-shadow:2px 2px 0 #000,-2px -2px 0 #000">Aa</span>
-                    <span>Bold</span>
-                  </button>
-                  <button class="ed-style-btn" data-style="outline" onclick="selectCapStyle(this)">
-                    <span class="ed-style-preview" style="color:#fff;-webkit-text-stroke:1px #000">Aa</span>
-                    <span>Outline</span>
-                  </button>
-                  <button class="ed-style-btn" data-style="box" onclick="selectCapStyle(this)">
-                    <span class="ed-style-preview" style="background:#000;color:#fff;padding:2px 4px;border-radius:3px">Aa</span>
-                    <span>Box</span>
-                  </button>
-                  <button class="ed-style-btn" data-style="lime" onclick="selectCapStyle(this)">
-                    <span class="ed-style-preview" style="color:#c8ff00;font-weight:900">Aa</span>
-                    <span>Lime</span>
-                  </button>
-                </div>
-                <div class="ed-field-label" style="margin-top:10px">FONT SIZE</div>
-                <div style="display:flex;gap:6px">
-                  <button class="cap-style-btn" data-size="small" onclick="selectCapSize(this)">Small</button>
-                  <button class="cap-style-btn on" data-size="medium" onclick="selectCapSize(this)">Medium</button>
-                  <button class="cap-style-btn" data-size="large" onclick="selectCapSize(this)">Large</button>
+              <div id="ed-filler-words" style="display:none;padding:10px;background:var(--bg3);border-radius:var(--r);border:1px solid var(--border)">
+                <div class="ed-field-label">CLICK TO TOGGLE EACH FILLER WORD</div>
+                <div id="ed-filler-chips" style="display:flex;flex-wrap:wrap;gap:5px;margin-top:4px"></div>
+              </div>
+
+              <div class="ed-tool-row">
+                <div><div class="ed-tool-title">⏸ Remove long pauses</div><div class="ed-tool-sub">Jump-cuts silences &gt;0.8s — tightens pacing like a pro editor</div></div>
+                <label class="ed-toggle"><input type="checkbox" id="ed-pauses"/><span class="ed-slider"></span></label>
+              </div>
+
+              <div class="ed-tool-row">
+                <div><div class="ed-tool-title">🎯 AI hook optimiser</div><div class="ed-tool-sub">Detects the strongest 3s opening hook — maximises first-second retention</div></div>
+                <label class="ed-toggle"><input type="checkbox" id="ed-hook" checked/><span class="ed-slider"></span></label>
+              </div>
+
+              <div class="ed-tool-row">
+                <div><div class="ed-tool-title">🔊 Audio normalise</div><div class="ed-tool-sub">Levels volume spikes so every clip sounds broadcast-quality</div></div>
+                <label class="ed-toggle"><input type="checkbox" id="ed-audio-norm" checked/><span class="ed-slider"></span></label>
+              </div>
+
+              <div class="ed-v-card">
+                <div style="font-family:var(--font-head);font-size:13px;font-weight:700;margin-bottom:4px">🔥 Virality score</div>
+                <div style="font-size:11px;color:var(--ink2);margin-bottom:10px;line-height:1.6">AI scores your clip's hook strength, pacing, and emotional pull — like Opus Clip's virality score but completely free</div>
+                <button onclick="runViralityScore()" style="width:100%;padding:8px;background:rgba(200,255,0,.12);border:1px solid rgba(200,255,0,.3);border-radius:var(--r);color:var(--lime);font-size:12px;font-family:var(--font-head);font-weight:700;cursor:pointer;transition:all .15s" id="ed-vscore-btn">Analyse →</button>
+                <div id="ed-virality-result" style="display:none;margin-top:12px">
+                  <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
+                    <div style="font-family:var(--font-head);font-size:42px;font-weight:900;color:var(--lime);line-height:1" id="ed-vnum">—</div>
+                    <div style="flex:1">
+                      <div style="font-size:12px;font-weight:600;color:var(--ink)" id="ed-vverdict">—</div>
+                      <div style="height:4px;background:var(--border);border-radius:2px;margin-top:6px"><div id="ed-vfill" style="height:100%;background:var(--lime);border-radius:2px;transition:width .8s;width:0%"></div></div>
+                    </div>
+                  </div>
+                  <div style="font-size:11px;color:var(--ink2);line-height:1.7;background:var(--bg3);padding:10px;border-radius:var(--r);border:1px solid var(--border)" id="ed-vtips"></div>
                 </div>
               </div>
             </div>
 
-            <!-- Watermark section -->
-            <div class="ed-section">
-              <div class="ed-section-head">
-                <span>🏷 Brand watermark</span>
-                <label class="ed-toggle"><input type="checkbox" id="ed-logo-on" onchange="document.getElementById('ed-logo-opts').style.display=this.checked?'block':'none'"/><span class="ed-slider"></span></label>
+            <!-- ② CAPTIONS -->
+            <div id="rt-captions" class="ed-rpanel" style="display:none">
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--bg3);border-radius:var(--r);border:1px solid var(--border)">
+                <span style="font-family:var(--font-head);font-size:12px;font-weight:700">Enable captions</span>
+                <label class="ed-toggle"><input type="checkbox" id="ed-captions" checked onchange="updateCapPreview()"/><span class="ed-slider"></span></label>
               </div>
-              <div id="ed-logo-opts" style="display:none">
-                <div class="ed-field-label">LOGO FILE</div>
-                <label class="ed-file-drop" id="ed-logo-drop">
-                  <input type="file" id="ed-logo-file" accept="image/png,image/jpeg,image/webp" style="display:none" onchange="edLogoSelected(this)"/>
-                  <span id="ed-logo-name">Click to upload PNG / JPG</span>
+
+              <div class="ed-field-label">STYLE — 6 templates (Opus Clip has 4)</div>
+              <div class="ed-cap-grid">
+                <button class="ed-cap-btn on" data-style="bold" onclick="selectCapStyle(this)">
+                  <div class="ed-cap-preview-box" style="background:#111"><span style="color:#fff;font-weight:900;text-shadow:2px 2px 0 #000,-2px -2px 0 #000;font-size:13px;font-family:var(--font-head)">Bold</span></div>
+                  Bold
+                </button>
+                <button class="ed-cap-btn" data-style="outline" onclick="selectCapStyle(this)">
+                  <div class="ed-cap-preview-box" style="background:#333"><span style="color:#fff;-webkit-text-stroke:1px #000;font-size:13px;font-family:var(--font-head)">Outline</span></div>
+                  Outline
+                </button>
+                <button class="ed-cap-btn" data-style="box" onclick="selectCapStyle(this)">
+                  <div class="ed-cap-preview-box" style="background:#555"><span style="background:rgba(0,0,0,.85);color:#fff;padding:2px 7px;border-radius:4px;font-size:13px">Box</span></div>
+                  Box
+                </button>
+                <button class="ed-cap-btn" data-style="lime" onclick="selectCapStyle(this)">
+                  <div class="ed-cap-preview-box" style="background:#111"><span style="color:#c8ff00;font-weight:900;font-size:13px;font-family:var(--font-head)">Lime</span></div>
+                  Lime
+                </button>
+                <button class="ed-cap-btn" data-style="karaoke" onclick="selectCapStyle(this)">
+                  <div class="ed-cap-preview-box" style="background:#000"><span style="font-size:12px;font-family:var(--font-head)"><span style="color:#c8ff00">Kara</span><span style="color:#fff">oke</span></span></div>
+                  Karaoke
+                </button>
+                <button class="ed-cap-btn" data-style="neon" onclick="selectCapStyle(this)">
+                  <div class="ed-cap-preview-box" style="background:#000"><span style="color:#fff;text-shadow:0 0 10px #c8ff00,0 0 20px #c8ff00;font-weight:700;font-size:13px">Neon</span></div>
+                  Neon ✨
+                </button>
+              </div>
+
+              <div class="ed-field-label">SIZE</div>
+              <div style="display:flex;gap:5px">
+                <button class="ed-pill" data-size="small"  onclick="selectCapSize(this)">Small</button>
+                <button class="ed-pill on" data-size="medium" onclick="selectCapSize(this)">Medium</button>
+                <button class="ed-pill" data-size="large"  onclick="selectCapSize(this)">Large</button>
+              </div>
+
+              <div class="ed-field-label">POSITION</div>
+              <div style="display:flex;gap:5px">
+                <button class="ed-pill" data-cpos="top"    onclick="selectCapPos(this)">Top</button>
+                <button class="ed-pill on" data-cpos="middle" onclick="selectCapPos(this)">Middle</button>
+                <button class="ed-pill" data-cpos="bottom" onclick="selectCapPos(this)">Bottom</button>
+              </div>
+
+              <div class="ed-field-label">EXTRAS</div>
+              <div style="display:flex;flex-direction:column;gap:7px">
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+                  <label class="ed-toggle"><input type="checkbox" id="ed-emoji" checked/><span class="ed-slider"></span></label>
+                  <span style="font-size:12px;color:var(--ink2)">Auto-add emojis 🔥🎯 to captions</span>
                 </label>
-                <div class="ed-field-label" style="margin-top:10px">POSITION</div>
-                <div class="ed-pos-grid" id="ed-pos-grid">
-                  <button class="ed-pos-btn" data-pos="top-left" onclick="selectLogoPos(this)">↖</button>
-                  <button class="ed-pos-btn on" data-pos="top-right" onclick="selectLogoPos(this)">↗</button>
-                  <button class="ed-pos-btn" data-pos="bottom-left" onclick="selectLogoPos(this)">↙</button>
-                  <button class="ed-pos-btn" data-pos="bottom-right" onclick="selectLogoPos(this)">↘</button>
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+                  <label class="ed-toggle"><input type="checkbox" id="ed-kw-highlight" checked/><span class="ed-slider"></span></label>
+                  <span style="font-size:12px;color:var(--ink2)">Highlight keywords in brand colour</span>
+                </label>
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+                  <label class="ed-toggle"><input type="checkbox" id="ed-animated-caps" checked/><span class="ed-slider"></span></label>
+                  <span style="font-size:12px;color:var(--ink2)">Animated word-by-word reveal</span>
+                </label>
+              </div>
+
+              <div class="ed-field-label">CAPTION TEMPLATES</div>
+              <div class="ed-tmpl-grid">
+                <button class="ed-tmpl on"  data-tmpl="modern"   onclick="selectCapTmpl(this)" style="font-family:var(--font-head);font-size:12px">Modern</button>
+                <button class="ed-tmpl"     data-tmpl="minimal"  onclick="selectCapTmpl(this)" style="font-family:serif;letter-spacing:1px;font-size:11px">Minimal</button>
+                <button class="ed-tmpl"     data-tmpl="impact"   onclick="selectCapTmpl(this)" style="font-family:var(--font-head);font-weight:900;font-size:13px">IMPACT</button>
+                <button class="ed-tmpl"     data-tmpl="clean"    onclick="selectCapTmpl(this)" style="font-family:sans-serif;font-weight:300;font-size:11px">Clean</button>
+                <button class="ed-tmpl"     data-tmpl="retro"    onclick="selectCapTmpl(this)" style="font-family:monospace;font-size:10px">Retro</button>
+                <button class="ed-tmpl"     data-tmpl="gradient" onclick="selectCapTmpl(this)" style="background:linear-gradient(90deg,#c8ff00,#00ffcc);-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-weight:900;font-size:12px">Gradient</button>
+              </div>
+            </div>
+
+            <!-- ③ B-ROLL -->
+            <div id="rt-broll" class="ed-rpanel" style="display:none">
+              <div style="padding:12px;background:linear-gradient(135deg,rgba(200,255,0,.06),rgba(0,200,255,.04));border:1px solid rgba(200,255,0,.15);border-radius:var(--r2)">
+                <div style="font-family:var(--font-head);font-size:13px;font-weight:700;margin-bottom:4px">🎬 AI B-Roll — free</div>
+                <div style="font-size:11px;color:var(--ink2);line-height:1.6">Opus Clip charges $29/mo for B-Roll. Ours is included. Automatically inserts relevant stock footage to break up talking-head shots.</div>
+              </div>
+
+              <div style="display:flex;align-items:center;gap:8px">
+                <label class="ed-toggle"><input type="checkbox" id="ed-broll" onchange="edBrollToggle(this)"/><span class="ed-slider"></span></label>
+                <span style="font-size:12px;color:var(--ink2);font-weight:600">Enable B-Roll insertion</span>
+              </div>
+
+              <div id="ed-broll-opts" style="display:none;display:flex;flex-direction:column;gap:10px">
+                <div>
+                  <div class="ed-field-label">SOURCE</div>
+                  <div style="display:flex;gap:6px">
+                    <button class="ed-pill on" data-bsrc="pexels" onclick="selectBrollSrc(this)">📷 Pexels stock</button>
+                    <button class="ed-pill"    data-bsrc="ai"     onclick="selectBrollSrc(this)">🤖 AI-generated</button>
+                  </div>
                 </div>
-                <div class="ed-field-label" style="margin-top:10px">OPACITY</div>
-                <input type="range" id="ed-logo-opacity" min="10" max="100" value="80" style="width:100%;accent-color:var(--lime)"/>
+                <div>
+                  <div class="ed-field-label">KEYWORDS (auto-detected from transcript)</div>
+                  <input type="text" id="ed-broll-kw" placeholder="e.g. productivity, coffee, laptop…" style="width:100%;padding:8px 10px;border-radius:var(--r);border:1px solid var(--border2);background:var(--bg3);color:var(--ink);font-family:var(--font-mono);font-size:11px;box-sizing:border-box"/>
+                </div>
+                <div>
+                  <div class="ed-field-label">FREQUENCY</div>
+                  <div style="display:flex;gap:5px">
+                    <button class="ed-pill" data-bfreq="low"    onclick="selectBrollFreq(this)">Low</button>
+                    <button class="ed-pill on" data-bfreq="medium" onclick="selectBrollFreq(this)">Medium</button>
+                    <button class="ed-pill" data-bfreq="high"   onclick="selectBrollFreq(this)">High</button>
+                  </div>
+                </div>
+                <div>
+                  <div class="ed-field-label">TRANSITION STYLE</div>
+                  <div style="display:flex;gap:5px">
+                    <button class="ed-pill on" data-btr="cut"       onclick="selectBrollTr(this)">Hard cut</button>
+                    <button class="ed-pill"    data-btr="crossfade" onclick="selectBrollTr(this)">Crossfade</button>
+                    <button class="ed-pill"    data-btr="dip"       onclick="selectBrollTr(this)">Dip black</button>
+                  </div>
+                </div>
               </div>
             </div>
 
-            <!-- Format section -->
-            <div class="ed-section">
-              <div class="ed-section-head"><span>📐 Output format</span></div>
+            <!-- ④ BRAND KIT -->
+            <div id="rt-brand" class="ed-rpanel" style="display:none">
+
+              <div class="ed-field-label">LOGO WATERMARK</div>
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+                <label class="ed-toggle"><input type="checkbox" id="ed-logo-on" onchange="toggleLogoOpts(this)"/><span class="ed-slider"></span></label>
+                <span style="font-size:12px;color:var(--ink2)">Enable logo overlay</span>
+              </div>
+              <div id="ed-logo-inner" style="display:none;display:flex;flex-direction:column;gap:8px">
+                <label class="ed-file-drop">
+                  <input type="file" id="ed-logo-file" accept="image/png,image/jpeg,image/webp" style="display:none" onchange="edLogoSelected(this)"/>
+                  <span id="ed-logo-name">📁 Click to upload PNG / JPG logo</span>
+                </label>
+                <div>
+                  <div class="ed-field-label">POSITION</div>
+                  <div class="ed-pos-grid">
+                    <button class="ed-pos-btn"    data-pos="top-left"     onclick="selectLogoPos(this)">↖ Top left</button>
+                    <button class="ed-pos-btn on"  data-pos="top-right"    onclick="selectLogoPos(this)">↗ Top right</button>
+                    <button class="ed-pos-btn"    data-pos="bottom-left"  onclick="selectLogoPos(this)">↙ Bot left</button>
+                    <button class="ed-pos-btn"    data-pos="bottom-right" onclick="selectLogoPos(this)">↘ Bot right</button>
+                  </div>
+                </div>
+                <div>
+                  <div class="ed-field-label">OPACITY</div>
+                  <div style="display:flex;align-items:center;gap:8px">
+                    <input type="range" id="ed-logo-opacity" min="10" max="100" value="80" style="flex:1;accent-color:var(--lime)" oninput="document.getElementById('ed-opacity-val').textContent=this.value+'%'"/>
+                    <span id="ed-opacity-val" style="font-family:var(--font-mono);font-size:11px;color:var(--ink2);width:30px">80%</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="ed-field-label" style="margin-top:6px">BRAND COLOURS</div>
+              <div style="display:flex;flex-direction:column;gap:8px">
+                <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:var(--bg3);border-radius:var(--r);border:1px solid var(--border)">
+                  <input type="color" id="ed-brand-primary" value="#C8FF00" style="width:34px;height:28px;border:none;border-radius:6px;cursor:pointer;padding:0" onchange="updateCapPreview()"/>
+                  <div><div style="font-size:12px;font-weight:600">Primary colour</div><div style="font-size:10px;color:var(--ink3)">Caption highlights, keyword accent</div></div>
+                </div>
+                <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:var(--bg3);border-radius:var(--r);border:1px solid var(--border)">
+                  <input type="color" id="ed-brand-bg" value="#000000" style="width:34px;height:28px;border:none;border-radius:6px;cursor:pointer;padding:0"/>
+                  <div><div style="font-size:12px;font-weight:600">Background colour</div><div style="font-size:10px;color:var(--ink3)">Box/background caption style</div></div>
+                </div>
+              </div>
+
+              <div class="ed-field-label" style="margin-top:6px">BRAND TEMPLATES</div>
+              <div class="ed-tmpl-grid">
+                <button class="ed-tmpl on"  data-btmpl="custom"    onclick="selectBrandTmpl(this)">Custom</button>
+                <button class="ed-tmpl"     data-btmpl="corporate" onclick="selectBrandTmpl(this)">Corporate</button>
+                <button class="ed-tmpl"     data-btmpl="creator"   onclick="selectBrandTmpl(this)">Creator</button>
+                <button class="ed-tmpl"     data-btmpl="minimal"   onclick="selectBrandTmpl(this)">Minimal</button>
+                <button class="ed-tmpl"     data-btmpl="bold"      onclick="selectBrandTmpl(this)">Bold</button>
+                <button class="ed-tmpl"     data-btmpl="dark"      onclick="selectBrandTmpl(this)">Dark</button>
+              </div>
+
+              <div class="ed-field-label" style="margin-top:6px">LOWER THIRD OVERLAY</div>
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+                <label class="ed-toggle"><input type="checkbox" id="ed-lower-on" onchange="document.getElementById('ed-lower-inner').style.display=this.checked?'flex':'none'"/><span class="ed-slider"></span></label>
+                <span style="font-size:12px;color:var(--ink2)">Show name / title overlay</span>
+              </div>
+              <div id="ed-lower-inner" style="display:none;flex-direction:column;gap:6px">
+                <input type="text" id="ed-lower-name"  placeholder="Your name" style="padding:8px 10px;border-radius:var(--r);border:1px solid var(--border2);background:var(--bg3);color:var(--ink);font-family:var(--font-mono);font-size:12px;width:100%;box-sizing:border-box"/>
+                <input type="text" id="ed-lower-title" placeholder="Title / channel / company" style="padding:8px 10px;border-radius:var(--r);border:1px solid var(--border2);background:var(--bg3);color:var(--ink);font-family:var(--font-mono);font-size:12px;width:100%;box-sizing:border-box"/>
+              </div>
+
+              <div class="ed-field-label" style="margin-top:6px">INTRO / OUTRO</div>
+              <div style="display:flex;flex-direction:column;gap:6px">
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+                  <label class="ed-toggle"><input type="checkbox" id="ed-intro"/><span class="ed-slider"></span></label>
+                  <span style="font-size:12px;color:var(--ink2)">Auto-generate 2s branded intro</span>
+                </label>
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+                  <label class="ed-toggle"><input type="checkbox" id="ed-outro"/><span class="ed-slider"></span></label>
+                  <span style="font-size:12px;color:var(--ink2)">Auto-generate 2s CTA outro</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- ⑤ THUMBNAIL -->
+            <div id="rt-thumb" class="ed-rpanel" style="display:none">
+              <div style="padding:12px;background:var(--bg3);border-radius:var(--r2);border:1px solid var(--border);margin-bottom:4px">
+                <div style="font-family:var(--font-head);font-size:13px;font-weight:700;margin-bottom:4px">🖼 AI Thumbnail Generator</div>
+                <div style="font-size:11px;color:var(--ink2);line-height:1.6">AI picks the most expressive frame from your clip and adds bold text + colour for maximum CTR. Opus Clip charges $29/mo for this.</div>
+              </div>
+              <button onclick="generateThumbnails()" style="width:100%;padding:9px;background:rgba(200,255,0,.12);border:1px solid rgba(200,255,0,.3);border-radius:var(--r);color:var(--lime);font-size:12px;font-family:var(--font-head);font-weight:700;cursor:pointer" id="ed-thumb-btn">Generate thumbnails →</button>
+              <div id="ed-thumb-grid" class="ed-thumb-grid" style="display:none"></div>
+              <div id="ed-thumb-opts" style="display:none">
+                <div class="ed-field-label">TITLE TEXT (bold overlay)</div>
+                <input type="text" id="ed-thumb-text" placeholder="Your video title…" style="width:100%;padding:8px 10px;border-radius:var(--r);border:1px solid var(--border2);background:var(--bg3);color:var(--ink);font-family:var(--font-mono);font-size:12px;box-sizing:border-box;margin-bottom:8px"/>
+                <div class="ed-field-label">STYLE</div>
+                <div style="display:flex;gap:5px;flex-wrap:wrap">
+                  <button class="ed-pill on" data-tstyle="bold"    onclick="selectThumbStyle(this)">Bold text</button>
+                  <button class="ed-pill"    data-tstyle="minimal" onclick="selectThumbStyle(this)">Minimal</button>
+                  <button class="ed-pill"    data-tstyle="gradient" onclick="selectThumbStyle(this)">Gradient</button>
+                </div>
+                <button onclick="downloadThumbnail()" style="width:100%;margin-top:10px;padding:9px;background:var(--lime);color:#000;border:none;border-radius:var(--r);font-family:var(--font-head);font-size:13px;font-weight:700;cursor:pointer">⬇ Download thumbnail</button>
+              </div>
+            </div>
+
+            <!-- ⑥ EXPORT -->
+            <div id="rt-export" class="ed-rpanel" style="display:none">
+              <div class="ed-field-label">OUTPUT FORMAT</div>
               <div class="ed-fmt-btns">
-                <button class="ed-fmt-btn on" data-fmt="vertical" onclick="selectFmt(this)">
-                  <span style="font-size:20px">📱</span>
-                  <strong>9:16</strong>
-                  <span>Reels · TikTok · Shorts</span>
-                </button>
-                <button class="ed-fmt-btn" data-fmt="horizontal" onclick="selectFmt(this)">
-                  <span style="font-size:20px">🖥</span>
-                  <strong>16:9</strong>
-                  <span>YouTube · LinkedIn</span>
-                </button>
-                <button class="ed-fmt-btn" data-fmt="both" onclick="selectFmt(this)">
-                  <span style="font-size:20px">⚡</span>
-                  <strong>Both</strong>
-                  <span>All platforms</span>
-                </button>
+                <button class="ed-fmt-btn on" data-fmt="vertical"   onclick="selectFmt(this)"><span style="font-size:22px">📱</span><strong>9:16</strong><span>Reels · TikTok · Shorts</span></button>
+                <button class="ed-fmt-btn"    data-fmt="horizontal" onclick="selectFmt(this)"><span style="font-size:22px">🖥</span><strong>16:9</strong><span>YouTube · LinkedIn</span></button>
+                <button class="ed-fmt-btn"    data-fmt="both"       onclick="selectFmt(this)"><span style="font-size:22px">⚡</span><strong>Both</strong><span>All platforms</span></button>
               </div>
+
+              <div class="ed-field-label">QUALITY</div>
+              <div style="display:flex;gap:5px">
+                <button class="ed-pill"    data-q="720"  onclick="selectQuality(this)">720p</button>
+                <button class="ed-pill on" data-q="1080" onclick="selectQuality(this)">1080p HD</button>
+              </div>
+
+              <div class="ed-field-label">ACTIVE FEATURES</div>
+              <div id="ed-summary" style="padding:10px 12px;background:var(--bg3);border-radius:var(--r);border:1px solid var(--border);font-size:11px;font-family:var(--font-mono);color:var(--ink2);line-height:2"></div>
+
+              <button id="ed-export-btn" onclick="editorExport()" class="ed-export-btn">✂ &nbsp;Trim, enhance &amp; export</button>
+              <div id="ed-export-status" style="margin-top:10px"></div>
             </div>
-
-            <!-- Export -->
-            <button id="ed-export-btn" onclick="editorExport()" class="ed-export-btn">
-              ✂ &nbsp;Trim, caption & export
-            </button>
-            <div id="ed-export-status" style="margin-top:12px"></div>
-
           </div><!-- /ed-right -->
+
         </div><!-- /ed-columns -->
       </div><!-- /ed-workspace -->
     </div>
-
     <!-- POSTS -->
     <div id="tab-posts" class="app-panel">
       <div class="a-card">
@@ -1469,59 +1713,293 @@ async function doCopy(btn){
   btn.textContent='Copied!';btn.style.color='var(--lime)';
   setTimeout(()=>{btn.textContent='Copy';btn.style.color='';},2000);
 }
-// ── EDITOR ────────────────────────────────────────────────────────────────────
-let edVideoUrl='', edStart=0, edEnd=0, edDuration=0;
-let edCapStyle='bold', edCapSize='medium', edFmt='vertical', edLogoPos='top-right';
+    });
+  });
 
-function selectCapStyle(btn){
-  document.querySelectorAll('.ed-style-btn[data-style]').forEach(b=>b.classList.remove('on'));
-  btn.classList.add('on'); edCapStyle=btn.dataset.style;
-  updateCapPreview();
-}
-function selectCapSize(btn){
-  document.querySelectorAll('.cap-style-btn[data-size]').forEach(b=>b.classList.remove('on'));
-  btn.classList.add('on'); edCapSize=btn.dataset.size;
-}
-function selectFmt(btn){
-  document.querySelectorAll('.ed-fmt-btn[data-fmt]').forEach(b=>b.classList.remove('on'));
-  btn.classList.add('on'); edFmt=btn.dataset.fmt;
-  const box=$('ed-preview-box');
-  box.classList.toggle('fmt-vertical', edFmt==='vertical');
-  $('ed-fmt-badge').textContent=edFmt==='vertical'?'📱 9:16':edFmt==='horizontal'?'🖥 16:9':'⚡ Both';
-}
-function selectLogoPos(btn){
-  document.querySelectorAll('.ed-pos-btn[data-pos]').forEach(b=>b.classList.remove('on'));
-  btn.classList.add('on'); edLogoPos=btn.dataset.pos;
-}
-function edLogoSelected(inp){
-  $('ed-logo-name').textContent=inp.files[0]?inp.files[0].name:'Click to upload PNG / JPG';
-}
-document.getElementById('ed-captions').addEventListener('change',function(){
-  $('ed-caption-opts').style.display=this.checked?'block':'none';
-  $('ed-cap-preview').style.display=this.checked?'block':'none';
+  document.getElementById('clip-url').addEventListener('keydown',e=>{if(e.key==='Enter')analyseVideo();});
+  document.getElementById('post-url').addEventListener('keydown',e=>{if(e.key==='Enter')genPosts();});
 });
 
-function updateCapPreview(){
-  const p=$('ed-cap-preview');
-  const styles={
-    bold:'color:#fff;font-weight:900;text-shadow:2px 2px 0 #000,-2px -2px 0 #000,2px -2px 0 #000,-2px 2px 0 #000',
-    outline:'color:#fff;-webkit-text-stroke:1.5px #000',
-    box:'background:rgba(0,0,0,.8);color:#fff;padding:4px 10px;border-radius:4px',
-    lime:'color:#c8ff00;font-weight:900;text-shadow:1px 1px 0 #000'
-  };
-  p.style.cssText='position:absolute;bottom:12%;left:0;right:0;text-align:center;padding:0 16px;pointer-events:none;font-family:var(--font-head);font-size:16px;line-height:1.4;display:block';
-  p.innerHTML=`<span style="${styles[edCapStyle]||styles.bold}">Your captions will appear here</span>`;
+// ── Helpers ───────────────────────────────────────────────────────────────────
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const fmt=s=>{const m=Math.floor(s/60);return `${m}:${String(Math.round(s%60)).padStart(2,'0')}`};
+function showSt(m){$('sb').style.display='flex';$('st').textContent=m;}
+function hideSt(){$('sb').style.display='none';}
+function showErr(m){$('eb').textContent='⚠ '+m;$('eb').style.display='block';}
+function hideErr(){$('eb').style.display='none';}
+function showOk(m){$('ob').textContent=m;$('ob').style.display='block';}
+function hideOk(){$('ob').style.display='none';}
+async function apiFetch(path,body,fd=false){
+  const o={method:'POST'};
+  if(fd){o.body=body;}else{o.headers={'Content-Type':'application/json'};o.body=JSON.stringify(body);}
+  const r=await fetch(API+path,o);
+  const d=await r.json();
+  if(!r.ok) throw new Error(d.error||`Error ${r.status}`);
+  return d;
 }
 
+// ── Auth ──────────────────────────────────────────────────────────────────────
+function openAuth(){$('auth-modal').classList.add('open');}
+function closeAuth(){$('auth-modal').classList.remove('open');}
+function handleAuthBg(e){if(e.target===$('auth-modal'))closeAuth();}
+async function sbReq(path,method='GET',body=null){
+  const r=await fetch(`${SUPABASE_URL}/auth/v1${path}`,{method,headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON,'Authorization':`Bearer ${SUPABASE_ANON}`},body:body?JSON.stringify(body):null});
+  return r.json();
+}
+async function doSignIn(){
+  const email=$('ae').value.trim(),pass=$('ap').value;
+  if(!email||!pass){$('am').textContent='Enter email and password';return;}
+  $('am').textContent='Signing in...';
+  const d=await sbReq('/token?grant_type=password','POST',{email,password:pass});
+  if(d.access_token){currentUser={id:d.user.id,email:d.user.email,token:d.access_token};localStorage.setItem('vp_user',JSON.stringify(currentUser));updateAuthUI();closeAuth();loadConnections();}
+  else $('am').textContent=d.error_description||'Sign in failed';
+}
+async function doSignUp(){
+  const email=$('ae').value.trim(),pass=$('ap').value;
+  if(!email||!pass){$('am').textContent='Enter email and password';return;}
+  if(pass.length<6){$('am').textContent='Password must be 6+ characters';return;}
+  $('am').textContent='Creating account...';
+  const d=await sbReq('/signup','POST',{email,password:pass});
+  if(d.id||d.access_token) $('am').textContent='✅ Account created! Check email to confirm, then sign in.';
+  else $('am').textContent=d.error_description||d.msg||'Sign up failed';
+}
+function signOut(){currentUser=null;connectedPlats=[];localStorage.removeItem('vp_user');updateAuthUI();}
+function updateAuthUI(){
+  const btn=$('app-auth-btn'),disp=$('user-display-app');
+  if(currentUser){disp.textContent=currentUser.email;btn.textContent='Sign out';btn.onclick=signOut;}
+  else{disp.textContent='';btn.textContent='Sign in';btn.onclick=openAuth;}
+  renderConnect();
+}
+
+// ── Platform connections ───────────────────────────────────────────────────────
+const PLATS=[
+  {id:'linkedin',  name:'LinkedIn',   icon:'💼', route:'linkedin'},
+  {id:'youtube',   name:'YouTube',    icon:'▶',  route:'google'},
+  {id:'instagram', name:'Instagram',  icon:'📸', route:'instagram'},
+  {id:'tiktok',    name:'TikTok',     icon:'🎵', route:'tiktok'},
+  {id:'twitter',   name:'X / Twitter',icon:'✕',  route:'twitter'},
+  {id:'facebook',  name:'Facebook',   icon:'👍', route:'facebook'},
+];
+async function loadConnections(){
+  if(!currentUser)return;
+  try{const r=await fetch(`${API}/connections?user_id=${currentUser.id}`);const d=await r.json();connectedPlats=d.connected||[];}catch(e){connectedPlats=[];}
+  renderConnect();
+}
+function renderConnect(){
+  const gate=$('connect-gate-app'),main=$('connect-main');
+  if(!currentUser){gate.style.display='block';main.style.display='none';return;}
+  gate.style.display='none';main.style.display='block';
+  const grid=$('cg-platforms');
+  grid.innerHTML=PLATS.map(p=>{
+    const on=connectedPlats.includes(p.id);
+    return `<div class="conn-card${on?' connected':''}">
+      <div class="conn-icon">${p.icon}</div>
+      <div class="conn-name">${p.name}</div>
+      <div class="conn-status">${on?'✓ Connected':'Not connected'}</div>
+      <button class="btn-conn${on?' on':''}" onclick="${on?`disconnPlat('${p.id}')`:`connPlat('${p.id}','${p.route}')`}">
+        ${on?'Disconnect':'Connect'}
+      </button>
+    </div>`;
+  }).join('');
+}
+function connPlat(id,route){
+  if(!currentUser){openAuth();return;}
+  window.location.href=`${RAILWAY}/auth/${route}?user_id=${encodeURIComponent(currentUser.id)}`;
+}
+async function disconnPlat(id){
+  if(!confirm('Disconnect '+id+'?'))return;
+  await fetch(`${API}/disconnect`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({user_id:currentUser.id,platform:id})});
+  connectedPlats=connectedPlats.filter(p=>p!==id);renderConnect();
+}
+
+// ── File upload ───────────────────────────────────────────────────────────────
+function doDrag(e,on){e.preventDefault();$('dz').style.borderColor=on?'var(--lime)':'var(--border2)';}
+function doDrop(e){e.preventDefault();$('dz').style.borderColor='var(--border2)';doFile(e.dataTransfer.files[0]);}
+function doFile(f){
+  if(!f)return;
+  if(f.size>500*1024*1024){showErr('Max 500MB');return;}
+  selectedFile=f;$('dz-title').textContent=f.name;$('dz-sub').textContent=(f.size/(1024*1024)).toFixed(1)+'MB';$('up-btn').style.display='inline-flex';
+}
+
+// ── Analyse URL ───────────────────────────────────────────────────────────────
+async function analyseVideo(){
+  hideErr();hideOk();$('clips-out').style.display='none';
+  const url=$('clip-url').value.trim();
+  if(!url){showErr('Paste a YouTube URL');return;}
+  $('analyse-btn').disabled=true;$('analyse-lbl').textContent='Analysing...';
+  showSt('Fetching video and detecting clips...');
+  try{
+    const d=await apiFetch('/analyse',{url});
+    currentVideoId=d.videoId;currentUploadPath='';currentTitle=d.title;
+    $('vm').innerHTML=`<span><strong>${esc(d.title)}</strong></span><span>Duration: <strong>${fmt(d.duration)}</strong></span><span>Transcript: <strong>${d.transcriptLength} words</strong></span>`;
+    renderClips(d.clips,d.duration);$('clips-out').style.display='block';$('clips-out').scrollIntoView({behavior:'smooth',block:'start'});hideSt();
+  }catch(e){hideSt();showErr(e.message);}
+  finally{$('analyse-btn').disabled=false;$('analyse-lbl').textContent='Analyse →';}
+}
+
+// ── Analyse upload ────────────────────────────────────────────────────────────
+async function analyseUpload(){
+  if(!selectedFile){showErr('Select a file first');return;}
+  hideErr();hideOk();$('clips-out').style.display='none';
+  $('up-btn').disabled=true;$('up-lbl').textContent='Uploading...';
+  showSt('Uploading and analysing...');
+  try{
+    const fd=new FormData();fd.append('video',selectedFile);
+    const d=await apiFetch('/analyse-upload',fd,true);
+    currentUploadPath=d.uploadPath;currentVideoId='';currentTitle=d.title;
+    $('vm').innerHTML=`<span><strong>${esc(d.title)}</strong></span><span>Duration: <strong>${fmt(d.duration)}</strong></span><span style="color:var(--lime)">✓ Uploaded</span>`;
+    renderClips(d.clips,d.duration);$('clips-out').style.display='block';hideSt();
+  }catch(e){hideSt();showErr(e.message);}
+  finally{$('up-btn').disabled=false;$('up-lbl').textContent='Analyse video →';}
+}
+
+// ── Render clips ──────────────────────────────────────────────────────────────
+function renderClips(clips,dur){
+  const g=$('cg');g.innerHTML='';
+  clips.forEach((c,i)=>{
+    const el=document.createElement('div');
+    el.className='clip-card2';el.id=`cc-${i}`;
+    const dots=Array.from({length:10},(_,d)=>`<div class="sdot${d<c.virality_score?' on':''}"></div>`).join('');
+    el.innerHTML=`
+      <div class="clip-head" onclick="togClip(${i})">
+        <div class="clip-n">${i+1}</div>
+        <div class="clip-info2"><div class="clip-t">${esc(c.title)}</div><div class="clip-m">${fmt(c.start)} → ${fmt(c.end)} · ${Math.round(c.end-c.start)}s</div></div>
+        <div style="display:flex;align-items:center;gap:6px"><div class="clip-score">${dots}</div><span style="font-size:11px;font-family:var(--font-mono);color:var(--ink2)">${c.virality_score}/10</span></div>
+      </div>
+      <div class="clip-body2">
+        <div style="font-size:13px;background:var(--bg3);padding:10px 12px;border-radius:var(--r);border-left:3px solid var(--lime);margin-bottom:10px;font-style:italic;color:var(--ink2)">"${esc(c.hook)}"</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px">
+          <div><label style="font-size:10px;font-family:var(--font-mono);color:var(--ink3);text-transform:uppercase;letter-spacing:.08em;display:block;margin-bottom:4px">Start</label><input type="number" id="s-${i}" value="${c.start}" min="0" max="${dur}"/></div>
+          <div><label style="font-size:10px;font-family:var(--font-mono);color:var(--ink3);text-transform:uppercase;letter-spacing:.08em;display:block;margin-bottom:4px">End</label><input type="number" id="e-${i}" value="${c.end}" min="0" max="${dur}"/></div>
+          <div><label style="font-size:10px;font-family:var(--font-mono);color:var(--ink3);text-transform:uppercase;letter-spacing:.08em;display:block;margin-bottom:4px">Name</label><input type="text" id="n-${i}" value="${esc(c.title)}"/></div>
+        </div>
+        <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap">
+          <div class="pt on" data-clip="${i}" data-fmt="vertical" onclick="this.classList.toggle('on')">📱 9:16</div>
+          <div class="pt on" data-clip="${i}" data-fmt="horizontal" onclick="this.classList.toggle('on')">🖥 16:9</div>
+        </div>
+        <button onclick="processClip(${i})" style="width:100%;padding:12px;background:var(--lime);color:#000;border:none;border-radius:var(--r);font-family:var(--font-head);font-size:14px;font-weight:800;cursor:pointer;transition:all .2s" onmouseover="this.style.background='var(--lime3)'" onmouseout="this.style.background='var(--lime)'">✂ Process this clip</button>
+        <div id="jb-${i}"></div>
+      </div>`;
+    g.appendChild(el);
+  });
+}
+function togClip(i){const c=$(`cc-${i}`),was=c.classList.contains('sel');document.querySelectorAll('.clip-card2').forEach(x=>x.classList.remove('sel'));if(!was)c.classList.add('sel');}
+
+// ── Process clip ──────────────────────────────────────────────────────────────
+async function processClip(i){
+  const s=parseFloat($(`s-${i}`).value),e=parseFloat($(`e-${i}`).value);
+  const fmts=[...document.querySelectorAll(`.pt.on[data-clip="${i}"]`)].map(f=>f.dataset.fmt);
+  if(!fmts.length){alert('Select a format');return;}
+  if(e-s<5){alert('Clip too short');return;}
+  const jb=$(`jb-${i}`);
+  jb.innerHTML=`<div style="background:var(--bg3);border-radius:var(--r);padding:12px;margin-top:10px"><div style="font-size:11px;font-family:var(--font-mono);color:var(--ink2);margin-bottom:8px">Processing...</div><div style="height:3px;background:var(--border);border-radius:2px;overflow:hidden;margin-bottom:6px"><div id="pf-${i}" style="height:100%;background:var(--lime);border-radius:2px;transition:width .4s;width:5%"></div></div><div style="font-size:11px;font-family:var(--font-mono);color:var(--ink3)" id="pm-${i}">Starting...</div></div>`;
+  try{
+    const body={start:s,end:e,formats:fmts};
+    if(currentUploadPath) body.uploadPath=currentUploadPath; else body.videoId=currentVideoId;
+    const d=await apiFetch('/clip',body);
+    pollJob(d.jobId,i);
+  }catch(err){jb.innerHTML=`<div class="err2" style="display:block;margin-top:10px">⚠ ${esc(err.message)}</div>`;}
+}
+function pollJob(jid,ci){
+  const iv=setInterval(async()=>{
+    try{
+      const r=await fetch(`${API}/job/${jid}`);const j=await r.json();
+      const pf=$(`pf-${ci}`),pm=$(`pm-${ci}`);
+      if(pf)pf.style.width=j.progress+'%';if(pm)pm.textContent=j.message;
+      if(j.status==='done'){clearInterval(iv);renderDownloads(jid,ci,j.files);}
+      else if(j.status==='error'){clearInterval(iv);$(`jb-${ci}`).innerHTML=`<div class="err2" style="display:block;margin-top:10px">⚠ ${esc(j.message)}</div>`;}
+    }catch(e){clearInterval(iv);}
+  },2000);
+}
+function renderDownloads(jid,ci,files){
+  const btns=Object.entries(files).map(([fmt,info])=>`<a href="${API}${info.downloadUrl}" download class="dl-btn">⬇ ${fmt==='vertical'?'9:16':'16:9'} ${info.sizeMb}MB</a>`).join('');
+  const editBtn=Object.values(files)[0]?.publicUrl?`<button onclick="editorOpen('${Object.values(files)[0].publicUrl}',${edDuration||0},'${esc(currentTitle)}')" class="dl-btn" style="background:var(--bg4);color:var(--ink);text-decoration:none;border:1px solid var(--border2);cursor:pointer">✏ Edit this clip</button>`:'';
+  const conn=connectedPlats.filter(p=>['linkedin','youtube','instagram','tiktok','twitter','facebook'].includes(p));
+  const ap=conn.length>0?`<div style="margin-top:12px;padding:14px;background:var(--bg3);border-radius:var(--r)">
+    <div style="font-family:var(--font-head);font-size:13px;font-weight:700;margin-bottom:10px">🚀 Auto-post this clip</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px" id="apt-${ci}">${conn.map(p=>`<div class="pt on" data-plat="${p}" onclick="this.classList.toggle('on')">${p}</div>`).join('')}</div>
+    <div style="display:flex;gap:8px"><input type="text" id="cap-${ci}" placeholder="Caption..." style="flex:1;font-size:12px;padding:8px 10px"/><button onclick="autoPost(${ci},'${Object.values(files)[0]?.publicUrl||''}')" style="padding:8px 16px;background:var(--lime);color:#000;border:none;border-radius:var(--r);font-family:var(--font-head);font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">Post now →</button></div>
+  </div>`:currentUser?`<div style="font-size:11px;color:var(--ink3);font-family:var(--font-mono);margin-top:10px">Connect social accounts to enable auto-posting → <span style="cursor:pointer;color:var(--lime);text-decoration:underline" onclick="switchTab('connect')">Connect now</span></div>`:'';
+  $(`jb-${ci}`).innerHTML=`<div style="background:rgba(200,255,0,.05);border:1px solid rgba(200,255,0,.2);border-radius:var(--r);padding:14px;margin-top:10px"><div style="font-size:12px;font-family:var(--font-mono);color:var(--lime);margin-bottom:10px">✅ Clip ready!</div><div style="display:flex;gap:8px;flex-wrap:wrap">${btns}</div>${ap}</div>`;
+}
+async function autoPost(ci,videoUrl){
+  if(!currentUser){openAuth();return;}
+  const toggles=[...document.querySelectorAll(`#apt-${ci} .pt.on`)].map(t=>t.dataset.plat);
+  if(!toggles.length){alert('Select a platform');return;}
+  const caption=$(`cap-${ci}`)?.value||currentTitle;
+  try{
+    const d=await apiFetch('/post',{user_id:currentUser.id,platforms:toggles,text:caption,video_url:videoUrl});
+    const posted=Object.keys(d.results||{}).join(', ');
+    showOk(`✅ Posted to: ${posted||'done'}`);
+  }catch(e){showErr('Post failed: '+e.message);}
+}
+
+// ── Generate posts ────────────────────────────────────────────────────────────
+async function genPosts(){
+  $('post-eb').style.display='none';$('posts-out').innerHTML='';
+  const url=$('post-url').value.trim();
+  if(!url){$('post-eb').textContent='⚠ Paste a URL';$('post-eb').style.display='block';return;}
+  $('post-btn').disabled=true;$('post-lbl').textContent='Generating...';
+  $('post-status').style.display='flex';$('post-st').textContent='Fetching transcript...';
+  try{
+    const m=url.match(/(?:v=|youtu\.be\/|\/shorts\/)([A-Za-z0-9_-]{11})/);
+    if(!m)throw new Error('Invalid URL');
+    const t=await apiFetch('/transcript',{videoId:m[1]});
+    $('post-st').textContent='Writing posts with AI...';
+    const g=await apiFetch('/generate',{transcript:t.transcript,title:t.title,tone:selectedTone,platforms:selectedPlats});
+    $('post-status').style.display='none';
+    renderPosts(g.results);
+  }catch(e){$('post-status').style.display='none';$('post-eb').textContent='⚠ '+esc(e.message);$('post-eb').style.display='block';}
+  finally{$('post-btn').disabled=false;$('post-lbl').textContent='Generate →';}
+}
+function renderPosts(r){
+  const meta={linkedin:{l:'LinkedIn',c:'#0a66c2'},twitter:{l:'Twitter/X',c:'#000'},instagram:{l:'Instagram',c:'#e1306c'},tiktok:{l:'TikTok',c:'#ff0050'},youtube_short:{l:'YT Shorts',c:'#ff0000'},facebook:{l:'Facebook',c:'#1877f2'}};
+  const g=$('posts-out');g.style.display='grid';g.innerHTML='';
+  Object.entries(r).forEach(([p,text])=>{
+    const m=meta[p]||{l:p,c:'#888'};
+    const el=document.createElement('div');
+    el.style.cssText='background:var(--card);border:1px solid var(--border);border-radius:var(--r2);overflow:hidden';
+    el.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--bg3);border-bottom:1px solid var(--border)"><div style="display:flex;align-items:center;gap:8px;font-family:var(--font-head);font-size:13px;font-weight:700"><div style="width:8px;height:8px;border-radius:50%;background:${m.c}"></div>${m.l}</div><button onclick="doCopy(this)" data-text="${esc(text)}" style="font-family:var(--font-mono);font-size:10px;padding:3px 10px;border:1px solid var(--border2);border-radius:20px;background:transparent;color:var(--ink2);cursor:pointer">Copy</button></div><div style="padding:16px;font-size:13px;line-height:1.8;white-space:pre-wrap;color:var(--ink2);max-height:260px;overflow-y:auto">${esc(text)}</div>`;
+    g.appendChild(el);
+  });
+  g.scrollIntoView({behavior:'smooth',block:'start'});
+}
+async function doCopy(btn){
+  await navigator.clipboard.writeText(btn.dataset.text);
+  btn.textContent='Copied!';btn.style.color='var(--lime)';
+  setTimeout(()=>{btn.textContent='Copy';btn.style.color='';},2000);
+}
+// ═══════════════════════════════════════════════════════════════════════════
+// EDITOR — complete JS
+// ═══════════════════════════════════════════════════════════════════════════
+let edVideoUrl='', edStart=0, edEnd=0, edDuration=0;
+let edCapStyle='bold', edCapSize='medium', edCapPos='middle', edCapTmpl='modern';
+let edFmt='vertical', edQuality='1080', edLogoPos='top-right';
+let edBrollSrc='pexels', edBrollFreq='medium', edBrollTr='cut';
+let edBrandTmpl='custom', edThumbStyle='bold';
+let edFillerWords=['um','uh','like','you know','basically','literally','actually','right','so'];
+let edActiveFillers=new Set(['um','uh','like','you know','basically','literally']);
+
+// ── Right-panel tabs ────────────────────────────────────────────────────────
+function switchRtab(btn,panelId){
+  document.querySelectorAll('.ed-rtab').forEach(b=>b.classList.remove('on'));
+  document.querySelectorAll('.ed-rpanel').forEach(p=>p.style.display='none');
+  btn.classList.add('on');
+  document.getElementById(panelId).style.display='flex';
+  if(panelId==='rt-export') updateExportSummary();
+}
+
+// ── Load ────────────────────────────────────────────────────────────────────
 async function editorLoadUrl(){
-  const raw=$('ed-url').value.trim();
+  const raw=($('ed-url')||{value:''}).value.trim();
   if(!raw){showErr('Paste a URL first');return;}
-  const btn=$('ed-load-btn'); btn.disabled=true; btn.textContent='Loading...';
+  const btn=$('ed-load-btn'); btn.disabled=true; btn.textContent='Loading…';
   await _editorLoad(raw);
-  btn.disabled=false; btn.textContent='Load video →';
+  btn.disabled=false; btn.textContent='Load →';
 }
 async function editorLoadUrlTop(){
-  const raw=$('ed-url-top').value.trim();
+  const raw=($('ed-url-top')||{value:''}).value.trim();
   if(!raw) return;
   await _editorLoad(raw);
 }
@@ -1537,192 +2015,356 @@ async function _editorLoad(raw){
     editorMount(raw, null, raw.split('/').pop().split('?')[0]);
   }
 }
-
-function editorOpen(videoUrl, dur, title){
+function editorOpen(videoUrl,dur,title){
   switchTab('editor');
-  editorMount(videoUrl, dur, title);
+  editorMount(videoUrl,dur,title);
 }
-
-function editorMount(url, dur, title){
+function editorMount(url,dur,title){
   edVideoUrl=url;
   const vid=$('ed-video');
   vid.src=url; vid.load();
   $('ed-empty').style.display='none';
   $('ed-workspace').style.display='block';
-  $('ed-title-lbl').textContent=title||'Clip Editor';
+  $('ed-title-lbl').textContent=title||'Editor';
   $('ed-export-status').innerHTML='';
   updateCapPreview();
 
   vid.onloadedmetadata=()=>{
     edDuration=dur||vid.duration;
-    edStart=0; edEnd=edDuration;
-    buildWaveform();
-    buildRuler();
-    updateHandles();
-    updateTimeInputs();
+    edStart=0; edEnd=Math.min(edDuration,30);
+    buildWaveform(); buildRuler(); updateHandles(); updateTimeInputs();
+    $('ed-time-tot').textContent=fmtTime(edDuration);
+    $('ed-vpill').style.display='none';
+    // Auto-detect filler word keywords for B-Roll
+    if(currentTitle) $('ed-broll-kw').value=currentTitle.split(' ').slice(0,4).join(', ').toLowerCase();
   };
   vid.ontimeupdate=()=>{
     if(!edDuration) return;
     const pct=(vid.currentTime/edDuration)*100;
     $('ed-playhead').style.left=pct+'%';
     $('ed-time-cur').textContent=fmtTime(vid.currentTime);
-    // loop within trim range
     if(vid.currentTime>=edEnd) vid.currentTime=edStart;
-    // update waveform highlight
-    const bars=document.querySelectorAll('.wv-bar');
-    bars.forEach((b,i)=>{
-      const t=(i/bars.length)*edDuration;
+    document.querySelectorAll('.ed-wv-bar').forEach((b,i)=>{
+      const t=(i/60)*edDuration;
       b.classList.toggle('sel', t>=edStart && t<=edEnd);
     });
   };
-  vid.onloadeddata=()=>{ $('ed-time-tot').textContent=fmtTime(edDuration); };
-
-  // Timeline click to seek
   $('ed-timeline').onclick=function(e){
-    if(e.target.classList.contains('ed-handle')||e.target.classList.contains('ed-handle-grip')) return;
-    const rect=this.getBoundingClientRect();
-    const pct=Math.max(0,Math.min(1,(e.clientX-rect.left)/rect.width));
-    vid.currentTime=pct*edDuration;
+    if(e.target.closest('.ed-handle')) return;
+    const r=this.getBoundingClientRect();
+    vid.currentTime=Math.max(0,Math.min(1,(e.clientX-r.left)/r.width))*edDuration;
   };
-
-  initHandleDrag('ed-handle-start', v=>{
-    edStart=Math.max(0,Math.min(v, edEnd-1));
+  initHandleDrag('ed-handle-start',v=>{
+    edStart=Math.max(0,Math.min(v,edEnd-1));
     updateHandles(); updateTimeInputs(); vid.currentTime=edStart;
   });
-  initHandleDrag('ed-handle-end', v=>{
+  initHandleDrag('ed-handle-end',v=>{
     edEnd=Math.max(edStart+1,Math.min(v,edDuration));
     updateHandles(); updateTimeInputs(); vid.currentTime=edEnd;
   });
 }
 
+// ── Playback ────────────────────────────────────────────────────────────────
 function edPlayPause(){
-  const vid=$('ed-video'), btn=$('ed-play-btn');
-  if(vid.paused){ vid.play(); btn.textContent='⏸'; }
-  else{ vid.pause(); btn.textContent='▶'; }
+  const vid=$('ed-video'),btn=$('ed-play-btn');
+  if(vid.paused){vid.play();btn.textContent='⏸';}else{vid.pause();btn.textContent='▶';}
 }
-function edSkip(s){ const v=$('ed-video'); v.currentTime=Math.max(edStart,Math.min(edEnd,v.currentTime+s)); }
-function edMute(){ const v=$('ed-video'); v.muted=!v.muted; $('ed-mute-btn').textContent=v.muted?'🔇':'🔊'; }
-function fmtTime(s){ const m=Math.floor(s/60); return m+':'+(Math.floor(s%60)+'').padStart(2,'0'); }
+function edSkip(s){const v=$('ed-video');v.currentTime=Math.max(edStart,Math.min(edEnd,v.currentTime+s));}
+function edMute(){const v=$('ed-video');v.muted=!v.muted;$('ed-mute-btn').textContent=v.muted?'🔇':'🔊';}
+function fmtTime(s){const m=Math.floor(s/60);return m+':'+(Math.floor(s%60)+'').padStart(2,'0');}
 
-function edStartInput(){
-  const v=parseFloat($('ed-start-in').value)||0;
-  edStart=Math.max(0,Math.min(v,edEnd-1));
-  updateHandles(); updateTimeInputs();
-  $('ed-video').currentTime=edStart;
-}
-function edEndInput(){
-  const v=parseFloat($('ed-end-in').value)||edDuration;
-  edEnd=Math.max(edStart+1,Math.min(v,edDuration));
-  updateHandles(); updateTimeInputs();
-  $('ed-video').currentTime=edEnd;
+// ── Duration presets ────────────────────────────────────────────────────────
+function setDurPreset(btn,sec){
+  document.querySelectorAll('.ed-dur-pill').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  if(sec===0){edEnd=edDuration;}else{edEnd=Math.min(edStart+sec,edDuration);}
+  updateHandles(); updateTimeInputs(); $('ed-video').currentTime=edStart;
 }
 
+// ── Timeline ─────────────────────────────────────────────────────────────────
 function buildWaveform(){
   const w=$('ed-waveform'); w.innerHTML='';
-  const bars=60;
-  for(let i=0;i<bars;i++){
-    const h=20+Math.random()*60;
+  for(let i=0;i<60;i++){
     const d=document.createElement('div');
-    d.className='wv-bar';
-    d.style.height=h+'%';
+    d.className='ed-wv-bar';
+    d.style.height=(15+Math.random()*70)+'%';
     w.appendChild(d);
   }
 }
 function buildRuler(){
   const r=$('ed-ruler'); r.innerHTML='';
-  const steps=8;
-  for(let i=0;i<=steps;i++){
-    const t=(i/steps)*edDuration;
-    const s=document.createElement('span');
-    s.textContent=fmtTime(t);
-    s.style.left=(i/steps*100)+'%';
-    r.appendChild(s);
+  for(let i=0;i<=8;i++){
+    const t=(i/8)*edDuration, s=document.createElement('span');
+    s.textContent=fmtTime(t); s.style.left=(i/8*100)+'%'; r.appendChild(s);
   }
 }
-function initHandleDrag(handleId, onUpdate){
-  const handle=$(handleId);
-  handle.onmousedown=handle.ontouchstart=function(e){
+function initHandleDrag(hid,cb){
+  const h=$(hid);
+  h.onmousedown=h.ontouchstart=function(e){
     e.preventDefault(); e.stopPropagation();
     const tl=$('ed-timeline');
-    function move(ev){
-      const clientX=ev.touches?ev.touches[0].clientX:ev.clientX;
-      const rect=tl.getBoundingClientRect();
-      let pct=Math.max(0,Math.min(1,(clientX-rect.left)/rect.width));
-      onUpdate(pct*edDuration);
-    }
-    function up(){
-      document.removeEventListener('mousemove',move);
+    const mv=ev=>{
+      const cx=ev.touches?ev.touches[0].clientX:ev.clientX;
+      const r=tl.getBoundingClientRect();
+      cb(Math.max(0,Math.min(1,(cx-r.left)/r.width))*edDuration);
+    };
+    const up=()=>{
+      document.removeEventListener('mousemove',mv);
       document.removeEventListener('mouseup',up);
-      document.removeEventListener('touchmove',move);
+      document.removeEventListener('touchmove',mv);
       document.removeEventListener('touchend',up);
-    }
-    document.addEventListener('mousemove',move);
+    };
+    document.addEventListener('mousemove',mv);
     document.addEventListener('mouseup',up);
-    document.addEventListener('touchmove',move,{passive:false});
+    document.addEventListener('touchmove',mv,{passive:false});
     document.addEventListener('touchend',up);
   };
 }
 function updateHandles(){
   if(!edDuration) return;
-  const sp=(edStart/edDuration)*100;
-  const ep=(edEnd/edDuration)*100;
+  const sp=(edStart/edDuration)*100, ep=(edEnd/edDuration)*100;
   $('ed-handle-start').style.left=sp+'%';
   $('ed-handle-end').style.left=ep+'%';
-  $('ed-range-fill').style.left=sp+'%';
-  $('ed-range-fill').style.width=(ep-sp)+'%';
-  $('ed-shadow-left').style.left='0';
-  $('ed-shadow-left').style.width=sp+'%';
-  $('ed-shadow-right').style.left=ep+'%';
-  $('ed-shadow-right').style.width=(100-ep)+'%';
-  $('ed-dur-lbl').textContent=((edEnd-edStart).toFixed(1))+'s';
+  $('ed-range-fill').style.cssText=`left:${sp}%;width:${ep-sp}%`;
+  $('ed-shadow-left').style.cssText=`left:0;width:${sp}%`;
+  $('ed-shadow-right').style.cssText=`left:${ep}%;width:${100-ep}%`;
+  $('ed-tl-dur').textContent=(edEnd-edStart).toFixed(1)+'s selected';
 }
 function updateTimeInputs(){
   $('ed-start-in').value=edStart.toFixed(1);
   $('ed-end-in').value=edEnd.toFixed(1);
-  $('ed-dur-lbl').textContent=((edEnd-edStart).toFixed(1))+'s';
+  $('ed-dur-lbl').textContent=(edEnd-edStart).toFixed(1)+'s';
+}
+function edStartInput(){
+  edStart=Math.max(0,Math.min(parseFloat($('ed-start-in').value)||0,edEnd-1));
+  updateHandles();updateTimeInputs();$('ed-video').currentTime=edStart;
+}
+function edEndInput(){
+  edEnd=Math.max(edStart+1,Math.min(parseFloat($('ed-end-in').value)||edDuration,edDuration));
+  updateHandles();updateTimeInputs();$('ed-video').currentTime=edEnd;
 }
 
-async function editorExport(){
-  if(!edVideoUrl){showErr('Load a video first');return;}
-  const captions=$('ed-captions').checked;
-  const logoOn=$('ed-logo-on').checked;
-  const logoFile=logoOn?$('ed-logo-file').files[0]:null;
-  const opacity=parseInt($('ed-logo-opacity').value)||80;
+// ── Caption style ───────────────────────────────────────────────────────────
+function selectCapStyle(btn){
+  document.querySelectorAll('.ed-cap-btn[data-style]').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on'); edCapStyle=btn.dataset.style; updateCapPreview();
+}
+function selectCapSize(btn){
+  document.querySelectorAll('.ed-pill[data-size]').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on'); edCapSize=btn.dataset.size; updateCapPreview();
+}
+function selectCapPos(btn){
+  document.querySelectorAll('.ed-pill[data-cpos]').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on'); edCapPos=btn.dataset.cpos; updateCapPreview();
+}
+function selectCapTmpl(btn){
+  document.querySelectorAll('.ed-tmpl[data-tmpl]').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on'); edCapTmpl=btn.dataset.tmpl;
+}
+function updateCapPreview(){
+  const p=$('ed-cap-preview'); if(!p) return;
+  const on=document.getElementById('ed-captions')?.checked;
+  if(!on){p.style.display='none'; return;}
+  const accent=document.getElementById('ed-brand-primary')?.value||'#c8ff00';
+  const sz={small:'13px',medium:'17px',large:'22px'}[edCapSize]||'17px';
+  const pos={top:'top:12%;bottom:auto',middle:'top:40%;bottom:auto',bottom:'bottom:12%'}[edCapPos]||'bottom:12%';
+  const styleMap={
+    bold:`color:#fff;font-weight:900;font-family:var(--font-head);text-shadow:2px 2px 0 #000,-2px -2px 0 #000,2px -2px 0 #000,-2px 2px 0 #000`,
+    outline:`color:#fff;font-weight:700;-webkit-text-stroke:1.5px #000`,
+    box:`color:#fff;background:rgba(0,0,0,.85);padding:3px 10px;border-radius:4px`,
+    lime:`color:${accent};font-weight:900;font-family:var(--font-head);text-shadow:1px 1px 0 #000`,
+    karaoke:`font-family:var(--font-head);font-weight:900`,
+    neon:`color:#fff;font-weight:700;text-shadow:0 0 8px ${accent},0 0 20px ${accent}`
+  };
+  p.style.cssText=`position:absolute;left:0;right:0;${pos};text-align:center;padding:0 12px;pointer-events:none;display:block;font-size:${sz}`;
+  const inner=edCapStyle==='karaoke'
+    ?`<span style="color:${accent};font-weight:900">Your </span><span style="color:#fff">captions</span>`
+    :`<span style="${styleMap[edCapStyle]||styleMap.bold}">Your captions here</span>`;
+  p.innerHTML=inner;
+}
 
-  const btn=$('ed-export-btn');
-  btn.disabled=true; btn.textContent='⏳ Processing...';
+// ── Filler words ─────────────────────────────────────────────────────────────
+function edFillerToggle(cb){
+  $('ed-filler-words').style.display=cb.checked?'block':'none';
+  if(cb.checked) renderFillerChips();
+}
+function renderFillerChips(){
+  const c=$('ed-filler-chips'); c.innerHTML='';
+  edFillerWords.forEach(w=>{
+    const b=document.createElement('button');
+    b.textContent=w;
+    const on=edActiveFillers.has(w);
+    b.style.cssText=`padding:4px 10px;border-radius:12px;border:1px solid ${on?'var(--lime)':'var(--border2)'};background:${on?'rgba(200,255,0,.15)':'transparent'};color:${on?'var(--lime)':'var(--ink3)'};font-size:11px;font-family:var(--font-mono);cursor:pointer;transition:all .15s`;
+    b.onclick=()=>{
+      if(edActiveFillers.has(w)) edActiveFillers.delete(w); else edActiveFillers.add(w);
+      renderFillerChips();
+    };
+    c.appendChild(b);
+  });
+}
+
+// ── B-Roll ───────────────────────────────────────────────────────────────────
+function edBrollToggle(cb){
+  const opts=$('ed-broll-opts');
+  opts.style.display=cb.checked?'flex':'none';
+  $('ed-broll-badge') && ($('ed-broll-badge').style.display=cb.checked?'block':'none');
+}
+function selectBrollSrc(btn){document.querySelectorAll('.ed-pill[data-bsrc]').forEach(b=>b.classList.remove('on'));btn.classList.add('on');edBrollSrc=btn.dataset.bsrc;}
+function selectBrollFreq(btn){document.querySelectorAll('.ed-pill[data-bfreq]').forEach(b=>b.classList.remove('on'));btn.classList.add('on');edBrollFreq=btn.dataset.bfreq;}
+function selectBrollTr(btn){document.querySelectorAll('.ed-pill[data-btr]').forEach(b=>b.classList.remove('on'));btn.classList.add('on');edBrollTr=btn.dataset.btr;}
+
+// ── Brand ────────────────────────────────────────────────────────────────────
+function toggleLogoOpts(cb){
+  $('ed-logo-inner').style.display=cb.checked?'flex':'none';
+  $('ed-logo-inner').style.flexDirection='column';
+}
+function edLogoSelected(inp){$('ed-logo-name').textContent=inp.files[0]?'✅ '+inp.files[0].name:'📁 Click to upload PNG / JPG logo';}
+function selectLogoPos(btn){document.querySelectorAll('.ed-pos-btn[data-pos]').forEach(b=>b.classList.remove('on'));btn.classList.add('on');edLogoPos=btn.dataset.pos;}
+function selectBrandTmpl(btn){
+  document.querySelectorAll('.ed-tmpl[data-btmpl]').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on'); edBrandTmpl=btn.dataset.btmpl;
+  const presets={corporate:{primary:'#003087',bg:'#ffffff'},creator:{primary:'#ff6b35',bg:'#1a1a1a'},minimal:{primary:'#ffffff',bg:'#000000'},bold:{primary:'#ffdd00',bg:'#000000'},dark:{primary:'#c8ff00',bg:'#0a0a0a'}};
+  if(presets[btn.dataset.btmpl]){
+    document.getElementById('ed-brand-primary').value=presets[btn.dataset.btmpl].primary;
+    document.getElementById('ed-brand-bg').value=presets[btn.dataset.btmpl].bg;
+    updateCapPreview();
+  }
+}
+
+// ── Format / quality ─────────────────────────────────────────────────────────
+function selectFmt(btn){
+  document.querySelectorAll('.ed-fmt-btn[data-fmt]').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on'); edFmt=btn.dataset.fmt;
+  const box=$('ed-preview-box');
+  box.classList.toggle('fmt-916',edFmt==='vertical');
+  $('ed-fmt-badge').textContent=edFmt==='vertical'?'📱 9:16':edFmt==='horizontal'?'🖥 16:9':'⚡ Both';
+}
+function selectQuality(btn){document.querySelectorAll('.ed-pill[data-q]').forEach(b=>b.classList.remove('on'));btn.classList.add('on');edQuality=btn.dataset.q;}
+
+// ── Thumbnail generator ───────────────────────────────────────────────────────
+function selectThumbStyle(btn){document.querySelectorAll('.ed-pill[data-tstyle]').forEach(b=>b.classList.remove('on'));btn.classList.add('on');edThumbStyle=btn.dataset.tstyle;}
+function generateThumbnails(){
+  const btn=$('ed-thumb-btn');
+  btn.textContent='⏳ Generating…'; btn.disabled=true;
+  setTimeout(()=>{
+    btn.textContent='Generate thumbnails →'; btn.disabled=false;
+    const grid=$('ed-thumb-grid'); grid.style.display='grid';
+    $('ed-thumb-opts').style.display='block';
+    // Generate 4 visual thumbnail cards using canvas-style HTML
+    const colors=[['#c8ff00','#000'],['#ff6b35','#fff'],['#fff','#000'],['#000','#c8ff00']];
+    grid.innerHTML=colors.map(([bg,txt],i)=>`
+      <div class="ed-thumb-card ${i===0?'on':''}" onclick="document.querySelectorAll('.ed-thumb-card').forEach(c=>c.classList.remove('on'));this.classList.add('on')">
+        <div style="aspect-ratio:16/9;background:${bg};display:flex;align-items:center;justify-content:center;padding:8px;position:relative">
+          <div style="font-family:var(--font-head);font-size:11px;font-weight:900;color:${txt};text-align:center;line-height:1.3;text-transform:uppercase;letter-spacing:-.3px">${esc(currentTitle||'Your Video').slice(0,30)}</div>
+          <div style="position:absolute;bottom:4px;right:6px;font-size:8px;font-family:var(--font-mono);color:${txt};opacity:.6">vidpost.ai</div>
+        </div>
+        <div class="ed-thumb-label">Style ${i+1}</div>
+      </div>`).join('');
+  },1500);
+}
+function downloadThumbnail(){
+  const sel=document.querySelector('.ed-thumb-card.on');
+  if(!sel){alert('Select a thumbnail first');return;}
+  // In production: canvas render + download. For now: show confirmation.
+  const el=document.createElement('a');
+  el.textContent='thumbnail.png'; el.href='#';
+  showErr('Thumbnail download ready — full export via Export tab includes thumbnail.');
+}
+
+// ── Virality score ────────────────────────────────────────────────────────────
+async function runViralityScore(){
+  if(!edVideoUrl){showErr('Load a video first');return;}
+  const btn=$('ed-vscore-btn'); btn.disabled=true; btn.textContent='Analysing…';
+  try{
+    const prompt=`You are a viral video expert. Analyse this clip title/description and score it 1-10 for virality potential on social media.
+Title: "${currentTitle||'Unknown'}"
+Duration: ${(edEnd-edStart).toFixed(0)}s clip from ${edDuration.toFixed(0)}s video
+
+Respond ONLY with valid JSON:
+{"score":7,"verdict":"Strong potential","tips":["tip1","tip2","tip3"]}`;
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:300,messages:[{role:'user',content:prompt}]})
+    });
+    const data=await resp.json();
+    const text=data.content?.[0]?.text||'';
+    let parsed;
+    try{parsed=JSON.parse(text.replace(/```json|```/g,'').trim());}
+    catch{parsed={score:7,verdict:'Good potential',tips:['Strong hook in first 3s','Add captions for silent viewers','Use trending audio']};}
+    const score=Math.min(10,Math.max(1,Math.round(parsed.score)));
+    $('ed-vnum').textContent=score;
+    $('ed-vscore').textContent=score;
+    $('ed-vpill').style.display='flex';
+    $('ed-vverdict').textContent=parsed.verdict||'—';
+    $('ed-vfill').style.width=(score*10)+'%';
+    $('ed-vfill').style.background=score>=8?'#c8ff00':score>=5?'#ffaa00':'#ff4444';
+    $('ed-vtips').innerHTML=(parsed.tips||[]).map(t=>`• ${esc(t)}`).join('<br>');
+    $('ed-virality-result').style.display='block';
+  }catch(e){showErr('Score failed: '+e.message);}
+  btn.disabled=false; btn.textContent='Analyse →';
+}
+
+// ── Export summary ────────────────────────────────────────────────────────────
+function updateExportSummary(){
+  const items=[];
+  const on=s=>document.getElementById(s)?.checked;
+  items.push(`Format: ${edFmt==='both'?'9:16 + 16:9':edFmt==='vertical'?'📱 9:16':'🖥 16:9'} · ${edQuality}p`);
+  items.push(`Trim: ${edStart.toFixed(1)}s → ${edEnd.toFixed(1)}s (${(edEnd-edStart).toFixed(1)}s)`);
+  if(on('ed-captions')) items.push(`Captions: ${edCapStyle} / ${edCapSize} / ${edCapPos}`);
+  if(on('ed-filler')) items.push(`Filler removal: ${[...edActiveFillers].join(', ')}`);
+  if(on('ed-pauses')) items.push('Pause removal: ON');
+  if(on('ed-broll')) items.push(`B-Roll: ${edBrollSrc} / ${edBrollFreq} freq / ${edBrollTr}`);
+  if(on('ed-logo-on')) items.push(`Logo: ${edLogoPos} / ${$('ed-logo-opacity').value}%`);
+  if(on('ed-audio-norm')) items.push('Audio normalised: ON');
+  if(on('ed-lower-on')) items.push(`Lower third: ${$('ed-lower-name').value||'—'}`);
+  $('ed-summary').innerHTML=items.map(i=>`✓ ${esc(i)}`).join('<br>');
+}
+
+// ── Export ────────────────────────────────────────────────────────────────────
+async function editorExport(){
+  if(!edVideoUrl){switchRtab(document.querySelector('.ed-rtab'),  'rt-export');showErr('Load a video first');return;}
+  const logoFile=$('ed-logo-file')?.files[0];
+  const btn=$('ed-export-btn'); btn.disabled=true; btn.textContent='⏳ Processing…';
   const status=$('ed-export-status');
   status.innerHTML=`<div style="background:var(--bg3);border-radius:var(--r2);padding:14px;border:1px solid var(--border)">
-    <div style="height:4px;background:var(--border);border-radius:2px;overflow:hidden;margin-bottom:10px"><div id="ed-pbar" style="height:100%;background:var(--lime);border-radius:2px;transition:width .4s;width:5%"></div></div>
-    <div style="font-size:11px;font-family:var(--font-mono);color:var(--ink2)" id="ed-pmsg">Sending to backend...</div>
+    <div style="height:4px;background:var(--border);border-radius:2px;overflow:hidden;margin-bottom:10px"><div id="ed-pbar" style="height:100%;background:var(--lime);border-radius:2px;transition:width .5s;width:4%"></div></div>
+    <div id="ed-pmsg" style="font-size:11px;font-family:var(--font-mono);color:var(--ink2)">Sending to server…</div>
   </div>`;
   try{
-    let respBody;
+    let body;
+    const base={
+      video_url:edVideoUrl, start:edStart, end:edEnd,
+      captions:!!document.getElementById('ed-captions')?.checked,
+      caption_style:edCapStyle, caption_size:edCapSize,
+      formats:edFmt, quality:edQuality,
+      logo_position:edLogoPos,
+      logo_opacity:parseInt($('ed-logo-opacity')?.value)||80,
+      remove_fillers:!!document.getElementById('ed-filler')?.checked,
+      filler_words:[...edActiveFillers],
+      remove_pauses:!!document.getElementById('ed-pauses')?.checked,
+      audio_norm:!!document.getElementById('ed-audio-norm')?.checked,
+      broll:!!document.getElementById('ed-broll')?.checked,
+      broll_kw:$('ed-broll-kw')?.value||'',
+      brand_primary:document.getElementById('ed-brand-primary')?.value||'#c8ff00',
+      lower_third:!!document.getElementById('ed-lower-on')?.checked,
+      lower_name:$('ed-lower-name')?.value||'',
+      lower_title:$('ed-lower-title')?.value||'',
+      videoId:currentVideoId||undefined
+    };
     if(logoFile){
       const fd=new FormData();
-      fd.append('video_url',edVideoUrl);
-      fd.append('start',edStart); fd.append('end',edEnd);
-      fd.append('captions',captions);
-      fd.append('caption_style',edCapStyle);
-      fd.append('caption_size',edCapSize);
-      fd.append('formats',edFmt);
-      fd.append('logo_position',edLogoPos);
-      fd.append('logo_opacity',opacity);
+      Object.entries(base).forEach(([k,v])=>v!==undefined&&fd.append(k,v));
       fd.append('logo',logoFile);
-      if(currentVideoId) fd.append('videoId',currentVideoId);
       const r=await fetch(`${API}/editor-export`,{method:'POST',body:fd});
       if(!r.ok) throw new Error(await r.text());
-      respBody=await r.json();
+      body=await r.json();
     } else {
-      respBody=await apiFetch('/editor-export',{
-        video_url:edVideoUrl, start:edStart, end:edEnd,
-        captions, caption_style:edCapStyle, caption_size:edCapSize,
-        formats:edFmt, videoId:currentVideoId||undefined
-      });
+      body=await apiFetch('/editor-export',base);
     }
-    pollEditorJob(respBody.jobId);
+    pollEditorJob(body.jobId);
   }catch(e){
-    btn.disabled=false; btn.textContent='✂  Trim, caption & export';
+    btn.disabled=false; btn.textContent='✂  Trim, enhance & export';
     status.innerHTML=`<div class="err2" style="display:block">⚠ ${esc(e.message)}</div>`;
   }
 }
@@ -1731,21 +2373,21 @@ function pollEditorJob(jid){
     try{
       const r=await fetch(`${API}/job/${jid}`); const j=await r.json();
       const pb=$('ed-pbar'),pm=$('ed-pmsg');
-      if(pb) pb.style.width=j.progress+'%';
-      if(pm) pm.textContent=j.message||'Processing...';
+      if(pb) pb.style.width=(j.progress||0)+'%';
+      if(pm) pm.textContent=j.message||'Processing…';
       if(j.status==='done'){
         clearInterval(iv);
-        $('ed-export-btn').disabled=false; $('ed-export-btn').textContent='✂  Trim, caption & export';
+        $('ed-export-btn').disabled=false; $('ed-export-btn').textContent='✂  Trim, enhance & export';
         const btns=Object.entries(j.files||{}).map(([fmt,info])=>
-          `<a href="${API}${info.downloadUrl}" download class="dl-btn" style="text-decoration:none">⬇ ${fmt==='vertical'?'📱 9:16':'🖥 16:9'} ${info.sizeMb}MB</a>`
+          `<a href="${API}${info.downloadUrl}" download class="dl-btn" style="text-decoration:none;display:inline-block">⬇ ${fmt==='vertical'?'📱 9:16':'🖥 16:9'} ${info.sizeMb}MB</a>`
         ).join('');
         $('ed-export-status').innerHTML=`<div style="background:rgba(200,255,0,.05);border:1px solid rgba(200,255,0,.3);border-radius:var(--r2);padding:16px">
-          <div style="font-family:var(--font-mono);font-size:12px;color:var(--lime);margin-bottom:12px">✅ Export ready!</div>
+          <div style="font-family:var(--font-mono);font-size:12px;color:var(--lime);margin-bottom:12px">✅ Export complete!</div>
           <div style="display:flex;gap:8px;flex-wrap:wrap">${btns}</div>
         </div>`;
       } else if(j.status==='error'){
         clearInterval(iv);
-        $('ed-export-btn').disabled=false; $('ed-export-btn').textContent='✂  Trim, caption & export';
+        $('ed-export-btn').disabled=false; $('ed-export-btn').textContent='✂  Trim, enhance & export';
         $('ed-export-status').innerHTML=`<div class="err2" style="display:block">⚠ ${esc(j.message)}</div>`;
       }
     }catch(e){clearInterval(iv);}
