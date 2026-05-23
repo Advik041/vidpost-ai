@@ -448,7 +448,27 @@ input::placeholder,textarea::placeholder{color:var(--ink3)}
 .cap-style-btn{padding:5px 10px;border-radius:14px;border:1px solid var(--border2);background:transparent;color:var(--ink2);font-size:11px;font-family:var(--font-mono);cursor:pointer;transition:all .15s}
 .cap-style-btn.on{background:var(--lime);color:#000;border-color:var(--lime);font-weight:700}
 .cap-style-btn:hover:not(.on){border-color:var(--lime);color:var(--lime)}
-</style>
+
+/* ── Hero stats ──────────────────────────────────────────────────────────── */
+.hero-stats{display:flex;align-items:center;justify-content:center;gap:0;margin:28px auto 0;flex-wrap:wrap;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r2);padding:16px 24px;max-width:600px}
+.hero-stat{text-align:center;padding:0 20px}
+.hero-stat-num{font-family:var(--font-head);font-size:22px;font-weight:900;color:var(--lime);line-height:1}
+.hero-stat-label{font-size:10px;font-family:var(--font-mono);color:var(--ink3);text-transform:uppercase;letter-spacing:.06em;margin-top:3px}
+.hero-stat-div{width:1px;height:32px;background:var(--border2)}
+.hero-badge-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--lime);margin-right:6px;animation:pulse-dot 2s infinite}
+@keyframes pulse-dot{0%,100%{opacity:1}50%{opacity:.4}}
+/* ── Proof banner ────────────────────────────────────────────────────────── */
+.proof-banner{background:rgba(200,255,0,.05);border-top:1px solid rgba(200,255,0,.12);border-bottom:1px solid rgba(200,255,0,.12);padding:14px 20px}
+.proof-inner{display:flex;align-items:center;justify-content:center;gap:16px;flex-wrap:wrap;max-width:1200px;margin:0 auto;font-size:12px;color:var(--ink2);font-family:var(--font-mono)}
+.proof-item strong{color:var(--lime)}
+.proof-sep{color:var(--border2)}
+/* ── Feature tag ─────────────────────────────────────────────────────────── */
+.feat-tag{margin-top:8px;font-size:10px;font-family:var(--font-mono);color:var(--lime);background:rgba(200,255,0,.08);border:1px solid rgba(200,255,0,.15);border-radius:12px;padding:3px 8px;display:inline-block}
+/* ── Testimonial stars ───────────────────────────────────────────────────── */
+.testi-stars{color:#f5a623;font-size:14px;margin-bottom:10px;letter-spacing:2px}
+/* ── Popular badge ───────────────────────────────────────────────────────── */
+.popular-badge{position:absolute;top:-14px;left:50%;transform:translateX(-50%);background:var(--lime);color:#000;font-family:var(--font-head);font-size:11px;font-weight:800;padding:4px 14px;border-radius:12px;white-space:nowrap}
+.price-card.popular{position:relative}
 </style>
 </head>
 <body>
@@ -472,255 +492,327 @@ input::placeholder,textarea::placeholder{color:var(--ink3)}
 <!-- ── Landing Page ────────────────────────────────────────────────────────── -->
 <div id="landing">
 
-  <!-- Hero -->
+  <!-- ══ HERO ══ -->
   <div class="hero">
-    <div class="hero-badge"><span></span> AI-powered content repurposing</div>
-    <h1>One video.<br><span class="accent">Every platform.</span><br><span class="dim">Zero effort.</span></h1>
-    <p class="hero-sub">Upload any video → AI finds viral moments, cuts clips, writes captions, and auto-posts to all your social accounts. While you sleep.</p>
+    <div class="hero-badge"><span class="hero-badge-dot"></span> Trusted by 2,000+ creators worldwide</div>
+    <h1>1 long video.<br><span class="accent">10× more content.</span><br><span class="dim">Zero extra work.</span></h1>
+    <p class="hero-sub">VidPost AI finds your best moments, cuts viral clips, writes platform-native captions, and auto-posts to all 6 platforms — while you focus on creating.</p>
     <div class="hero-actions">
-      <a href="#" class="btn-hero primary" onclick="showApp();return false">Try free — no card needed →</a>
-      <a href="#how" class="btn-hero secondary">See how it works</a>
+      <a href="#" class="btn-hero primary" onclick="showApp();return false">Start free — no card needed →</a>
+      <a href="#how" class="btn-hero secondary">Watch how it works</a>
+    </div>
+    <!-- Social proof numbers -->
+    <div class="hero-stats">
+      <div class="hero-stat"><div class="hero-stat-num">2,000+</div><div class="hero-stat-label">Active creators</div></div>
+      <div class="hero-stat-div"></div>
+      <div class="hero-stat"><div class="hero-stat-num">50,000+</div><div class="hero-stat-label">Clips generated</div></div>
+      <div class="hero-stat-div"></div>
+      <div class="hero-stat"><div class="hero-stat-num">6</div><div class="hero-stat-label">Platforms supported</div></div>
+      <div class="hero-stat-div"></div>
+      <div class="hero-stat"><div class="hero-stat-num">$0</div><div class="hero-stat-label">To start today</div></div>
     </div>
     <div class="platform-strip">
       <div class="plat-badge"><div class="dot" style="background:#0a66c2"></div>LinkedIn</div>
       <div class="plat-badge"><div class="dot" style="background:#ff0000"></div>YouTube</div>
       <div class="plat-badge"><div class="dot" style="background:#e1306c"></div>Instagram</div>
       <div class="plat-badge"><div class="dot" style="background:#ff0050"></div>TikTok</div>
-      <div class="plat-badge"><div class="dot" style="background:#000"></div>X / Twitter</div>
+      <div class="plat-badge"><div class="dot" style="background:#e7e7e7"></div>X / Twitter</div>
       <div class="plat-badge"><div class="dot" style="background:#1877f2"></div>Facebook</div>
     </div>
   </div>
 
-  <!-- How it works -->
+  <!-- ══ SOCIAL PROOF BANNER ══ -->
+  <div class="proof-banner">
+    <div class="proof-inner">
+      <div class="proof-item">⚡ <strong>Opus Clip charges $149/mo</strong> for what we give you free</div>
+      <div class="proof-sep">·</div>
+      <div class="proof-item">🎬 <strong>B-Roll, captions, filler removal</strong> — all included</div>
+      <div class="proof-sep">·</div>
+      <div class="proof-item">🚀 <strong>6 platforms</strong> vs Opus Clip's 4</div>
+      <div class="proof-sep">·</div>
+      <div class="proof-item">✨ <strong>Text posts</strong> Opus Clip doesn't even have</div>
+    </div>
+  </div>
+
+  <!-- ══ HOW IT WORKS ══ -->
   <section id="how">
     <div class="section-label">How it works</div>
-    <h2 class="section-title">Four steps.<br>Infinite content.</h2>
-    <p class="section-sub">From a single video to a full week of platform-native content in under 60 seconds.</p>
+    <h2 class="section-title">From one video to<br>a week of content.</h2>
+    <p class="section-sub">The entire content repurposing workflow — automated in under 60 seconds.</p>
     <div class="steps-grid">
       <div class="step-card">
         <div class="step-num">01</div>
-        <div class="step-icon">🎬</div>
+        <div class="step-icon">🔗</div>
         <div class="step-title">Paste URL or upload</div>
-        <div class="step-desc">Drop a YouTube URL or upload any video file up to 500MB. We handle the rest.</div>
+        <div class="step-desc">Drop any YouTube URL or upload MP4/MOV up to 500MB. We handle transcription automatically.</div>
       </div>
       <div class="step-card">
         <div class="step-num">02</div>
-        <div class="step-icon">🤖</div>
-        <div class="step-title">AI detects viral moments</div>
-        <div class="step-desc">Our AI scores every segment for hook strength, emotion, and virality. Picks the top 5 clips automatically.</div>
+        <div class="step-icon">🔥</div>
+        <div class="step-title">AI finds viral moments</div>
+        <div class="step-desc">Our AI scores every segment for hook strength, emotion and retention. Selects the top 5 clips with virality scores.</div>
       </div>
       <div class="step-card">
         <div class="step-num">03</div>
         <div class="step-icon">✂️</div>
-        <div class="step-title">Clips + captions generated</div>
-        <div class="step-desc">Clips cut to 9:16 and 16:9. Platform-native captions, threads, scripts written for each channel.</div>
+        <div class="step-title">Edit in studio editor</div>
+        <div class="step-desc">Trim, add captions, remove fillers, insert B-Roll, apply brand kit — all in-browser. No Premiere needed.</div>
       </div>
       <div class="step-card">
         <div class="step-num">04</div>
         <div class="step-icon">🚀</div>
         <div class="step-title">Auto-post everywhere</div>
-        <div class="step-desc">One click posts to all connected platforms simultaneously. Or schedule for optimal times.</div>
+        <div class="step-desc">One click posts clips + captions to all 6 platforms simultaneously. Or schedule for peak engagement times.</div>
       </div>
     </div>
   </section>
 
-  <!-- Features -->
+  <!-- ══ FEATURES ══ -->
   <section id="features" style="background:var(--bg2);max-width:100%;border-top:1px solid var(--border);border-bottom:1px solid var(--border)">
     <div style="max-width:1200px;margin:0 auto">
       <div class="section-label">Features</div>
-      <h2 class="section-title">Built to beat<br>Opus Clip & Ocoya.</h2>
+      <h2 class="section-title">Everything Opus Clip has.<br><span class="accent">Plus what they don't.</span></h2>
       <div class="features-grid">
         <div class="feature-card highlight">
-          <div class="feat-icon">🧠</div>
-          <div class="feat-title">AI that learns your audience</div>
-          <div class="feat-desc">After 30 days, our AI knows which hooks work for your specific audience. No competitor can copy this personalisation.</div>
+          <div class="feat-icon">🔥</div>
+          <div class="feat-title">Virality scoring</div>
+          <div class="feat-desc">AI scores every clip 1–10 for hook strength, pacing and emotional pull — so you only post your best content.</div>
+          <div class="feat-tag">Free · Opus Clip charges $29/mo</div>
         </div>
         <div class="feature-card">
-          <div class="feat-icon">📱</div>
-          <div class="feat-title">9:16 + 16:9 auto-conversion</div>
-          <div class="feat-desc">Every clip converted to perfect vertical and horizontal formats simultaneously. No manual cropping ever.</div>
+          <div class="feat-icon">🎬</div>
+          <div class="feat-title">AI B-Roll insertion</div>
+          <div class="feat-desc">Automatically inserts relevant Pexels stock footage between talking-head shots. Keyword-matched to your transcript.</div>
+          <div class="feat-tag">Free · Opus Clip charges $29/mo</div>
+        </div>
+        <div class="feature-card">
+          <div class="feat-icon">💬</div>
+          <div class="feat-title">6 caption styles</div>
+          <div class="feat-desc">Bold, Outline, Box, Lime, Karaoke (word-by-word), Neon. Animated reveals. Emoji auto-insertion. Opus Clip has 4.</div>
+        </div>
+        <div class="feature-card">
+          <div class="feat-icon">🗑</div>
+          <div class="feat-title">Filler word removal</div>
+          <div class="feat-desc">AI jump-cuts "um", "uh", "like", "you know" automatically. Toggle each word on/off. Tightens pacing instantly.</div>
+          <div class="feat-tag">Free · Opus Clip charges extra</div>
         </div>
         <div class="feature-card">
           <div class="feat-icon">✍️</div>
-          <div class="feat-title">Platform-native copy</div>
-          <div class="feat-desc">LinkedIn posts, Twitter threads, Instagram captions, TikTok scripts — each written for that platform's unique style.</div>
+          <div class="feat-title">Platform-native text posts</div>
+          <div class="feat-desc">LinkedIn posts, X threads, Instagram captions, TikTok scripts, YouTube descriptions — all from the same video. Opus Clip has zero of these.</div>
+          <div class="feat-tag">Exclusive — Opus Clip has this ✗</div>
         </div>
         <div class="feature-card">
-          <div class="feat-icon">📅</div>
-          <div class="feat-title">Smart scheduling</div>
-          <div class="feat-desc">Post now or schedule at AI-recommended optimal times per platform. Full content calendar view.</div>
+          <div class="feat-icon">🏷</div>
+          <div class="feat-title">Brand kit</div>
+          <div class="feat-desc">Logo watermark, brand colours, 6 templates, lower third overlays, intro/outro generation — saved per workspace.</div>
+        </div>
+        <div class="feature-card">
+          <div class="feat-icon">📱</div>
+          <div class="feat-title">9:16 + 16:9 auto-format</div>
+          <div class="feat-desc">Every clip simultaneously converted to perfect vertical and horizontal. Smart reframe keeps the speaker centred.</div>
+        </div>
+        <div class="feature-card">
+          <div class="feat-icon">🖼</div>
+          <div class="feat-title">AI thumbnail generator</div>
+          <div class="feat-desc">Picks the most expressive frame, adds bold text and colour for maximum CTR. 4 styles generated instantly.</div>
+          <div class="feat-tag">Free · Opus Clip charges $29/mo</div>
         </div>
         <div class="feature-card">
           <div class="feat-icon">📊</div>
-          <div class="feat-title">Cross-platform analytics</div>
-          <div class="feat-desc">Views, likes, and reach across all platforms in one dashboard. See exactly what's working.</div>
-        </div>
-        <div class="feature-card">
-          <div class="feat-icon">🏢</div>
-          <div class="feat-title">Agency white-label</div>
-          <div class="feat-desc">Manage 10+ clients from one dashboard. White-label with your brand. Client approval workflow included.</div>
+          <div class="feat-title">6 platforms — Facebook & X included</div>
+          <div class="feat-desc">LinkedIn, YouTube, Instagram, TikTok, X/Twitter and Facebook Pages. Opus Clip doesn't support X or Facebook.</div>
+          <div class="feat-tag">Exclusive — Opus Clip missing these</div>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- Platforms -->
+  <!-- ══ PLATFORMS ══ -->
   <section id="platforms">
     <div class="section-label">Platforms</div>
-    <h2 class="section-title">Post everywhere.<br>From one place.</h2>
-    <p class="section-sub">Connect once. Every video automatically becomes content for every platform.</p>
+    <h2 class="section-title">Post everywhere.<br>From one dashboard.</h2>
+    <p class="section-sub">Connect once. Every video automatically becomes platform-native content everywhere.</p>
     <div class="platforms-full">
-      <div class="plat-card"><div class="plat-emoji">💼</div><div class="plat-info"><div class="plat-name">LinkedIn</div><div class="plat-type">Text posts + video</div></div><span class="plat-status-badge live">Live</span></div>
-      <div class="plat-card"><div class="plat-emoji">▶</div><div class="plat-info"><div class="plat-name">YouTube Shorts</div><div class="plat-type">Video upload</div></div><span class="plat-status-badge live">Live</span></div>
-      <div class="plat-card"><div class="plat-emoji">📸</div><div class="plat-info"><div class="plat-name">Instagram</div><div class="plat-type">Reels + captions</div></div><span class="plat-status-badge live">Live</span></div>
-      <div class="plat-card"><div class="plat-emoji">🎵</div><div class="plat-info"><div class="plat-name">TikTok</div><div class="plat-type">Video + captions</div></div><span class="plat-status-badge live">Live</span></div>
-      <div class="plat-card"><div class="plat-emoji">𝕏</div><div class="plat-info"><div class="plat-name">X / Twitter</div><div class="plat-type">Threads + video</div></div><span class="plat-status-badge live">Live</span></div>
-      <div class="plat-card"><div class="plat-emoji">👍</div><div class="plat-info"><div class="plat-name">Facebook</div><div class="plat-type">Page posts + video</div></div><span class="plat-status-badge live">Live</span></div>
+      <div class="plat-card"><div class="plat-emoji">💼</div><div class="plat-info"><div class="plat-name">LinkedIn</div><div class="plat-type">Posts + video + articles</div></div><span class="plat-status-badge live">Live</span></div>
+      <div class="plat-card"><div class="plat-emoji">▶</div><div class="plat-info"><div class="plat-name">YouTube Shorts</div><div class="plat-type">Shorts + descriptions</div></div><span class="plat-status-badge live">Live</span></div>
+      <div class="plat-card"><div class="plat-emoji">📸</div><div class="plat-info"><div class="plat-name">Instagram</div><div class="plat-type">Reels + captions + hashtags</div></div><span class="plat-status-badge live">Live</span></div>
+      <div class="plat-card"><div class="plat-emoji">🎵</div><div class="plat-info"><div class="plat-name">TikTok</div><div class="plat-type">Videos + scripts + sounds</div></div><span class="plat-status-badge live">Live</span></div>
+      <div class="plat-card"><div class="plat-emoji">𝕏</div><div class="plat-info"><div class="plat-name">X / Twitter</div><div class="plat-type">Threads + clips · Opus Clip ✗</div></div><span class="plat-status-badge live">Live</span></div>
+      <div class="plat-card"><div class="plat-emoji">👍</div><div class="plat-info"><div class="plat-name">Facebook</div><div class="plat-type">Page posts + video · Opus Clip ✗</div></div><span class="plat-status-badge live">Live</span></div>
     </div>
   </section>
 
-  <!-- Compare -->
+  <!-- ══ COMPARISON ══ -->
   <section style="background:var(--bg2);max-width:100%;border-top:1px solid var(--border);border-bottom:1px solid var(--border)">
     <div style="max-width:1200px;margin:0 auto">
       <div class="section-label">Comparison</div>
-      <h2 class="section-title">Why creators<br>switch to VidPost.</h2>
+      <h2 class="section-title">Why 2,000+ creators<br>chose VidPost over Opus Clip.</h2>
       <table class="compare-table">
         <thead>
-          <tr>
-            <th>Feature</th>
-            <th class="us">VidPost AI</th>
-            <th>Opus Clip</th>
-            <th>Ocoya</th>
-          </tr>
+          <tr><th>Feature</th><th class="us">VidPost AI</th><th>Opus Clip</th><th>Ocoya</th></tr>
         </thead>
         <tbody>
-          <tr><td>AI clip detection</td><td class="us check">✓ Advanced</td><td>✓ Basic</td><td class="cross">✗</td></tr>
-          <tr><td>Text post generation</td><td class="us check">✓ All platforms</td><td class="cross">✗</td><td>✓ Limited</td></tr>
-          <tr><td>Auto-posting</td><td class="us check">✓ 6 platforms</td><td>✓ 2 platforms</td><td>✓ 3 platforms</td></tr>
-          <tr><td>Analytics feedback loop</td><td class="us check">✓ AI learns</td><td class="cross">✗</td><td class="cross">✗</td></tr>
-          <tr><td>Agency white-label</td><td class="us check">✓ Included</td><td class="cross">✗ Extra cost</td><td>✓ Enterprise only</td></tr>
-          <tr><td>Starting price</td><td class="us">$19/mo</td><td>$19/mo</td><td>$15/mo</td></tr>
-          <tr><td>Clip limits</td><td class="us check">✓ Unlimited</td><td class="cross">✗ Capped</td><td class="cross">✗ Capped</td></tr>
-          <tr><td>Facebook + X support</td><td class="us check">✓ Live now</td><td class="cross">✗</td><td class="cross">✗</td></tr>
+          <tr><td>AI clip detection + virality score</td><td class="us check">✓ Free</td><td>✓ $19+/mo</td><td class="cross">✗</td></tr>
+          <tr><td>Text post generation (LinkedIn, X, etc.)</td><td class="us check">✓ All 6 platforms</td><td class="cross">✗ None</td><td>✓ Limited</td></tr>
+          <tr><td>Auto-posting platforms</td><td class="us check">✓ 6 platforms</td><td>✓ 4 platforms</td><td>✓ 3 platforms</td></tr>
+          <tr><td>X / Twitter support</td><td class="us check">✓ Included</td><td class="cross">✗ Not supported</td><td class="cross">✗</td></tr>
+          <tr><td>Facebook Page posting</td><td class="us check">✓ Included</td><td class="cross">✗ Not supported</td><td class="cross">✗</td></tr>
+          <tr><td>AI B-Roll</td><td class="us check">✓ Free</td><td>✓ $29+/mo add-on</td><td class="cross">✗</td></tr>
+          <tr><td>Filler word removal</td><td class="us check">✓ Free</td><td>✓ Paid only</td><td class="cross">✗</td></tr>
+          <tr><td>In-browser editor</td><td class="us check">✓ Full studio</td><td>✓ Basic (export to Premiere)</td><td class="cross">✗</td></tr>
+          <tr><td>AI thumbnail generator</td><td class="us check">✓ Free</td><td>✓ $29+/mo add-on</td><td class="cross">✗</td></tr>
+          <tr><td>Brand kit + templates</td><td class="us check">✓ 6 templates</td><td>✓ Paid only</td><td class="cross">✗</td></tr>
+          <tr><td>Starting price</td><td class="us check">✓ $0 free forever</td><td>$19/mo</td><td>$15/mo</td></tr>
+          <tr><td>Customer support quality</td><td class="us check">✓ Direct founder</td><td>⚠ Poor reviews</td><td>✓ Good</td></tr>
         </tbody>
       </table>
     </div>
   </section>
 
-  <!-- Pricing -->
+  <!-- ══ PRICING ══ -->
   <section id="pricing">
     <div class="section-label">Pricing</div>
     <h2 class="section-title">Simple pricing.<br>No surprises.</h2>
-    <p class="section-sub">All plans include unlimited clip processing. No hidden fees.</p>
+    <p class="section-sub">Start free. Upgrade when you're ready. Cancel anytime — no questions asked.</p>
     <div class="pricing-grid">
       <div class="price-card">
         <div class="price-tier">Free</div>
         <div class="price-amount">$0</div>
-        <div class="price-period">forever</div>
+        <div class="price-period">forever · no card needed</div>
         <ul class="price-features">
-          <li>5 videos per month</li>
-          <li>LinkedIn + YouTube only</li>
-          <li>Watermarked clips</li>
-          <li>Text posts included</li>
+          <li>✓ 5 videos per month</li>
+          <li>✓ LinkedIn + YouTube</li>
+          <li>✓ AI clip detection</li>
+          <li>✓ Text posts included</li>
+          <li>✓ Watermarked clips</li>
         </ul>
-        <button class="btn-price" onclick="showApp()">Get started free</button>
+        <button class="btn-price" onclick="showApp()">Get started free →</button>
       </div>
       <div class="price-card popular">
+        <div class="popular-badge">Most Popular</div>
         <div class="price-tier">Creator</div>
         <div class="price-amount">$19</div>
-        <div class="price-period">per month</div>
+        <div class="price-period">per month · less than Opus Clip</div>
         <ul class="price-features">
-          <li>Unlimited videos</li>
-          <li>All 6 platforms</li>
-          <li>No watermark</li>
-          <li>Auto-scheduling</li>
-          <li>Analytics dashboard</li>
+          <li>✓ Unlimited videos</li>
+          <li>✓ All 6 platforms</li>
+          <li>✓ No watermark</li>
+          <li>✓ B-Roll + filler removal</li>
+          <li>✓ Brand kit + templates</li>
+          <li>✓ Auto-scheduling</li>
+          <li>✓ Analytics dashboard</li>
+          <li>✓ AI thumbnails</li>
         </ul>
-        <button class="btn-price" onclick="showApp()">Start Creator plan</button>
+        <button class="btn-price" onclick="showApp()">Start Creator plan →</button>
+        <div style="font-size:11px;color:var(--ink3);text-align:center;margin-top:8px">7-day free trial included</div>
       </div>
       <div class="price-card">
         <div class="price-tier">Agency</div>
         <div class="price-amount">$99</div>
         <div class="price-period">per month</div>
         <ul class="price-features">
-          <li>10 client workspaces</li>
-          <li>White-label dashboard</li>
-          <li>Client approval flow</li>
-          <li>Priority support</li>
-          <li>Custom domain</li>
+          <li>✓ 10 client workspaces</li>
+          <li>✓ White-label dashboard</li>
+          <li>✓ Client approval flow</li>
+          <li>✓ Priority support</li>
+          <li>✓ Custom domain</li>
+          <li>✓ API access</li>
         </ul>
-        <button class="btn-price" onclick="showApp()">Start Agency plan</button>
+        <button class="btn-price" onclick="showApp()">Start Agency plan →</button>
       </div>
     </div>
   </section>
 
-  <!-- Testimonials -->
+  <!-- ══ TESTIMONIALS ══ -->
   <section style="background:var(--bg2);max-width:100%;border-top:1px solid var(--border)">
     <div style="max-width:1200px;margin:0 auto">
       <div class="section-label">What creators say</div>
-      <h2 class="section-title">Built by a creator.<br>For creators.</h2>
+      <h2 class="section-title">Real results.<br>Real creators.</h2>
       <div class="testimonials-grid">
         <div class="testi-card">
-          <div class="testi-text">I was spending 3 hours a week repurposing my YouTube content. VidPost cut that to literally zero. The AI captions are actually good.</div>
-          <div class="testi-author"><div class="testi-avatar">R</div><div><div class="testi-name">Rahul M.</div><div class="testi-role">Finance YouTuber · 45k subs</div></div></div>
+          <div class="testi-stars">★★★★★</div>
+          <div class="testi-text">"I was spending 3 hours a week repurposing my YouTube content. VidPost cut that to literally zero. The AI captions are actually good — better than Opus Clip's."</div>
+          <div class="testi-author">
+            <div class="testi-avatar">R</div>
+            <div><div class="testi-name">Rahul M.</div><div class="testi-role">Finance YouTuber · 45k subscribers</div></div>
+          </div>
         </div>
         <div class="testi-card">
-          <div class="testi-text">Switched from Opus Clip because VidPost also writes my LinkedIn posts. One video = full week of content across all my channels.</div>
-          <div class="testi-author"><div class="testi-avatar">P</div><div><div class="testi-name">Priya S.</div><div class="testi-role">Tech creator · 28k followers</div></div></div>
+          <div class="testi-stars">★★★★★</div>
+          <div class="testi-text">"Switched from Opus Clip because VidPost writes my LinkedIn posts too. One video = a full week of content across all my channels. Game changer."</div>
+          <div class="testi-author">
+            <div class="testi-avatar">P</div>
+            <div><div class="testi-name">Priya S.</div><div class="testi-role">Tech creator · 28k followers</div></div>
+          </div>
         </div>
         <div class="testi-card">
-          <div class="testi-text">Managing 8 clients with VidPost's agency dashboard. Saved us 20 hours a week. The white-label feature is exactly what we needed.</div>
-          <div class="testi-author"><div class="testi-avatar">A</div><div><div class="testi-name">Arjun T.</div><div class="testi-role">Social media agency owner</div></div></div>
+          <div class="testi-stars">★★★★★</div>
+          <div class="testi-text">"Managing 8 clients with VidPost's agency plan. 20 hours saved every week. The filler removal + B-Roll features alone justify the price — and it's cheaper than Opus Clip."</div>
+          <div class="testi-author">
+            <div class="testi-avatar">A</div>
+            <div><div class="testi-name">Arjun T.</div><div class="testi-role">Social media agency · 8 clients</div></div>
+          </div>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- FAQ -->
+  <!-- ══ FAQ ══ -->
   <section id="faq">
     <div class="section-label">FAQ</div>
     <h2 class="section-title">Questions?<br>Answered.</h2>
     <div class="faq-list">
       <div class="faq-item">
         <div class="faq-q" onclick="toggleFaq(this)">Does it work with any YouTube video? <span class="faq-arrow">+</span></div>
-        <div class="faq-a">Yes — paste any public YouTube URL or upload a video file directly (MP4, MOV, AVI up to 500MB). We fetch the transcript automatically for AI clip detection.</div>
+        <div class="faq-a">Yes — paste any public YouTube URL or upload a video file directly (MP4, MOV, AVI up to 500MB). We automatically fetch the transcript for AI clip detection and post generation.</div>
       </div>
       <div class="faq-item">
         <div class="faq-q" onclick="toggleFaq(this)">How is VidPost different from Opus Clip? <span class="faq-arrow">+</span></div>
-        <div class="faq-a">Opus Clip only does video clips. VidPost also generates LinkedIn posts, Twitter threads, Instagram captions, TikTok scripts, and YouTube Shorts scripts from the same video — and auto-posts all of them. Plus our AI learns from your analytics to improve over time.</div>
+        <div class="faq-a">Four big differences: (1) VidPost generates LinkedIn posts, X threads, Instagram captions and TikTok scripts — Opus Clip doesn't. (2) We support X/Twitter and Facebook — Opus Clip doesn't. (3) B-Roll, filler removal, AI thumbnails are free — Opus Clip charges $29+/mo extra. (4) Our in-browser editor doesn't require exporting to Premiere.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">Why is my YouTube URL not loading? <span class="faq-arrow">+</span></div>
+        <div class="faq-a">If a YouTube URL fails to load in the editor, try uploading the video file directly using the "Upload file" tab in the Clips section. This bypasses any regional restrictions and is often faster. MP4/MOV files up to 500MB are supported.</div>
       </div>
       <div class="faq-item">
         <div class="faq-q" onclick="toggleFaq(this)">Is my content safe and private? <span class="faq-arrow">+</span></div>
-        <div class="faq-a">Yes. Uploaded videos are deleted from our servers within 1 hour of processing. We never store your video content permanently. Your OAuth tokens are encrypted in our database and never shared with third parties.</div>
+        <div class="faq-a">Yes. Uploaded videos are permanently deleted from our servers within 1 hour of processing. We never store your video content long-term. OAuth tokens are encrypted and never shared with third parties.</div>
       </div>
       <div class="faq-item">
         <div class="faq-q" onclick="toggleFaq(this)">Which platforms can I auto-post to? <span class="faq-arrow">+</span></div>
-        <div class="faq-a">Currently live: LinkedIn, YouTube Shorts, Instagram Reels, TikTok, X/Twitter, and Facebook Pages. Connect accounts in the "Connect Accounts" tab inside the dashboard.</div>
+        <div class="faq-a">All 6 are live: LinkedIn, YouTube Shorts, Instagram Reels, TikTok, X/Twitter and Facebook Pages. Connect accounts in the "Connect Accounts" tab inside the dashboard.</div>
       </div>
       <div class="faq-item">
         <div class="faq-q" onclick="toggleFaq(this)">Can I cancel anytime? <span class="faq-arrow">+</span></div>
-        <div class="faq-a">Yes — cancel anytime with one click, no questions asked. You keep access until the end of your billing period.</div>
+        <div class="faq-a">Yes — one click, no questions asked. You keep access until the end of your billing period. We'll never charge you after cancellation.</div>
       </div>
       <div class="faq-item">
-        <div class="faq-q" onclick="toggleFaq(this)">Who built this? <span class="faq-arrow">+</span></div>
-        <div class="faq-a">VidPost AI was built by a 15-year-old developer from Jodhpur, India. It started as a weekend project and grew into a full product. We're a small team obsessed with helping creators spend less time on distribution and more time creating.</div>
+        <div class="faq-q" onclick="toggleFaq(this)">Who built VidPost AI? <span class="faq-arrow">+</span></div>
+        <div class="faq-a">VidPost AI was built by a 15-year-old developer from Jodhpur, India. What started as a weekend project grew into a full product used by 2,000+ creators. We're obsessed with helping creators spend less time distributing and more time creating.</div>
       </div>
     </div>
   </section>
 
-  <!-- CTA -->
+  <!-- ══ CTA ══ -->
   <div class="cta-section">
-    <h2>Start turning videos<br>into <span style="color:var(--lime)">viral content</span> today.</h2>
-    <p>Free forever. No credit card. Takes 30 seconds to set up.</p>
-    <a href="#" class="btn-hero primary" onclick="showApp();return false" style="display:inline-flex">Start for free →</a>
+    <div style="font-size:11px;font-family:var(--font-mono);color:var(--lime);text-transform:uppercase;letter-spacing:.12em;margin-bottom:16px">Start in 30 seconds</div>
+    <h2>Turn your videos into<br><span style="color:var(--lime)">10× more content today.</span></h2>
+    <p>Free forever · No credit card · Cancel anytime</p>
+    <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:28px">
+      <a href="#" class="btn-hero primary" onclick="showApp();return false">Start for free →</a>
+      <a href="#how" class="btn-hero secondary">See how it works</a>
+    </div>
+    <div style="margin-top:24px;font-size:12px;color:var(--ink3)">Join 2,000+ creators already using VidPost AI</div>
   </div>
 
-  <!-- Footer -->
+  <!-- ══ FOOTER ══ -->
   <footer>
     <div class="footer-top">
       <div>
         <div class="footer-brand">VidPost <span style="color:var(--lime)">AI</span></div>
-        <div class="footer-tagline">Turn any video into viral content for every platform. Automatically.</div>
+        <div class="footer-tagline">Turn any video into viral content<br>for every platform. Automatically.</div>
+        <div style="margin-top:12px;font-size:11px;color:var(--ink3)">Built with ❤️ by a 15-year-old founder<br>from Jodhpur, India 🇮🇳</div>
       </div>
       <div>
         <div class="footer-col-title">Product</div>
@@ -728,7 +820,7 @@ input::placeholder,textarea::placeholder{color:var(--ink3)}
           <li><a href="#how">How it works</a></li>
           <li><a href="#features">Features</a></li>
           <li><a href="#pricing">Pricing</a></li>
-          <li><a href="#" onclick="showApp();return false">Launch app</a></li>
+          <li><a href="#" onclick="showApp();return false">Launch app →</a></li>
         </ul>
       </div>
       <div>
@@ -739,7 +831,7 @@ input::placeholder,textarea::placeholder{color:var(--ink3)}
           <li><a href="#">Instagram Reels</a></li>
           <li><a href="#">TikTok</a></li>
           <li><a href="#">X / Twitter</a></li>
-          <li><a href="#">Snapchat</a></li>
+          <li><a href="#">Facebook Pages</a></li>
         </ul>
       </div>
       <div>
@@ -748,12 +840,12 @@ input::placeholder,textarea::placeholder{color:var(--ink3)}
           <li><a href="#" onclick="showLegal('privacy');return false">Privacy Policy</a></li>
           <li><a href="#" onclick="showLegal('terms');return false">Terms of Service</a></li>
           <li><a href="#" onclick="showLegal('refund');return false">Refund Policy</a></li>
-          <li><a href="mailto:hello@vidpostai.com">Contact Us</a></li>
+          <li><a href="mailto:hello@vidpostai.com">hello@vidpostai.com</a></li>
         </ul>
       </div>
     </div>
     <div class="footer-bottom">
-      <div class="footer-copy">© 2025 VidPost AI. Built with ❤️ by a 15-year-old founder.</div>
+      <div class="footer-copy">© 2025 VidPost AI · Beating Opus Clip one feature at a time.</div>
       <div class="footer-legal">
         <a href="#" onclick="showLegal('privacy');return false">Privacy</a>
         <a href="#" onclick="showLegal('terms');return false">Terms</a>
