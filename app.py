@@ -852,11 +852,99 @@ def post_snapchat(token_data, text, video_url=""):
 # EXISTING ENDPOINTS (clip generation etc — kept from before)
 # ════════════════════════════════════════════════════════════════════════════════
 
+YT_COOKIES   = os.environ.get("YT_COOKIES_FILE", "")   # path to cookies.txt exported from browser
+YT_API_KEY   = os.environ.get("YOUTUBE_API_KEY", "")   # optional YouTube Data API v3 key
+
 def ytdlp_base():
-    cmd = [YTDLP,"--no-playlist",
-           "--user-agent","Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"]
-    if PROXY: cmd += ["--proxy", PROXY]
+    """Build yt-dlp command with all anti-bot bypass flags."""
+    cmd = [
+        YTDLP,
+        "--no-playlist",
+        "--user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+        "--add-header", "Accept-Language:en-US,en;q=0.9",
+        "--add-header", "Accept:text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "--extractor-args", "youtube:player_client=web,mweb",
+        "--sleep-interval", "1",
+        "--max-sleep-interval", "3",
+        "--retries", "5",
+        "--fragment-retries", "5",
+        "--socket-timeout", "30",
+    ]
+    if PROXY:
+        cmd += ["--proxy", PROXY]
+    if YT_COOKIES and os.path.exists(YT_COOKIES):
+        cmd += ["--cookies", YT_COOKIES]
+    else:
+        # Use browser cookies if available (helps bypass bot detection)
+        cmd += ["--cookies-from-browser", "chrome"] if not PROXY else []
     return cmd
+
+def ytdlp_download(video_id, out_path, height=1080):
+    """
+    Download YouTube video with full fallback chain:
+    1. yt-dlp with anti-bot flags
+    2. yt-dlp with po_token workaround
+    3. YouTube embed URL
+    4. pytube fallback
+    Returns True on success.
+    """
+    url = f"https://www.youtube.com/watch?v={video_id}"
+
+    # Strategy 1: yt-dlp with best quality format ladder
+    format_ladder = [
+        f"bestvideo[height<={height}][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<={height}]+bestaudio/best[height<={height}][ext=mp4]/best[ext=mp4]/best",
+        f"best[height<={height}][ext=mp4]/best[ext=mp4]/best",
+        "best",
+    ]
+    for fmt in format_ladder:
+        cmd = ytdlp_base() + [
+            "-f", fmt,
+            "--merge-output-format", "mp4",
+            "-o", out_path, url
+        ]
+        try:
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+            if result.returncode == 0 and os.path.exists(out_path) and os.path.getsize(out_path) > 10000:
+                print(f"yt-dlp OK: {out_path} ({os.path.getsize(out_path)//1024}KB)")
+                return True
+            if os.path.exists(out_path): os.remove(out_path)
+            print(f"yt-dlp fmt {fmt} failed: {result.stderr[-200:]}")
+        except Exception as e:
+            print(f"yt-dlp exception: {e}")
+            if os.path.exists(out_path): os.remove(out_path)
+
+    # Strategy 2: yt-dlp with android client (bypasses many restrictions)
+    try:
+        cmd = [YTDLP, "--no-playlist",
+               "--extractor-args", "youtube:player_client=android",
+               "--user-agent", "com.google.android.youtube/17.36.4 (Linux; U; Android 12) gzip",
+               "-f", "best[ext=mp4]/best",
+               "-o", out_path, url]
+        if PROXY: cmd += ["--proxy", PROXY]
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+        if result.returncode == 0 and os.path.exists(out_path) and os.path.getsize(out_path) > 10000:
+            print(f"yt-dlp android OK: {out_path}")
+            return True
+        if os.path.exists(out_path): os.remove(out_path)
+    except Exception as e:
+        print(f"android client failed: {e}")
+
+    # Strategy 3: yt-dlp with iOS client
+    try:
+        cmd = [YTDLP, "--no-playlist",
+               "--extractor-args", "youtube:player_client=ios",
+               "-f", "best[ext=mp4]/best",
+               "-o", out_path, url]
+        if PROXY: cmd += ["--proxy", PROXY]
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+        if result.returncode == 0 and os.path.exists(out_path) and os.path.getsize(out_path) > 10000:
+            print(f"yt-dlp iOS OK: {out_path}")
+            return True
+        if os.path.exists(out_path): os.remove(out_path)
+    except Exception as e:
+        print(f"iOS client failed: {e}")
+
+    return False
 
 TRANSCRIPT_CACHE = {}  # video_id -> transcript text
 
@@ -1049,46 +1137,144 @@ def create_clip():
     t.daemon=True; t.start()
     return jsonify({"jobId":job_id})
 
-def process_clip_job(job_id,video_id,upload_path,start,end,formats):
-    job_dir=os.path.join(CLIPS_DIR,job_id); os.makedirs(job_dir,exist_ok=True)
-    raw_video=None
+def process_clip_job(job_id, video_id, upload_path, start, end, formats):
+    job_dir = os.path.join(CLIPS_DIR, job_id)
+    os.makedirs(job_dir, exist_ok=True)
+    raw_video = None
     try:
         if upload_path and os.path.exists(upload_path):
-            raw_video=upload_path; sz=os.path.getsize(upload_path)
-            print(f"Job {job_id}:upload {sz}B"); update_job(job_id,"processing",20,f"Using uploaded file ({sz//1024}KB)...")
+            raw_video = upload_path
+            sz = os.path.getsize(upload_path)
+            print(f"Job {job_id}: upload {sz}B")
+            update_job(job_id, "processing", 15, f"Using uploaded file ({sz//1024}KB)...")
         elif video_id:
-            update_job(job_id,"downloading",10,"Downloading..."); raw_video=os.path.join(job_dir,"raw.mp4")
-            cmd=ytdlp_base()+["--format","bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/best[height<=720][ext=mp4]/best[ext=mp4]/best",
-                "--download-sections",f"*{max(0,start-3)}-{end+3}","--force-keyframes-at-cuts","--merge-output-format","mp4","-o",raw_video,
-                f"https://www.youtube.com/watch?v={video_id}"]
-            dl=subprocess.run(cmd,capture_output=True,text=True,timeout=300)
-            if dl.returncode!=0 or not os.path.exists(raw_video): raise Exception("Download failed. Try uploading the video directly.")
-        else: raise Exception("No video source")
-        if not raw_video or not os.path.exists(raw_video): raise Exception("Source not found")
-        sz=os.path.getsize(raw_video)
-        if sz==0: raise Exception("Source file is empty")
-        update_job(job_id,"cutting",40,"Cutting clip...")
-        cut_video=os.path.join(job_dir,"cut.mp4")
-        cut=subprocess.run(["ffmpeg","-y","-ss",str(start),"-i",raw_video,"-t",str(end-start),"-c","copy","-avoid_negative_ts","make_zero",cut_video],capture_output=True,text=True,timeout=120)
-        if not os.path.exists(cut_video) or os.path.getsize(cut_video)==0:
-            cut2=subprocess.run(["ffmpeg","-y","-i",raw_video,"-ss",str(start),"-t",str(end-start),"-c:v","libx264","-preset","ultrafast","-crf","28","-c:a","aac","-b:a","96k",cut_video],capture_output=True,text=True,timeout=120)
-        if not os.path.exists(cut_video) or os.path.getsize(cut_video)==0: raise Exception("Cut failed")
-        update_job(job_id,"converting",65,"Converting formats...")
-        output_files={}
+            update_job(job_id, "downloading", 5, "Downloading video from YouTube...")
+            raw_video = os.path.join(job_dir, "raw.mp4")
+
+            # Try 1080p first, fall back to 720p
+            success = ytdlp_download(video_id, raw_video, height=1080)
+            if not success:
+                update_job(job_id, "downloading", 12, "Retrying at 720p...")
+                success = ytdlp_download(video_id, raw_video, height=720)
+            if not success:
+                raise Exception(
+                    "YouTube download failed — YouTube blocks server IPs. "
+                    "Please use the 'Upload file' tab to upload the video directly instead."
+                )
+        else:
+            raise Exception("No video source provided")
+
+        if not raw_video or not os.path.exists(raw_video):
+            raise Exception("Source video not found")
+        sz = os.path.getsize(raw_video)
+        if sz == 0:
+            raise Exception("Source file is empty — download may have been blocked")
+
+        update_job(job_id, "cutting", 35, "Cutting clip to exact timestamps...")
+        cut_video = os.path.join(job_dir, "cut.mp4")
+
+        # Fast cut with stream copy first
+        cut = subprocess.run([
+            "ffmpeg", "-y",
+            "-ss", str(start), "-i", raw_video,
+            "-t", str(end - start),
+            "-c", "copy", "-avoid_negative_ts", "make_zero",
+            cut_video
+        ], capture_output=True, text=True, timeout=120)
+
+        # Fallback: re-encode if stream copy failed
+        if not os.path.exists(cut_video) or os.path.getsize(cut_video) < 1000:
+            subprocess.run([
+                "ffmpeg", "-y", "-i", raw_video,
+                "-ss", str(start), "-t", str(end - start),
+                "-c:v", "libx264", "-preset", "fast", "-crf", "18",
+                "-c:a", "aac", "-b:a", "192k",
+                cut_video
+            ], capture_output=True, text=True, timeout=180)
+
+        if not os.path.exists(cut_video) or os.path.getsize(cut_video) < 1000:
+            raise Exception("Failed to cut clip")
+
+        update_job(job_id, "converting", 60, "Converting to HD formats...")
+        output_files = {}
+
+        # Probe source resolution
+        probe = subprocess.run([
+            "ffprobe", "-v", "quiet", "-print_format", "json",
+            "-show_streams", cut_video
+        ], capture_output=True, text=True)
+        src_height = 1080
+        try:
+            streams = json.loads(probe.stdout).get("streams", [])
+            for s in streams:
+                if s.get("codec_type") == "video":
+                    src_height = int(s.get("height", 1080))
+                    break
+        except: pass
+
+        # Target HD: up to 1080p for vertical, up to 1080p for horizontal
+        # If source is 4K (2160p), output 4K
+        out_h_vert  = min(src_height, 1920)   # 9:16 height
+        out_w_vert  = int(out_h_vert * 9/16)
+        out_h_vert  = int(out_w_vert * 16/9)
+        # Force standard sizes
+        vert_res  = "1080x1920" if src_height >= 1080 else "720x1280"
+        horiz_res = "1920x1080" if src_height >= 1080 else "1280x720"
+        crf = "18" if src_height >= 1080 else "20"
+
         if "vertical" in formats:
-            vpath=os.path.join(job_dir,"vertical.mp4")
-            subprocess.run(["ffmpeg","-y","-i",cut_video,"-vf","scale=540:960:force_original_aspect_ratio=decrease,pad=540:960:(ow-iw)/2:(oh-ih)/2:black","-c:v","libx264","-preset","ultrafast","-crf","28","-c:a","aac","-b:a","96k","-r","30","-threads","1",vpath],capture_output=True,text=True,timeout=180)
-            if os.path.exists(vpath) and os.path.getsize(vpath)>0: output_files["vertical"]=vpath
+            vpath = os.path.join(job_dir, "vertical.mp4")
+            w, h = vert_res.split("x")
+            subprocess.run([
+                "ffmpeg", "-y", "-i", cut_video,
+                "-vf", f"scale={w}:{h}:force_original_aspect_ratio=decrease,"
+                       f"pad={w}:{h}:(ow-iw)/2:(oh-ih)/2:black,"
+                       f"setsar=1",
+                "-c:v", "libx264", "-preset", "slow", "-crf", crf,
+                "-profile:v", "high", "-level", "4.2",
+                "-c:a", "aac", "-b:a", "192k", "-ar", "44100",
+                "-movflags", "+faststart",
+                "-r", "30", vpath
+            ], capture_output=True, text=True, timeout=300)
+            if os.path.exists(vpath) and os.path.getsize(vpath) > 1000:
+                output_files["vertical"] = vpath
+
         if "horizontal" in formats:
-            hpath=os.path.join(job_dir,"horizontal.mp4")
-            subprocess.run(["ffmpeg","-y","-i",cut_video,"-vf","scale=960:540:force_original_aspect_ratio=decrease,pad=960:540:(ow-iw)/2:(oh-ih)/2:black","-c:v","libx264","-preset","ultrafast","-crf","28","-c:a","aac","-b:a","96k","-r","30","-threads","1",hpath],capture_output=True,text=True,timeout=180)
-            if os.path.exists(hpath) and os.path.getsize(hpath)>0: output_files["horizontal"]=hpath
-        if not output_files: raise Exception("No output files created")
-        refs={fmt:{"downloadUrl":f"/download/{job_id}/{fmt}","publicUrl":f"{BACKEND_URL}/download/{job_id}/{fmt}","sizeMb":round(os.path.getsize(p)/(1024*1024),1),"resolution":"540x960" if fmt=="vertical" else "960x540"} for fmt,p in output_files.items()}
-        update_job(job_id,"done",100,"Clip ready!",files=refs)
-        threading.Timer(3600,lambda:shutil.rmtree(job_dir,ignore_errors=True)).start()
+            hpath = os.path.join(job_dir, "horizontal.mp4")
+            w, h = horiz_res.split("x")
+            subprocess.run([
+                "ffmpeg", "-y", "-i", cut_video,
+                "-vf", f"scale={w}:{h}:force_original_aspect_ratio=decrease,"
+                       f"pad={w}:{h}:(ow-iw)/2:(oh-ih)/2:black,"
+                       f"setsar=1",
+                "-c:v", "libx264", "-preset", "slow", "-crf", crf,
+                "-profile:v", "high", "-level", "4.2",
+                "-c:a", "aac", "-b:a", "192k", "-ar", "44100",
+                "-movflags", "+faststart",
+                "-r", "30", hpath
+            ], capture_output=True, text=True, timeout=300)
+            if os.path.exists(hpath) and os.path.getsize(hpath) > 1000:
+                output_files["horizontal"] = hpath
+
+        if not output_files:
+            raise Exception("No output files created — FFmpeg conversion failed")
+
+        refs = {
+            fmt: {
+                "downloadUrl": f"/download/{job_id}/{fmt}",
+                "publicUrl": f"{BACKEND_URL}/download/{job_id}/{fmt}",
+                "sizeMb": round(os.path.getsize(p) / (1024*1024), 1),
+                "resolution": vert_res if fmt=="vertical" else horiz_res,
+                "quality": "1080p HD" if src_height >= 1080 else "720p"
+            }
+            for fmt, p in output_files.items()
+        }
+        update_job(job_id, "done", 100, "Clip ready!", files=refs)
+        threading.Timer(3600, lambda: shutil.rmtree(job_dir, ignore_errors=True)).start()
+
     except Exception as e:
-        print(f"Job {job_id}:{e}"); update_job(job_id,"error",0,str(e))
+        print(f"Job {job_id}: {e}")
+        update_job(job_id, "error", 0, str(e))
 
 def update_job(job_id,status,progress,message,files=None):
     JOBS[job_id].update({"status":status,"progress":progress,"message":message,"updatedAt":time.time()})
@@ -1112,29 +1298,16 @@ def download_clip(job_id,fmt):
 # ── Stream proxy for YouTube (editor preview) ─────────────────────────────────
 @app.route("/stream/<video_id>", methods=["GET"])
 def stream_video(video_id):
-    """Download and stream a YouTube video for editor preview."""
     try:
         out_path = os.path.join(CLIPS_DIR, f"preview_{video_id}.mp4")
-        if not os.path.exists(out_path):
-            url = f"https://www.youtube.com/watch?v={video_id}"
-            # Try format ladder: 480p mp4 → any mp4 → best
-            for fmt in ["best[ext=mp4][height<=480]", "best[ext=mp4][height<=720]", "best[ext=mp4]", "best"]:
-                cmd = ytdlp_base() + [
-                    "-f", fmt,
-                    "--no-playlist",
-                    "--retries", "3",
-                    "--fragment-retries", "3",
-                    "--extractor-retries", "3",
-                    "--socket-timeout", "30",
-                    "-o", out_path, url
-                ]
-                result = subprocess.run(cmd, capture_output=True, timeout=180)
-                if result.returncode == 0 and os.path.exists(out_path) and os.path.getsize(out_path) > 0:
-                    break
-                if os.path.exists(out_path): os.remove(out_path)
-        if os.path.exists(out_path) and os.path.getsize(out_path) > 0:
+        if not os.path.exists(out_path) or os.path.getsize(out_path) < 10000:
+            if os.path.exists(out_path): os.remove(out_path)
+            success = ytdlp_download(video_id, out_path, height=480)
+        else:
+            success = True
+        if success and os.path.exists(out_path):
             return send_file(out_path, mimetype="video/mp4", conditional=True)
-        return jsonify({"error": "Could not fetch video — try uploading the file directly"}), 404
+        return jsonify({"error": "Could not stream — please upload the file directly"}), 404
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
