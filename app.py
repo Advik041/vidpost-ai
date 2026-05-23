@@ -858,6 +858,8 @@ def ytdlp_base():
     if PROXY: cmd += ["--proxy", PROXY]
     return cmd
 
+TRANSCRIPT_CACHE = {}  # video_id -> transcript text
+
 @app.route("/analyse", methods=["POST","OPTIONS"])
 def analyse():
     if request.method == "OPTIONS": return jsonify({}), 200
@@ -865,32 +867,59 @@ def analyse():
     url  = data.get("url","").strip()
     if not url: return jsonify({"error":"Missing URL"}), 400
     m = re.search(r'(?:v=|youtu\.be/|/shorts/)([A-Za-z0-9_-]{11})', url)
-    if not m: return jsonify({"error":"Invalid YouTube URL"}), 400
+    if not m: return jsonify({"error":"Invalid YouTube URL — paste a youtube.com/watch or youtu.be link"}), 400
     video_id = m.group(1)
     title = "YouTube Video"
-    try:
-        r = requests.get(f"https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v={video_id}&format=json",timeout=5)
-        if r.ok: title = r.json().get("title",title)
-    except: pass
     duration = 600
+
+    # 1. Fast title via oEmbed (no yt-dlp needed)
     try:
-        cmd = ytdlp_base()+["--dump-json","--no-download",f"https://www.youtube.com/watch?v={video_id}"]
-        result = subprocess.run(cmd,capture_output=True,text=True,timeout=40)
-        if result.returncode==0:
-            info=json.loads(result.stdout); title=info.get("title",title); duration=int(info.get("duration",600))
-    except Exception as e: print(f"yt-dlp info:{e}")
-    transcript = f"Video:{title}. Duration:{duration}s."
-    if SUPADATA:
-        try:
-            resp=requests.get("https://api.supadata.ai/v1/youtube/transcript",
-                params={"videoId":video_id,"text":"true"},headers={"x-api-key":SUPADATA},timeout=20)
-            if resp.ok:
-                d=resp.json();c=d.get("content","")
-                t=c if isinstance(c,str) else " ".join([s.get("text","") for s in c])
-                if t and len(t)>30: transcript=t
-        except: pass
-    clips = _detect_clips(title,duration,transcript,GROQ_KEY)
-    return jsonify({"videoId":video_id,"title":title,"duration":duration,"clips":clips,"transcriptLength":len(transcript.split()),"mode":"url"})
+        r = requests.get(
+            f"https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v={video_id}&format=json",
+            timeout=6)
+        if r.ok: title = r.json().get("title", title)
+    except: pass
+
+    # 2. Duration via yt-dlp --dump-json (with retries + proper headers)
+    try:
+        cmd = ytdlp_base() + [
+            "--dump-json", "--no-download",
+            "--socket-timeout", "20",
+            "--retries", "3",
+            f"https://www.youtube.com/watch?v={video_id}"
+        ]
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=45)
+        if result.returncode == 0 and result.stdout.strip():
+            info = json.loads(result.stdout.strip().splitlines()[0])
+            title    = info.get("title", title)
+            duration = int(info.get("duration", 600))
+    except Exception as e:
+        print(f"yt-dlp info error: {e}")
+
+    # 3. Transcript — cache first, then Supadata, then fallback
+    if video_id in TRANSCRIPT_CACHE:
+        transcript = TRANSCRIPT_CACHE[video_id]
+    else:
+        transcript = f"Video: {title}. Duration: {duration}s."
+        if SUPADATA:
+            try:
+                resp = requests.get(
+                    "https://api.supadata.ai/v1/youtube/transcript",
+                    params={"videoId": video_id, "text": "true"},
+                    headers={"x-api-key": SUPADATA}, timeout=20)
+                if resp.ok:
+                    d = resp.json(); c = d.get("content", "")
+                    t = c if isinstance(c, str) else " ".join([s.get("text","") for s in c])
+                    if t and len(t) > 30:
+                        transcript = t
+                        TRANSCRIPT_CACHE[video_id] = transcript
+            except: pass
+
+    clips = _detect_clips(title, duration, transcript, GROQ_KEY)
+    return jsonify({
+        "videoId": video_id, "title": title, "duration": duration,
+        "clips": clips, "transcriptLength": len(transcript.split()), "mode": "url"
+    })
 
 @app.route("/analyse-upload", methods=["POST","OPTIONS"])
 def analyse_upload():
@@ -916,30 +945,89 @@ def _cleanup(uid,path):
     UPLOAD_STORE.pop(uid,None)
     if os.path.exists(path): os.remove(path)
 
-def _detect_clips(title,duration,transcript,groq_key):
-    clips=[]
+GROQ_MODELS = [
+    "llama-3.3-70b-versatile",
+    "llama-3.1-70b-versatile",
+    "mixtral-8x7b-32768",
+    "gemma2-9b-it"
+]
+
+def _groq_chat(messages, max_tokens=1000, temperature=0.1):
+    """Call Groq with automatic model fallback and retry on rate limit."""
+    if not GROQ_KEY:
+        return None
+    for model in GROQ_MODELS:
+        for attempt in range(3):
+            try:
+                resp = requests.post(
+                    "https://api.groq.com/openai/v1/chat/completions",
+                    headers={"Authorization": f"Bearer {GROQ_KEY}", "Content-Type": "application/json"},
+                    json={"model": model, "messages": messages,
+                          "max_tokens": max_tokens, "temperature": temperature},
+                    timeout=40
+                )
+                if resp.status_code == 429:
+                    # Rate limited — wait then try next model
+                    retry_after = int(resp.headers.get("retry-after", 3))
+                    time.sleep(min(retry_after, 5))
+                    break  # try next model
+                if resp.status_code == 200:
+                    return resp.json()["choices"][0]["message"]["content"].strip()
+                # Other error — try next model
+                break
+            except requests.Timeout:
+                if attempt == 2: break
+                time.sleep(1)
+            except Exception as e:
+                print(f"Groq {model}: {e}")
+                break
+    return None
+
+def _detect_clips(title, duration, transcript, groq_key):
+    clips = []
     if groq_key:
         try:
-            prompt=f"""Find 5 best viral moments to clip.
-VIDEO:"{title}" DURATION:{duration}s
-TRANSCRIPT:{transcript[:3000]}
-Return ONLY JSON array:[{{"start":10,"end":70,"title":"Title","hook":"Hook","virality_score":8,"reason":"Why"}}]
-Rules:30-90s each,within 0-{duration},spaced throughout.ONLY return JSON."""
-            resp=requests.post("https://api.groq.com/openai/v1/chat/completions",
-                headers={"Authorization":f"Bearer {groq_key}","Content-Type":"application/json"},
-                json={"model":"llama-3.3-70b-versatile","messages":[{"role":"user","content":prompt}],"max_tokens":800,"temperature":0.1},timeout=30)
-            if resp.ok:
-                raw=resp.json()["choices"][0]["message"]["content"].strip()
-                match=re.search(r'\[[\s\S]*\]',raw)
+            prompt = f"""Find 5 best viral moments to clip from this video.
+VIDEO: "{title}" DURATION: {duration}s
+TRANSCRIPT: {transcript[:4000]}
+
+Return ONLY a JSON array, no other text:
+[{{"start":10,"end":70,"title":"Hook Title","hook":"First sentence hook","virality_score":8,"reason":"Why viral"}}]
+
+Rules:
+- Each clip 30-90 seconds
+- start/end must be within 0-{duration}
+- Space clips throughout the video
+- virality_score 1-10
+- ONLY return the JSON array"""
+
+            raw = _groq_chat([{"role": "user", "content": prompt}], max_tokens=1000)
+            if raw:
+                match = re.search(r'\[[\s\S]*?\]', raw)
                 if match:
-                    parsed=json.loads(match.group())
-                    clips=[c for c in parsed if isinstance(c.get("start"),(int,float)) and isinstance(c.get("end"),(int,float)) and 0<=c["start"]<c["end"]<=duration and (c["end"]-c["start"])>=15]
-        except Exception as e: print(f"AI clip:{e}")
+                    parsed = json.loads(match.group())
+                    clips = [c for c in parsed
+                             if isinstance(c.get("start"), (int, float))
+                             and isinstance(c.get("end"), (int, float))
+                             and 0 <= c["start"] < c["end"] <= duration
+                             and (c["end"] - c["start"]) >= 15]
+        except Exception as e:
+            print(f"AI clip detection error: {e}")
+
+    # Fallback: evenly spaced clips
     if not clips:
-        seg=max(duration//6,40)
+        seg = max(duration // 6, 40)
         for i in range(5):
-            s=i*seg+10;e=min(s+60,duration-5)
-            if e>s+15: clips.append({"start":s,"end":e,"title":f"Highlight {i+1}","hook":"Watch this...","virality_score":7,"reason":"Auto-detected"})
+            s = i * seg + 10
+            e = min(s + 60, duration - 5)
+            if e > s + 15:
+                clips.append({
+                    "start": s, "end": e,
+                    "title": f"Highlight {i+1}",
+                    "hook": "Watch this...",
+                    "virality_score": 7,
+                    "reason": "Auto-detected segment"
+                })
     return clips
 
 @app.route("/clip",methods=["POST","OPTIONS"])
@@ -1028,13 +1116,25 @@ def stream_video(video_id):
     try:
         out_path = os.path.join(CLIPS_DIR, f"preview_{video_id}.mp4")
         if not os.path.exists(out_path):
-            cmd = ["yt-dlp", "-f", "best[ext=mp4][height<=480]/best[ext=mp4]/best",
-                   "--no-playlist", "-o", out_path,
-                   f"https://www.youtube.com/watch?v={video_id}"]
-            subprocess.run(cmd, capture_output=True, timeout=120)
-        if os.path.exists(out_path):
+            url = f"https://www.youtube.com/watch?v={video_id}"
+            # Try format ladder: 480p mp4 → any mp4 → best
+            for fmt in ["best[ext=mp4][height<=480]", "best[ext=mp4][height<=720]", "best[ext=mp4]", "best"]:
+                cmd = ytdlp_base() + [
+                    "-f", fmt,
+                    "--no-playlist",
+                    "--retries", "3",
+                    "--fragment-retries", "3",
+                    "--extractor-retries", "3",
+                    "--socket-timeout", "30",
+                    "-o", out_path, url
+                ]
+                result = subprocess.run(cmd, capture_output=True, timeout=180)
+                if result.returncode == 0 and os.path.exists(out_path) and os.path.getsize(out_path) > 0:
+                    break
+                if os.path.exists(out_path): os.remove(out_path)
+        if os.path.exists(out_path) and os.path.getsize(out_path) > 0:
             return send_file(out_path, mimetype="video/mp4", conditional=True)
-        return jsonify({"error":"Could not fetch video"}), 404
+        return jsonify({"error": "Could not fetch video — try uploading the file directly"}), 404
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -1088,11 +1188,17 @@ def editor_export():
             # Get source video
             if video_id:
                 src = os.path.join(CLIPS_DIR, f"preview_{video_id}.mp4")
-                if not os.path.exists(src):
-                    cmd = ["yt-dlp","-f","best[ext=mp4][height<=720]/best[ext=mp4]/best",
-                           "--no-playlist","-o",src,
-                           f"https://www.youtube.com/watch?v={video_id}"]
-                    subprocess.run(cmd,capture_output=True,timeout=180)
+                if not os.path.exists(src) or os.path.getsize(src) == 0:
+                    url = f"https://www.youtube.com/watch?v={video_id}"
+                    for fmt in ["best[ext=mp4][height<=720]", "best[ext=mp4]", "best"]:
+                        cmd = ytdlp_base() + [
+                            "-f", fmt, "--no-playlist",
+                            "--retries", "3", "--socket-timeout", "30",
+                            "-o", src, url
+                        ]
+                        r2 = subprocess.run(cmd, capture_output=True, timeout=300)
+                        if r2.returncode == 0 and os.path.exists(src) and os.path.getsize(src) > 0:
+                            break
             elif video_url:
                 src = os.path.join(job_dir,"source.mp4")
                 r = requests.get(video_url,stream=True,timeout=60)
@@ -1209,30 +1315,30 @@ def generate_posts():
     transcript=data.get("transcript","").strip(); title=data.get("title","YouTube Video")
     tone=data.get("tone","professional"); platforms=data.get("platforms",["linkedin"])
     if not transcript: return jsonify({"error":"Missing transcript"}),400
-    if not GROQ_KEY: return jsonify({"error":"No API key"}),400
+    if not GROQ_KEY: return jsonify({"error":"No Groq API key set in Railway environment"}),400
     tone_map={"professional":"professional and insightful","casual":"casual and conversational","bold":"bold and provocative","storytelling":"storytelling with a narrative arc"}
     tone_desc=tone_map.get(tone,tone_map["professional"])
+    trunc=transcript[:4000]
     prompts={
-        "linkedin":f'Write viral LinkedIn post.\nVIDEO:"{title}"\nTONE:{tone_desc}\nTRANSCRIPT:{transcript[:3000]}\n\n[Hook under 12 words]\n\n[emoji] Insight 1\n[emoji] Insight 2\n[emoji] Insight 3\n\n[Question]\n\n#tag1 #tag2 #tag3\n\nMax 200 words. Output ONLY post.',
-        "twitter":f'Write 6-tweet thread.\nVIDEO:"{title}"\nTONE:{tone_desc}\nTRANSCRIPT:{transcript[:3000]}\n\nTweet 1:hook\nTweets 2-5:insights\nTweet 6:ending\nNumber 1/2/etc.\nOutput ONLY 6 tweets.',
-        "instagram":f'Write Instagram caption.\nVIDEO:"{title}"\nTONE:{tone_desc}\nTRANSCRIPT:{transcript[:3000]}\n\nHook\n\n3 paragraphs with emoji\n\nQuestion\n\n15 hashtags\n\nOutput ONLY caption.',
-        "tiktok":f'Write 45-sec TikTok script.\nVIDEO:"{title}"\nTONE:{tone_desc}\nTRANSCRIPT:{transcript[:3000]}\n\nHOOK\nPOINT1\nPOINT2\nPOINT3\nCTA\n\nUnder 130 words.',
-        "youtube_short":f'Write YouTube Shorts script.\nVIDEO:"{title}"\nTONE:{tone_desc}\nTRANSCRIPT:{transcript[:3000]}\n\n[HOOK][POINT1][POINT2][POINT3][CTA]\n\nUnder 150 words.',
-        "facebook":f'Write a Facebook Page post.\nVIDEO:"{title}"\nTONE:{tone_desc}\nTRANSCRIPT:{transcript[:3000]}\n\nHook sentence.\n\n2-3 engaging paragraphs with emojis.\n\nQuestion to drive comments.\n\n3-5 hashtags.\n\nMax 250 words. Output ONLY post.'
+        "linkedin":f'Write viral LinkedIn post.\nVIDEO:"{title}"\nTONE:{tone_desc}\nTRANSCRIPT:{trunc}\n\n[Hook under 12 words]\n\n[emoji] Insight 1\n[emoji] Insight 2\n[emoji] Insight 3\n\n[Question]\n\n#tag1 #tag2 #tag3\n\nMax 200 words. Output ONLY the post text.',
+        "twitter":f'Write 6-tweet thread.\nVIDEO:"{title}"\nTONE:{tone_desc}\nTRANSCRIPT:{trunc}\n\nTweet 1:hook\nTweets 2-5:insights\nTweet 6:CTA\nNumber each 1/6 etc.\nOutput ONLY the 6 tweets.',
+        "instagram":f'Write Instagram caption.\nVIDEO:"{title}"\nTONE:{tone_desc}\nTRANSCRIPT:{trunc}\n\nHook line\n\n3 paragraphs with emojis\n\nEngaging question\n\n15 hashtags\n\nOutput ONLY the caption.',
+        "tiktok":f'Write 45-sec TikTok script.\nVIDEO:"{title}"\nTONE:{tone_desc}\nTRANSCRIPT:{trunc}\n\nHOOK→POINT1→POINT2→POINT3→CTA\n\nUnder 130 words. Output ONLY the script.',
+        "youtube_short":f'Write YouTube Shorts script.\nVIDEO:"{title}"\nTONE:{tone_desc}\nTRANSCRIPT:{trunc}\n\n[HOOK][POINT1][POINT2][POINT3][CTA]\n\nUnder 150 words. Output ONLY the script.',
+        "facebook":f'Write a Facebook Page post.\nVIDEO:"{title}"\nTONE:{tone_desc}\nTRANSCRIPT:{trunc}\n\nHook → 2-3 paragraphs with emojis → comment-driving question → 3-5 hashtags.\n\nMax 250 words. Output ONLY the post.'
     }
     results,errors={},{}
     for platform in platforms:
         if platform not in prompts: continue
         try:
-            resp=requests.post("https://api.groq.com/openai/v1/chat/completions",
-                headers={"Authorization":f"Bearer {GROQ_KEY}","Content-Type":"application/json"},
-                json={"model":"llama-3.3-70b-versatile","messages":[{"role":"user","content":prompts[platform]}],"max_tokens":1024,"temperature":0.75},timeout=30)
-            if resp.status_code==401: return jsonify({"error":"Invalid Groq key"}),401
-            if resp.status_code==429: return jsonify({"error":"Rate limit"}),429
-            if resp.ok: results[platform]=resp.json()["choices"][0]["message"]["content"].strip()
-            else: errors[platform]=f"Error {resp.status_code}"
+            text = _groq_chat(
+                [{"role":"user","content":prompts[platform]}],
+                max_tokens=1024, temperature=0.75
+            )
+            if text: results[platform]=text
+            else: errors[platform]="Generation failed — rate limit or API error. Try again in a moment."
         except Exception as e: errors[platform]=str(e)
-    if not results: return jsonify({"error":"Generation failed","details":errors}),500
+    if not results: return jsonify({"error":"Generation failed — check your GROQ_API_KEY in Railway","details":errors}),500
     return jsonify({"results":results,"errors":errors,"title":title})
 
 if __name__=="__main__":
