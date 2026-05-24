@@ -1514,137 +1514,253 @@ def editor_export():
     os.makedirs(job_dir, exist_ok=True)
     JOBS[job_id] = {"status":"queued","progress":0,"message":"Queued","files":{}}
 
-    # Parse params from either JSON or FormData
-    if request.content_type and "multipart" in request.content_type:
-        video_url    = request.form.get("video_url","")
-        start        = float(request.form.get("start", 0))
-        end          = float(request.form.get("end", 60))
-        captions     = request.form.get("captions","true").lower()=="true"
-        cap_style    = request.form.get("caption_style","bold")
-        cap_size     = request.form.get("caption_size","medium")
-        formats      = request.form.get("formats","vertical")
-        logo_pos     = request.form.get("logo_position","top-right")
-        logo_opacity = int(request.form.get("logo_opacity",80))
-        logo_file    = request.files.get("logo")
-        video_id     = request.form.get("videoId","")
-    else:
-        data         = request.get_json() or {}
-        video_url    = data.get("video_url","")
-        start        = float(data.get("start",0))
-        end          = float(data.get("end",60))
-        captions     = data.get("captions",True)
-        cap_style    = data.get("caption_style","bold")
-        cap_size     = data.get("caption_size","medium")
-        formats      = data.get("formats","vertical")
-        logo_pos     = data.get("logo_position","top-right")
-        logo_opacity = int(data.get("logo_opacity",80))
-        logo_file    = None
-        video_id     = data.get("videoId","")
+    is_form = request.content_type and "multipart" in request.content_type
+    def gf(k,d=""): return request.form.get(k,d) if is_form else (request.get_json() or {}).get(k,d)
+    def gfb(k,d=False):
+        v = request.form.get(k,"") if is_form else str((request.get_json() or {}).get(k,d))
+        return v.lower() in ("true","1","yes")
+    def gfi(k,d=0): 
+        try: return int(request.form.get(k,d) if is_form else (request.get_json() or {}).get(k,d))
+        except: return d
 
-    # Save logo if provided
-    logo_path = None
+    data = {} if is_form else (request.get_json() or {})
+    video_url       = gf("video_url")
+    start           = float(gf("start","0") or "0")
+    end             = float(gf("end","60") or "60")
+    captions        = gfb("captions", True)
+    cap_style       = gf("caption_style","bold")
+    cap_size        = gf("caption_size","medium")
+    formats         = gf("formats","vertical")
+    quality         = gf("quality","1080")
+    logo_pos        = gf("logo_position","top-right")
+    logo_opacity    = gfi("logo_opacity", 80)
+    video_id        = gf("videoId","")
+    remove_fillers  = gfb("remove_fillers", False)
+    filler_words    = data.get("filler_words", gf("filler_words","um,uh,like").split(",")) if not is_form else gf("filler_words","um,uh,like").split(",")
+    remove_pauses   = gfb("remove_pauses", False)
+    audio_norm      = gfb("audio_norm", True)
+    broll           = gfb("broll", False)
+    broll_kw        = gf("broll_kw","")
+    broll_freq      = gf("broll_freq","medium") or gf("broll_frequency","medium")
+    lower_third     = gfb("lower_third", False)
+    lower_name      = gf("lower_name","")
+    lower_title_text= gf("lower_title","")
+    brand_primary   = gf("brand_primary","#8b5cf6")
+
+    logo_file  = request.files.get("logo") if is_form else None
+    logo_path  = None
     if logo_file:
         logo_path = os.path.join(job_dir, "logo.png")
         logo_file.save(logo_path)
 
     def run_editor_job():
         try:
-            JOBS[job_id].update({"status":"running","progress":5,"message":"Downloading source video..."})
+            JOBS[job_id].update({"status":"running","progress":5,"message":"Getting source video..."})
 
-            # Get source video
+            # ── Step 1: Get source ──────────────────────────────────────────
             if video_id:
                 src = os.path.join(CLIPS_DIR, f"preview_{video_id}.mp4")
-                if not os.path.exists(src) or os.path.getsize(src) == 0:
-                    url = f"https://www.youtube.com/watch?v={video_id}"
-                    for fmt in ["best[ext=mp4][height<=720]", "best[ext=mp4]", "best"]:
-                        cmd = ytdlp_base() + [
-                            "-f", fmt, "--no-playlist",
-                            "--retries", "3", "--socket-timeout", "30",
-                            "-o", src, url
-                        ]
-                        r2 = subprocess.run(cmd, capture_output=True, timeout=300)
-                        if r2.returncode == 0 and os.path.exists(src) and os.path.getsize(src) > 0:
-                            break
+                if not os.path.exists(src) or os.path.getsize(src) < 10000:
+                    JOBS[job_id].update({"progress":8,"message":"Downloading from YouTube..."})
+                    if not ytdlp_download(video_id, src, height=1080):
+                        ytdlp_download(video_id, src, height=720)
             elif video_url:
                 src = os.path.join(job_dir,"source.mp4")
-                r = requests.get(video_url,stream=True,timeout=60)
-                with open(src,"wb") as f:
-                    for chunk in r.iter_content(65536): f.write(chunk)
+                JOBS[job_id].update({"progress":8,"message":"Fetching video..."})
+                r2 = requests.get(video_url, stream=True, timeout=120)
+                with open(src,"wb") as f2:
+                    for chunk in r2.iter_content(65536): f2.write(chunk)
             else:
                 JOBS[job_id].update({"status":"error","message":"No video source"}); return
 
-            JOBS[job_id].update({"progress":20,"message":"Trimming clip..."})
+            if not os.path.exists(src) or os.path.getsize(src) < 10000:
+                JOBS[job_id].update({"status":"error","message":"Could not obtain video. Please upload directly."}); return
 
+            # ── Step 2: Extract audio for Whisper ──────────────────────────
+            segments = []
+            audio_path = os.path.join(job_dir, "audio.mp4")
+            if captions or remove_fillers:
+                JOBS[job_id].update({"progress":15,"message":"Extracting audio for transcription..."})
+                subprocess.run(["ffmpeg","-y","-i",src,"-ss",str(start),"-t",str(end-start),
+                                "-vn","-c:a","aac","-b:a","128k",audio_path],
+                               capture_output=True, timeout=120)
+                if os.path.exists(audio_path) and os.path.getsize(audio_path) > 1000:
+                    JOBS[job_id].update({"progress":20,"message":"Transcribing with Whisper AI..."})
+                    segments = transcribe_with_whisper(audio_path)
+                    print(f"Editor job {job_id}: got {len(segments)} Whisper segments")
+
+            # ── Step 3: Filler removal (on raw segment before trimming) ────
+            JOBS[job_id].update({"progress":28,"message":"Trimming clip..."})
+            # First trim the source
+            trimmed = os.path.join(job_dir,"trimmed.mp4")
+            r_trim = subprocess.run(["ffmpeg","-y","-ss",str(start),"-i",src,"-t",str(end-start),
+                                     "-c","copy","-avoid_negative_ts","make_zero",trimmed],
+                                    capture_output=True, timeout=180)
+            if r_trim.returncode != 0 or not os.path.exists(trimmed):
+                subprocess.run(["ffmpeg","-y","-i",src,"-ss",str(start),"-t",str(end-start),
+                                "-c:v","libx264","-preset","fast","-crf","20",
+                                "-c:a","aac","-b:a","128k",trimmed],
+                               capture_output=True, timeout=180)
+
+            current = trimmed
+            if not os.path.exists(current): raise Exception("Trim failed")
+
+            # Filler removal
+            if remove_fillers and segments and filler_words:
+                JOBS[job_id].update({"progress":33,"message":f"Removing filler words ({len(filler_words)} types)..."})
+                filler_out = os.path.join(job_dir,"no_fillers.mp4")
+                # Adjust segment times relative to trim start
+                adj_segs = [{"start":max(0,s["start"]-start),"end":max(0,s["end"]-start),"text":s["text"]}
+                            for s in segments]
+                remove_fillers_from_video(current, adj_segs, filler_words, filler_out)
+                if os.path.exists(filler_out) and os.path.getsize(filler_out) > 10000:
+                    current = filler_out
+
+            # Pause removal (silence detection)
+            if remove_pauses:
+                JOBS[job_id].update({"progress":36,"message":"Removing long pauses..."})
+                pause_out = os.path.join(job_dir,"no_pauses.mp4")
+                subprocess.run([
+                    "ffmpeg","-y","-i",current,
+                    "-af","silenceremove=stop_periods=-1:stop_duration=0.8:stop_threshold=-50dB",
+                    "-c:v","copy",pause_out
+                ], capture_output=True, timeout=180)
+                if os.path.exists(pause_out) and os.path.getsize(pause_out) > 10000:
+                    current = pause_out
+
+            # Audio normalise
+            if audio_norm:
+                JOBS[job_id].update({"progress":39,"message":"Normalising audio levels..."})
+                norm_out = os.path.join(job_dir,"normalised.mp4")
+                subprocess.run([
+                    "ffmpeg","-y","-i",current,
+                    "-af","loudnorm=I=-16:TP=-1.5:LRA=11",
+                    "-c:v","copy",norm_out
+                ], capture_output=True, timeout=180)
+                if os.path.exists(norm_out) and os.path.getsize(norm_out) > 10000:
+                    current = norm_out
+
+            # ── Step 4: B-Roll insertion ────────────────────────────────────
+            if broll and broll_kw:
+                JOBS[job_id].update({"progress":43,"message":"Fetching B-Roll from Pexels..."})
+                pexels_urls = fetch_pexels_videos(broll_kw, count=4)
+                if pexels_urls:
+                    broll_files = []
+                    for i,pu in enumerate(pexels_urls):
+                        bf = os.path.join(job_dir,f"broll_{i}.mp4")
+                        if download_pexels_clip(pu, bf, duration=5):
+                            broll_files.append(bf)
+                    if broll_files:
+                        JOBS[job_id].update({"progress":50,"message":f"Inserting {len(broll_files)} B-Roll clips..."})
+                        broll_out = os.path.join(job_dir,"with_broll.mp4")
+                        insert_broll(current, broll_files, broll_out, broll_freq)
+                        if os.path.exists(broll_out) and os.path.getsize(broll_out) > 10000:
+                            current = broll_out
+
+            # ── Step 5: Format conversion (vertical + horizontal) ───────────
             fmt_list = ["vertical","horizontal"] if formats=="both" else [formats]
             output_files = {}
 
-            for fmt in fmt_list:
-                out_file = os.path.join(job_dir, f"{fmt}.mp4")
-                trim_file = os.path.join(job_dir, f"trim_{fmt}.mp4")
+            for i_fmt, fmt in enumerate(fmt_list):
+                JOBS[job_id].update({"progress":55+i_fmt*15,"message":f"Converting to {fmt} HD format..."})
+                if fmt == "vertical":
+                    vf = "scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,setsar=1"
+                    res_label = "1080x1920"
+                else:
+                    vf = "scale=1920:1080:force_original_aspect_ratio=increase,crop=1920:1080,setsar=1"
+                    res_label = "1920x1080"
 
-                # Step 1: trim
-                vf_trim = "scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920" if fmt=="vertical" \
-                          else "scale=1920:1080:force_original_aspect_ratio=increase,crop=1920:1080"
-                trim_cmd = ["ffmpeg","-y","-i",src,"-ss",str(start),"-to",str(end),
-                            "-vf",vf_trim,"-c:v","libx264","-crf","22","-preset","fast",
-                            "-c:a","aac","-b:a","128k",trim_file]
-                subprocess.run(trim_cmd,capture_output=True)
+                crf = "18" if quality=="1080" else "22"
+                fmt_out = os.path.join(job_dir, f"fmt_{fmt}.mp4")
+                subprocess.run([
+                    "ffmpeg","-y","-i",current,"-vf",vf,
+                    "-c:v","libx264","-preset","slow","-crf",crf,
+                    "-profile:v","high","-level","4.2",
+                    "-c:a","aac","-b:a","192k","-ar","44100",
+                    "-movflags","+faststart","-r","30",fmt_out
+                ], capture_output=True, timeout=600)
 
-                JOBS[job_id].update({"progress":50,"message":f"Processing {fmt} format..."})
+                if not os.path.exists(fmt_out) or os.path.getsize(fmt_out) < 1000:
+                    JOBS[job_id].update({"status":"error","message":f"Format conversion failed for {fmt}"}); return
 
-                current = trim_file
-                # Step 2: logo overlay
+                # ── Step 6: Logo watermark ──────────────────────────────────
+                logo_result = fmt_out
                 if logo_path and os.path.exists(logo_path):
-                    logo_out = os.path.join(job_dir, f"logo_{fmt}.mp4")
-                    pos_map = {
-                        "top-left":"10:10","top-right":"W-w-10:10",
-                        "bottom-left":"10:H-h-10","bottom-right":"W-w-10:H-h-10"
-                    }
+                    JOBS[job_id].update({"progress":70+i_fmt*5,"message":"Applying logo watermark..."})
+                    pos_map = {"top-left":"10:10","top-right":"W-w-10:10",
+                               "bottom-left":"10:H-h-10","bottom-right":"W-w-10:H-h-10"}
                     pos = pos_map.get(logo_pos,"W-w-10:10")
                     alpha = logo_opacity/100.0
-                    logo_vf = f"[1:v]scale=120:-1,format=rgba,colorchannelmixer=aa={alpha}[logo];[0:v][logo]overlay={pos}"
-                    logo_cmd = ["ffmpeg","-y","-i",current,"-i",logo_path,
-                                "-filter_complex",logo_vf,"-c:a","copy",logo_out]
-                    result = subprocess.run(logo_cmd,capture_output=True)
-                    if result.returncode==0: current=logo_out
+                    logo_vf = f"[1:v]scale=150:-1,format=rgba,colorchannelmixer=aa={alpha}[logo];[0:v][logo]overlay={pos}"
+                    logo_out = os.path.join(job_dir, f"logo_{fmt}.mp4")
+                    r3 = subprocess.run(["ffmpeg","-y","-i",fmt_out,"-i",logo_path,
+                                        "-filter_complex",logo_vf,"-c:a","copy",logo_out],
+                                       capture_output=True, timeout=300)
+                    if r3.returncode == 0 and os.path.exists(logo_out):
+                        logo_result = logo_out
 
-                JOBS[job_id].update({"progress":70,"message":"Adding captions..."})
+                # ── Step 7: Lower third ────────────────────────────────────
+                lower_result = logo_result
+                if lower_third and lower_name:
+                    lt_out = os.path.join(job_dir, f"lt_{fmt}.mp4")
+                    safe_name  = lower_name.replace("'","").replace('"','')[:30]
+                    safe_title_lt = lower_title_text.replace("'","").replace('"','')[:40] if lower_title_text else ""
+                    lt_vf = (f"drawbox=x=0:y=ih-90:w=iw:h=90:color=black@0.8:t=fill,"
+                             f"drawtext=text='{safe_name}':fontsize=28:fontcolor=white:x=20:y=ih-75:bold=1,"
+                             f"drawtext=text='{safe_title_lt}':fontsize=18:fontcolor=#aaaaaa:x=20:y=ih-42")
+                    r4 = subprocess.run(["ffmpeg","-y","-i",logo_result,"-vf",lt_vf,
+                                        "-c:v","libx264","-preset","fast","-crf","20",
+                                        "-c:a","copy",lt_out], capture_output=True, timeout=300)
+                    if r4.returncode == 0 and os.path.exists(lt_out):
+                        lower_result = lt_out
 
-                # Step 3: captions via subtitles
+                # ── Step 8: Real Whisper captions ──────────────────────────
+                cap_result = lower_result
                 if captions:
-                    # Build SRT from transcript if available (fallback: placeholder)
+                    JOBS[job_id].update({"progress":78+i_fmt*5,"message":"Burning captions..."})
                     srt_path = os.path.join(job_dir, f"caps_{fmt}.srt")
-                    dur = end - start
-                    # Generate simple timed subtitles (placeholder — real impl uses Whisper)
-                    srt_content = f"1\n00:00:00,000 --> {int(dur//60):02d}:{int(dur%60):02d},000\nAuto-captions powered by Whisper AI\n"
-                    with open(srt_path,"w") as f: f.write(srt_content)
+                    if segments:
+                        # Real Whisper segments — adjust for trim offset
+                        adj = [{"start":max(0,s["start"]-start),"end":max(0,s["end"]-start),"text":s["text"]}
+                               for s in segments]
+                        srt_content = segments_to_srt(adj)
+                    else:
+                        # Fallback placeholder SRT
+                        dur2 = end - start
+                        srt_content = f"1\n00:00:00,000 --> {int(dur2//60):02d}:{int(dur2%60):02d},000\nAuto-captions\n"
+                    with open(srt_path,"w",encoding="utf-8") as f3: f3.write(srt_content)
+                    cap_out2 = os.path.join(job_dir, f"cap_{fmt}.mp4")
+                    if burn_captions_ffmpeg(lower_result, srt_path, cap_out2, cap_style, cap_size, brand_primary):
+                        cap_result = cap_out2
 
-                    font_size = {"small":16,"medium":22,"large":30}.get(cap_size,22)
-                    style_map = {
-                        "bold":    f"FontName=Arial,FontSize={font_size},PrimaryColour=&HFFFFFF,Bold=1,Outline=2,OutlineColour=&H000000,Shadow=1",
-                        "outline": f"FontName=Arial,FontSize={font_size},PrimaryColour=&HFFFFFF,Bold=0,Outline=2,OutlineColour=&H000000",
-                        "box":     f"FontName=Arial,FontSize={font_size},PrimaryColour=&HFFFFFF,Bold=1,BackColour=&H80000000,BorderStyle=3",
-                        "lime":    f"FontName=Arial,FontSize={font_size},PrimaryColour=&H00FF00,Bold=1,Outline=2,OutlineColour=&H000000",
-                    }
-                    vstyle = style_map.get(cap_style, style_map["bold"])
-                    cap_out = os.path.join(job_dir, f"cap_{fmt}.mp4")
-                    cap_cmd = ["ffmpeg","-y","-i",current,
-                               "-vf",f"subtitles={srt_path}:force_style='{vstyle}',setpts=PTS-STARTPTS",
-                               "-c:v","libx264","-crf","22","-preset","fast","-c:a","copy",cap_out]
-                    res = subprocess.run(cap_cmd,capture_output=True)
-                    if res.returncode==0: current=cap_out
-
-                # Final copy
-                import shutil; shutil.copy(current, out_file)
-                size_mb = round(os.path.getsize(out_file)/(1024*1024),1)
+                # Final output
+                final = os.path.join(job_dir, f"{fmt}.mp4")
+                shutil.copy(cap_result, final)
+                size_mb = round(os.path.getsize(final)/(1024*1024),1)
                 output_files[fmt] = {
                     "downloadUrl": f"/download/{job_id}/{fmt}",
                     "publicUrl":   f"/download/{job_id}/{fmt}",
-                    "sizeMb":      size_mb
+                    "sizeMb":      size_mb,
+                    "resolution":  res_label,
+                    "quality":     f"{quality}p HD"
                 }
 
+            # ── Step 9: Generate thumbnail ──────────────────────────────────
+            JOBS[job_id].update({"progress":95,"message":"Generating thumbnail..."})
+            thumb_path = os.path.join(job_dir,"thumbnail.jpg")
+            first_fmt = list(output_files.keys())[0] if output_files else None
+            if first_fmt:
+                thumb_src = os.path.join(job_dir, f"{first_fmt}.mp4")
+                generate_thumbnail(thumb_src, thumb_path, title=video_url or "", accent=brand_primary)
+                if os.path.exists(thumb_path):
+                    for fmt2 in output_files:
+                        output_files[fmt2]["thumbnailUrl"] = f"/thumbnail/{job_id}"
+
             JOBS[job_id].update({"status":"done","progress":100,"message":"Export complete!","files":output_files})
+            threading.Timer(3600, lambda: shutil.rmtree(job_dir, ignore_errors=True)).start()
+
         except Exception as e:
+            import traceback; traceback.print_exc()
             JOBS[job_id].update({"status":"error","message":str(e),"progress":0})
 
     import threading
