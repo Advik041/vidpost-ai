@@ -10,25 +10,25 @@
 <style>
 /* ── Tokens ──────────────────────────────────────────────────────────────── */
 :root {
-  --lime:#c8ff00; --lime2:#a8d400; --lime3:#e8ff80;
+  --lime:#8b5cf6; --lime2:#7c3aed; --lime3:#c4b5fd;
   --r:8px; --r2:16px;
   --font-head:'Syne',sans-serif;
   --font-body:'Outfit',sans-serif;
   --font-mono:'Syne Mono',monospace;
 }
 [data-theme="dark"] {
-  --bg:#080808; --bg2:#111; --bg3:#181818; --bg4:#222;
-  --ink:#f0f0f0; --ink2:#aaa; --ink3:#555;
-  --border:#2a2a2a; --border2:#333;
-  --card:#111; --card2:#161616;
-  --glow:rgba(200,255,0,.12);
+  --bg:#07070e; --bg2:#0d0d18; --bg3:#13131f; --bg4:#1a1a28;
+  --ink:#ededff; --ink2:#8888aa; --ink3:#404060;
+  --border:#1a1a2e; --border2:#252540;
+  --card:#0d0d18; --card2:#13131f;
+  --glow:rgba(139,92,246,.18);
 }
 [data-theme="light"] {
-  --bg:#fafafa; --bg2:#f0f0f0; --bg3:#e8e8e8; --bg4:#ddd;
-  --ink:#0a0a0a; --ink2:#555; --ink3:#aaa;
-  --border:#e0e0e0; --border2:#d0d0d0;
-  --card:#fff; --card2:#f8f8f8;
-  --glow:rgba(168,212,0,.15);
+  --bg:#faf9ff; --bg2:#f0eeff; --bg3:#e8e4ff; --bg4:#ddd8ff;
+  --ink:#09090f; --ink2:#44446a; --ink3:#9090b8;
+  --border:#e2dcff; --border2:#cec5ff;
+  --card:#fff; --card2:#f8f7ff;
+  --glow:rgba(139,92,246,.12);
 }
 
 /* ── Reset ───────────────────────────────────────────────────────────────── */
@@ -252,7 +252,7 @@ input::placeholder,textarea::placeholder{color:var(--ink3)}
 .spin2{width:14px;height:14px;border:2px solid var(--border2);border-top-color:var(--lime);border-radius:50%;animation:spin .65s linear infinite;flex-shrink:0}
 @keyframes spin{to{transform:rotate(360deg)}}
 .err2{display:none;padding:12px 16px;background:rgba(220,50,50,.08);border:1px solid rgba(220,50,50,.3);border-radius:var(--r);font-size:12px;color:#ff6b6b;margin-bottom:12px;font-family:var(--font-mono)}
-.ok2{display:none;padding:12px 16px;background:rgba(200,255,0,.08);border:1px solid rgba(200,255,0,.2);border-radius:var(--r);font-size:12px;color:var(--lime);margin-bottom:12px;font-family:var(--font-mono)}
+.ok2{display:none;padding:12px 16px;background:rgba(139,92,246,.1);border:1px solid rgba(200,255,0,.2);border-radius:var(--r);font-size:12px;color:var(--lime);margin-bottom:12px;font-family:var(--font-mono)}
 
 /* Download btn */
 .dl-btn{padding:10px 18px;background:var(--lime);color:#000;border:none;border-radius:var(--r);font-size:12px;font-family:var(--font-head);font-weight:700;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:6px;transition:all .2s}
@@ -417,7 +417,7 @@ input::placeholder,textarea::placeholder{color:var(--ink3)}
 /* Logo position grid */
 .ed-pos-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px}
 .ed-pos-btn{padding:8px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);cursor:pointer;font-size:12px;transition:all .15s;color:var(--ink2);font-family:var(--font-mono)}
-.ed-pos-btn.on{border-color:var(--lime);background:rgba(200,255,0,.08);color:var(--lime)}
+.ed-pos-btn.on{border-color:var(--lime);background:rgba(139,92,246,.1);color:var(--lime)}
 
 /* Format buttons */
 .ed-fmt-btns{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
@@ -449,7 +449,43 @@ input::placeholder,textarea::placeholder{color:var(--ink3)}
 .cap-style-btn.on{background:var(--lime);color:#000;border-color:var(--lime);font-weight:700}
 .cap-style-btn:hover:not(.on){border-color:var(--lime);color:var(--lime)}
 
-/* ── Hero stats ──────────────────────────────────────────────────────────── */
+
+/* ── Stat cards (analytics) ──────────────────────────────────────────────── */
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);padding:16px;text-align:center}
+.stat-num{font-family:var(--font-head);font-size:28px;font-weight:900;color:var(--lime);line-height:1}
+.stat-label{font-size:10px;font-family:var(--font-mono);color:var(--ink3);text-transform:uppercase;letter-spacing:.08em;margin-top:4px}
+@media(max-width:600px){#analytics-stats{grid-template-columns:repeat(2,1fr)}}
+
+/* ── Billing plan cards ───────────────────────────────────────────────────── */
+.bill-plan-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);padding:20px;position:relative;display:flex;flex-direction:column;gap:0}
+.bill-plan-card.popular{border-color:rgba(200,255,0,.4);background:linear-gradient(135deg,rgba(200,255,0,.05),var(--card))}
+.bill-plan-badge{position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:var(--lime);color:#000;font-family:var(--font-head);font-size:10px;font-weight:800;padding:3px 12px;border-radius:12px;white-space:nowrap}
+.bill-plan-name{font-family:var(--font-head);font-size:14px;font-weight:700;margin-bottom:4px}
+.bill-plan-price{font-family:var(--font-head);font-size:32px;font-weight:900;color:var(--lime);line-height:1;margin-bottom:14px}
+.bill-plan-price span{font-size:13px;color:var(--ink3);font-weight:400}
+.bill-plan-features{list-style:none;display:flex;flex-direction:column;gap:5px;font-size:11px;color:var(--ink2);margin-bottom:16px;flex:1}
+.bill-cta{width:100%;padding:10px;border:1px solid var(--border2);border-radius:var(--r);background:var(--bg3);color:var(--ink2);font-family:var(--font-head);font-size:12px;font-weight:700;cursor:pointer;transition:all .15s}
+.bill-cta:disabled{opacity:.5;cursor:not-allowed}
+.bill-cta.lime{background:var(--lime);color:#000;border-color:var(--lime)}
+.bill-cta.lime:hover{background:var(--lime3)}
+@media(max-width:700px){#billing-plans{grid-template-columns:1fr}}
+
+/* ── Calendar ────────────────────────────────────────────────────────────── */
+.cal-day{min-height:52px;background:var(--bg3);border-radius:var(--r);padding:4px;font-size:10px;font-family:var(--font-mono);color:var(--ink3);cursor:pointer;transition:all .15s;border:1px solid transparent}
+.cal-day:hover{border-color:var(--border2)}
+.cal-day.today{border-color:var(--lime);color:var(--lime)}
+.cal-day.has-post{background:rgba(139,92,246,.1);border-color:rgba(200,255,0,.2)}
+.cal-day-num{font-weight:700;margin-bottom:2px}
+.cal-dot{width:5px;height:5px;border-radius:50%;background:var(--lime);display:inline-block;margin:1px}
+.cal-header{font-size:9px;font-family:var(--font-mono);color:var(--ink3);text-transform:uppercase;text-align:center;padding:4px 0;letter-spacing:.06em}
+
+/* ── Schedule queue items ─────────────────────────────────────────────────── */
+.sched-item{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg3);border-radius:var(--r);border:1px solid var(--border);margin-bottom:6px}
+.sched-plat-badge{padding:2px 8px;border-radius:12px;font-size:10px;font-family:var(--font-mono);background:rgba(200,255,0,.1);color:var(--lime);border:1px solid rgba(200,255,0,.2);white-space:nowrap}
+.sched-status-posted{color:#4caf50;font-size:10px;font-family:var(--font-mono)}
+.sched-status-pending{color:var(--ink3);font-size:10px;font-family:var(--font-mono)}
+.sched-status-failed{color:#f44336;font-size:10px;font-family:var(--font-mono)}
+</style>
 .hero-stats{display:flex;align-items:center;justify-content:center;gap:0;margin:28px auto 0;flex-wrap:wrap;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r2);padding:16px 24px;max-width:600px}
 .hero-stat{text-align:center;padding:0 20px}
 .hero-stat-num{font-family:var(--font-head);font-size:22px;font-weight:900;color:var(--lime);line-height:1}
@@ -463,7 +499,7 @@ input::placeholder,textarea::placeholder{color:var(--ink3)}
 .proof-item strong{color:var(--lime)}
 .proof-sep{color:var(--border2)}
 /* ── Feature tag ─────────────────────────────────────────────────────────── */
-.feat-tag{margin-top:8px;font-size:10px;font-family:var(--font-mono);color:var(--lime);background:rgba(200,255,0,.08);border:1px solid rgba(200,255,0,.15);border-radius:12px;padding:3px 8px;display:inline-block}
+.feat-tag{margin-top:8px;font-size:10px;font-family:var(--font-mono);color:var(--lime);background:rgba(139,92,246,.1);border:1px solid rgba(139,92,246,.25);border-radius:12px;padding:3px 8px;display:inline-block}
 /* ── Testimonial stars ───────────────────────────────────────────────────── */
 .testi-stars{color:#f5a623;font-size:14px;margin-bottom:10px;letter-spacing:2px}
 /* ── Popular badge ───────────────────────────────────────────────────────── */
@@ -509,7 +545,7 @@ input::placeholder,textarea::placeholder{color:var(--ink3)}
       <div class="hero-stat-div"></div>
       <div class="hero-stat"><div class="hero-stat-num">6</div><div class="hero-stat-label">Platforms supported</div></div>
       <div class="hero-stat-div"></div>
-      <div class="hero-stat"><div class="hero-stat-num">$0</div><div class="hero-stat-label">To start today</div></div>
+      <div class="hero-stat"><div class="hero-stat-num">$9</div><div class="hero-stat-label">Starting price</div></div>
     </div>
     <div class="platform-strip">
       <div class="plat-badge"><div class="dot" style="background:#0a66c2"></div>LinkedIn</div>
@@ -524,13 +560,13 @@ input::placeholder,textarea::placeholder{color:var(--ink3)}
   <!-- ══ SOCIAL PROOF BANNER ══ -->
   <div class="proof-banner">
     <div class="proof-inner">
-      <div class="proof-item">⚡ <strong>Opus Clip charges $149/mo</strong> for what we give you free</div>
+      <div class="proof-item">⚡ <strong>Starting at $9/mo</strong> — less than a coffee a week</div>
       <div class="proof-sep">·</div>
       <div class="proof-item">🎬 <strong>B-Roll, captions, filler removal</strong> — all included</div>
       <div class="proof-sep">·</div>
-      <div class="proof-item">🚀 <strong>6 platforms</strong> vs Opus Clip's 4</div>
+      <div class="proof-item">🚀 <strong>6 platforms</strong> including X &amp; Facebook</div>
       <div class="proof-sep">·</div>
-      <div class="proof-item">✨ <strong>Text posts</strong> Opus Clip doesn't even have</div>
+      <div class="proof-item">✨ <strong>AI text posts</strong> for every platform, every clip</div>
     </div>
   </div>
 
@@ -571,36 +607,36 @@ input::placeholder,textarea::placeholder{color:var(--ink3)}
   <section id="features" style="background:var(--bg2);max-width:100%;border-top:1px solid var(--border);border-bottom:1px solid var(--border)">
     <div style="max-width:1200px;margin:0 auto">
       <div class="section-label">Features</div>
-      <h2 class="section-title">Everything Opus Clip has.<br><span class="accent">Plus what they don't.</span></h2>
+      <h2 class="section-title">Everything you need to grow.<br><span class="accent">All in one platform.</span></h2>
       <div class="features-grid">
         <div class="feature-card highlight">
           <div class="feat-icon">🔥</div>
           <div class="feat-title">Virality scoring</div>
           <div class="feat-desc">AI scores every clip 1–10 for hook strength, pacing and emotional pull — so you only post your best content.</div>
-          <div class="feat-tag">Free · Opus Clip charges $29/mo</div>
+          <div class="feat-tag">Included in Creator + Agency plans</div>
         </div>
         <div class="feature-card">
           <div class="feat-icon">🎬</div>
           <div class="feat-title">AI B-Roll insertion</div>
           <div class="feat-desc">Automatically inserts relevant Pexels stock footage between talking-head shots. Keyword-matched to your transcript.</div>
-          <div class="feat-tag">Free · Opus Clip charges $29/mo</div>
+          <div class="feat-tag">Included in Creator + Agency plans</div>
         </div>
         <div class="feature-card">
           <div class="feat-icon">💬</div>
           <div class="feat-title">6 caption styles</div>
-          <div class="feat-desc">Bold, Outline, Box, Lime, Karaoke (word-by-word), Neon. Animated reveals. Emoji auto-insertion. Opus Clip has 4.</div>
+          <div class="feat-desc">Bold, Outline, Box, Lime, Karaoke (word-by-word), Neon. Animated reveals. Emoji auto-insertion. 6 styles total.</div>
         </div>
         <div class="feature-card">
           <div class="feat-icon">🗑</div>
           <div class="feat-title">Filler word removal</div>
           <div class="feat-desc">AI jump-cuts "um", "uh", "like", "you know" automatically. Toggle each word on/off. Tightens pacing instantly.</div>
-          <div class="feat-tag">Free · Opus Clip charges extra</div>
+          <div class="feat-tag">Included in Creator + Agency plans</div>
         </div>
         <div class="feature-card">
           <div class="feat-icon">✍️</div>
           <div class="feat-title">Platform-native text posts</div>
-          <div class="feat-desc">LinkedIn posts, X threads, Instagram captions, TikTok scripts, YouTube descriptions — all from the same video. Opus Clip has zero of these.</div>
-          <div class="feat-tag">Exclusive — Opus Clip has this ✗</div>
+          <div class="feat-desc">LinkedIn posts, X threads, Instagram captions, TikTok scripts, YouTube descriptions — all from the same video. No other tool generates all of these from one video.</div>
+          <div class="feat-tag">Included in all plans</div>
         </div>
         <div class="feature-card">
           <div class="feat-icon">🏷</div>
@@ -616,13 +652,13 @@ input::placeholder,textarea::placeholder{color:var(--ink3)}
           <div class="feat-icon">🖼</div>
           <div class="feat-title">AI thumbnail generator</div>
           <div class="feat-desc">Picks the most expressive frame, adds bold text and colour for maximum CTR. 4 styles generated instantly.</div>
-          <div class="feat-tag">Free · Opus Clip charges $29/mo</div>
+          <div class="feat-tag">Included in Creator + Agency plans</div>
         </div>
         <div class="feature-card">
           <div class="feat-icon">📊</div>
           <div class="feat-title">6 platforms — Facebook & X included</div>
-          <div class="feat-desc">LinkedIn, YouTube, Instagram, TikTok, X/Twitter and Facebook Pages. Opus Clip doesn't support X or Facebook.</div>
-          <div class="feat-tag">Exclusive — Opus Clip missing these</div>
+          <div class="feat-desc">LinkedIn, YouTube, Instagram, TikTok, X/Twitter and Facebook Pages. Every major platform, covered.</div>
+          <div class="feat-tag">Available in all paid plans</div>
         </div>
       </div>
     </div>
@@ -638,35 +674,58 @@ input::placeholder,textarea::placeholder{color:var(--ink3)}
       <div class="plat-card"><div class="plat-emoji">▶</div><div class="plat-info"><div class="plat-name">YouTube Shorts</div><div class="plat-type">Shorts + descriptions</div></div><span class="plat-status-badge live">Live</span></div>
       <div class="plat-card"><div class="plat-emoji">📸</div><div class="plat-info"><div class="plat-name">Instagram</div><div class="plat-type">Reels + captions + hashtags</div></div><span class="plat-status-badge live">Live</span></div>
       <div class="plat-card"><div class="plat-emoji">🎵</div><div class="plat-info"><div class="plat-name">TikTok</div><div class="plat-type">Videos + scripts + sounds</div></div><span class="plat-status-badge live">Live</span></div>
-      <div class="plat-card"><div class="plat-emoji">𝕏</div><div class="plat-info"><div class="plat-name">X / Twitter</div><div class="plat-type">Threads + clips · Opus Clip ✗</div></div><span class="plat-status-badge live">Live</span></div>
-      <div class="plat-card"><div class="plat-emoji">👍</div><div class="plat-info"><div class="plat-name">Facebook</div><div class="plat-type">Page posts + video · Opus Clip ✗</div></div><span class="plat-status-badge live">Live</span></div>
+      <div class="plat-card"><div class="plat-emoji">𝕏</div><div class="plat-info"><div class="plat-name">X / Twitter</div><div class="plat-type">Threads + video clips</div></div><span class="plat-status-badge live">Live</span></div>
+      <div class="plat-card"><div class="plat-emoji">👍</div><div class="plat-info"><div class="plat-name">Facebook</div><div class="plat-type">Page posts + video</div></div><span class="plat-status-badge live">Live</span></div>
     </div>
   </section>
 
-  <!-- ══ COMPARISON ══ -->
+  <!-- ══ HOW IT LOOKS ══ -->
   <section style="background:var(--bg2);max-width:100%;border-top:1px solid var(--border);border-bottom:1px solid var(--border)">
     <div style="max-width:1200px;margin:0 auto">
-      <div class="section-label">Comparison</div>
-      <h2 class="section-title">Why 2,000+ creators<br>chose VidPost over Opus Clip.</h2>
-      <table class="compare-table">
-        <thead>
-          <tr><th>Feature</th><th class="us">VidPost AI</th><th>Opus Clip</th><th>Ocoya</th></tr>
-        </thead>
-        <tbody>
-          <tr><td>AI clip detection + virality score</td><td class="us check">✓ Free</td><td>✓ $19+/mo</td><td class="cross">✗</td></tr>
-          <tr><td>Text post generation (LinkedIn, X, etc.)</td><td class="us check">✓ All 6 platforms</td><td class="cross">✗ None</td><td>✓ Limited</td></tr>
-          <tr><td>Auto-posting platforms</td><td class="us check">✓ 6 platforms</td><td>✓ 4 platforms</td><td>✓ 3 platforms</td></tr>
-          <tr><td>X / Twitter support</td><td class="us check">✓ Included</td><td class="cross">✗ Not supported</td><td class="cross">✗</td></tr>
-          <tr><td>Facebook Page posting</td><td class="us check">✓ Included</td><td class="cross">✗ Not supported</td><td class="cross">✗</td></tr>
-          <tr><td>AI B-Roll</td><td class="us check">✓ Free</td><td>✓ $29+/mo add-on</td><td class="cross">✗</td></tr>
-          <tr><td>Filler word removal</td><td class="us check">✓ Free</td><td>✓ Paid only</td><td class="cross">✗</td></tr>
-          <tr><td>In-browser editor</td><td class="us check">✓ Full studio</td><td>✓ Basic (export to Premiere)</td><td class="cross">✗</td></tr>
-          <tr><td>AI thumbnail generator</td><td class="us check">✓ Free</td><td>✓ $29+/mo add-on</td><td class="cross">✗</td></tr>
-          <tr><td>Brand kit + templates</td><td class="us check">✓ 6 templates</td><td>✓ Paid only</td><td class="cross">✗</td></tr>
-          <tr><td>Starting price</td><td class="us check">✓ $0 free forever</td><td>$19/mo</td><td>$15/mo</td></tr>
-          <tr><td>Customer support quality</td><td class="us check">✓ Direct founder</td><td>⚠ Poor reviews</td><td>✓ Good</td></tr>
-        </tbody>
-      </table>
+      <div class="section-label">See it in action</div>
+      <h2 class="section-title">Watch one video become<br><span class="accent">a week of content.</span></h2>
+      <p class="section-sub">Paste a YouTube URL → AI detects the best moments → clips are ready in under 60 seconds.</p>
+      <!-- Demo preview mockup -->
+      <div style="margin-top:48px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r2);overflow:hidden;max-width:860px;margin-left:auto;margin-right:auto">
+        <!-- Fake browser bar -->
+        <div style="padding:10px 16px;background:var(--bg4);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px">
+          <div style="width:10px;height:10px;border-radius:50%;background:#ff5f57"></div>
+          <div style="width:10px;height:10px;border-radius:50%;background:#febc2e"></div>
+          <div style="width:10px;height:10px;border-radius:50%;background:#28c840"></div>
+          <div style="flex:1;background:var(--bg3);border-radius:6px;padding:4px 12px;font-size:11px;font-family:var(--font-mono);color:var(--ink3);margin:0 12px">vidpost-ai.vercel.app</div>
+        </div>
+        <!-- Demo content -->
+        <div style="padding:24px;display:grid;grid-template-columns:1fr 1fr;gap:16px">
+          <!-- Input side -->
+          <div>
+            <div style="font-size:10px;font-family:var(--font-mono);color:var(--ink3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px">Input</div>
+            <div style="background:var(--bg4);border:1px solid var(--border2);border-radius:var(--r);padding:10px 12px;font-size:12px;font-family:var(--font-mono);color:var(--ink2);margin-bottom:10px">youtube.com/watch?v=dQw4w9WgXcQ</div>
+            <div style="background:var(--lime);color:#fff;text-align:center;padding:10px;border-radius:var(--r);font-family:var(--font-head);font-size:13px;font-weight:700;cursor:pointer">✨ Generate clips →</div>
+            <div style="margin-top:12px;padding:12px;background:var(--bg4);border-radius:var(--r);border:1px solid var(--border)">
+              <div style="font-size:10px;font-family:var(--font-mono);color:var(--ink3);margin-bottom:8px">AI DETECTED 5 VIRAL MOMENTS</div>
+              ${['Hook: The opening 30s','"Key insight at 2:14"','Most emotional moment','Strongest CTA','Best soundbite'].map((t,i)=>`
+              <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border)">
+                <div style="width:18px;height:18px;border-radius:50%;background:rgba(139,92,246,.2);border:1px solid var(--lime);font-size:9px;font-family:var(--font-mono);color:var(--lime);display:flex;align-items:center;justify-content:center">${i+1}</div>
+                <div style="font-size:11px;font-family:var(--font-mono);color:var(--ink2)">${t}</div>
+                <div style="margin-left:auto;font-size:10px;color:var(--lime);font-family:var(--font-mono)">${[8,9,7,8,9][i]}/10</div>
+              </div>`).join('')}
+            </div>
+          </div>
+          <!-- Output side -->
+          <div>
+            <div style="font-size:10px;font-family:var(--font-mono);color:var(--ink3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px">Output — 6 platforms</div>
+            ${[['💼','LinkedIn','Professional insight post with 3 key takeaways...'],['▶','YouTube Short','Hook script ready for Shorts upload...'],['📸','Instagram','Reel caption with 15 hashtags...'],['🎵','TikTok','45-sec viral script with hook...'],['𝕏','X/Twitter','6-tweet thread with engagement...'],['👍','Facebook','Page post driving comments...']].map(([ic,pl,tx])=>`
+            <div style="padding:6px 10px;background:var(--bg4);border-radius:var(--r);border:1px solid var(--border);margin-bottom:5px;display:flex;align-items:center;gap:8px">
+              <span style="font-size:14px">${ic}</span>
+              <div style="flex:1">
+                <div style="font-size:10px;font-weight:700;color:var(--ink);font-family:var(--font-head)">${pl}</div>
+                <div style="font-size:9px;color:var(--ink3);font-family:var(--font-mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${tx}</div>
+              </div>
+              <div style="font-size:9px;color:var(--lime);font-family:var(--font-mono)">✓ Ready</div>
+            </div>`).join('')}
+          </div>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -674,50 +733,57 @@ input::placeholder,textarea::placeholder{color:var(--ink3)}
   <section id="pricing">
     <div class="section-label">Pricing</div>
     <h2 class="section-title">Simple pricing.<br>No surprises.</h2>
-    <p class="section-sub">Start free. Upgrade when you're ready. Cancel anytime — no questions asked.</p>
+    <p class="section-sub">Every feature included. No hidden add-ons. Cancel anytime.</p>
     <div class="pricing-grid">
       <div class="price-card">
-        <div class="price-tier">Free</div>
-        <div class="price-amount">$0</div>
-        <div class="price-period">forever · no card needed</div>
+        <div class="price-tier">Starter</div>
+        <div class="price-amount">$9</div>
+        <div class="price-period">per month · less than a coffee a week</div>
         <ul class="price-features">
-          <li>✓ 5 videos per month</li>
-          <li>✓ LinkedIn + YouTube</li>
+          <li>✓ 15 clips / month</li>
+          <li>✓ LinkedIn + YouTube + TikTok</li>
           <li>✓ AI clip detection</li>
+          <li>✓ Auto-captions (3 styles)</li>
           <li>✓ Text posts included</li>
-          <li>✓ Watermarked clips</li>
+          <li>✓ 1080p export</li>
+          <li style="color:var(--ink3)">✗ B-Roll &amp; filler removal</li>
+          <li style="color:var(--ink3)">✗ Brand kit</li>
         </ul>
-        <button class="btn-price" onclick="showApp()">Get started free →</button>
+        <button class="btn-price" onclick="showApp()">Start Starter plan →</button>
       </div>
       <div class="price-card popular">
         <div class="popular-badge">Most Popular</div>
         <div class="price-tier">Creator</div>
-        <div class="price-amount">$19</div>
-        <div class="price-period">per month · less than Opus Clip</div>
+        <div class="price-amount">$29</div>
+        <div class="price-period">per month · cancel anytime</div>
         <ul class="price-features">
-          <li>✓ Unlimited videos</li>
+          <li>✓ Unlimited clips</li>
           <li>✓ All 6 platforms</li>
           <li>✓ No watermark</li>
-          <li>✓ B-Roll + filler removal</li>
+          <li>✓ AI B-Roll insertion</li>
+          <li>✓ Filler word removal</li>
+          <li>✓ All 6 caption styles</li>
           <li>✓ Brand kit + templates</li>
-          <li>✓ Auto-scheduling</li>
-          <li>✓ Analytics dashboard</li>
           <li>✓ AI thumbnails</li>
+          <li>✓ Post scheduling</li>
+          <li>✓ Analytics dashboard</li>
+          <li>✓ Virality scoring</li>
         </ul>
         <button class="btn-price" onclick="showApp()">Start Creator plan →</button>
-        <div style="font-size:11px;color:var(--ink3);text-align:center;margin-top:8px">7-day free trial included</div>
       </div>
       <div class="price-card">
         <div class="price-tier">Agency</div>
-        <div class="price-amount">$99</div>
-        <div class="price-period">per month</div>
+        <div class="price-amount">$79</div>
+        <div class="price-period">per month · cancel anytime</div>
         <ul class="price-features">
+          <li>✓ Everything in Creator</li>
           <li>✓ 10 client workspaces</li>
           <li>✓ White-label dashboard</li>
           <li>✓ Client approval flow</li>
           <li>✓ Priority support</li>
           <li>✓ Custom domain</li>
           <li>✓ API access</li>
+          <li>✓ Team members (3 seats)</li>
         </ul>
         <button class="btn-price" onclick="showApp()">Start Agency plan →</button>
       </div>
@@ -732,7 +798,7 @@ input::placeholder,textarea::placeholder{color:var(--ink3)}
       <div class="testimonials-grid">
         <div class="testi-card">
           <div class="testi-stars">★★★★★</div>
-          <div class="testi-text">"I was spending 3 hours a week repurposing my YouTube content. VidPost cut that to literally zero. The AI captions are actually good — better than Opus Clip's."</div>
+          <div class="testi-text">"I was spending 3 hours a week repurposing my YouTube content. VidPost cut that to literally zero. The AI captions are actually good — better than anything I've tried."</div>
           <div class="testi-author">
             <div class="testi-avatar">R</div>
             <div><div class="testi-name">Rahul M.</div><div class="testi-role">Finance YouTuber · 45k subscribers</div></div>
@@ -740,7 +806,7 @@ input::placeholder,textarea::placeholder{color:var(--ink3)}
         </div>
         <div class="testi-card">
           <div class="testi-stars">★★★★★</div>
-          <div class="testi-text">"Switched from Opus Clip because VidPost writes my LinkedIn posts too. One video = a full week of content across all my channels. Game changer."</div>
+          <div class="testi-text">"I switched to VidPost because it writes my LinkedIn posts too. One video = a full week of content across all my channels. Game changer."</div>
           <div class="testi-author">
             <div class="testi-avatar">P</div>
             <div><div class="testi-name">Priya S.</div><div class="testi-role">Tech creator · 28k followers</div></div>
@@ -748,7 +814,7 @@ input::placeholder,textarea::placeholder{color:var(--ink3)}
         </div>
         <div class="testi-card">
           <div class="testi-stars">★★★★★</div>
-          <div class="testi-text">"Managing 8 clients with VidPost's agency plan. 20 hours saved every week. The filler removal + B-Roll features alone justify the price — and it's cheaper than Opus Clip."</div>
+          <div class="testi-text">"Managing 8 clients with VidPost's agency plan. 20 hours saved every week. The filler removal + B-Roll features alone justify the price — and the price is unbeatable."</div>
           <div class="testi-author">
             <div class="testi-avatar">A</div>
             <div><div class="testi-name">Arjun T.</div><div class="testi-role">Social media agency · 8 clients</div></div>
@@ -768,8 +834,8 @@ input::placeholder,textarea::placeholder{color:var(--ink3)}
         <div class="faq-a">Yes — paste any public YouTube URL or upload a video file directly (MP4, MOV, AVI up to 500MB). We automatically fetch the transcript for AI clip detection and post generation.</div>
       </div>
       <div class="faq-item">
-        <div class="faq-q" onclick="toggleFaq(this)">How is VidPost different from Opus Clip? <span class="faq-arrow">+</span></div>
-        <div class="faq-a">Four big differences: (1) VidPost generates LinkedIn posts, X threads, Instagram captions and TikTok scripts — Opus Clip doesn't. (2) We support X/Twitter and Facebook — Opus Clip doesn't. (3) B-Roll, filler removal, AI thumbnails are free — Opus Clip charges $29+/mo extra. (4) Our in-browser editor doesn't require exporting to Premiere.</div>
+        <div class="faq-q" onclick="toggleFaq(this)">What makes VidPost AI unique? <span class="faq-arrow">+</span></div>
+        <div class="faq-a">VidPost AI is the only platform that combines AI video clipping with full platform-native text post generation — LinkedIn posts, X threads, Instagram captions, TikTok scripts — all from the same video. We also support X/Twitter and Facebook, include a full studio editor with B-Roll, filler removal, brand kit and AI thumbnails, and auto-post to all 6 platforms from one dashboard.</div>
       </div>
       <div class="faq-item">
         <div class="faq-q" onclick="toggleFaq(this)">Why is my YouTube URL not loading? <span class="faq-arrow">+</span></div>
@@ -845,7 +911,7 @@ input::placeholder,textarea::placeholder{color:var(--ink3)}
       </div>
     </div>
     <div class="footer-bottom">
-      <div class="footer-copy">© 2025 VidPost AI · Beating Opus Clip one feature at a time.</div>
+      <div class="footer-copy">© 2025 VidPost AI · Jaipur, Rajasthan, India.</div>
       <div class="footer-legal">
         <a href="#" onclick="showLegal('privacy');return false">Privacy</a>
         <a href="#" onclick="showLegal('terms');return false">Terms</a>
@@ -860,77 +926,185 @@ input::placeholder,textarea::placeholder{color:var(--ink3)}
 <div class="legal-page" id="legal-privacy">
   <a href="#" onclick="showLanding();return false" style="font-family:var(--font-mono);font-size:12px;color:var(--lime);text-decoration:none;display:block;margin-bottom:24px">← Back to home</a>
   <h1>Privacy Policy</h1>
-  <div class="updated">Last updated: May 19, 2025</div>
-  <p>VidPost AI ("we", "us", "our") operates vidpost-ai.vercel.app. This Privacy Policy explains how we collect, use, and protect your information.</p>
-  <h2>Information We Collect</h2>
+  <div class="updated">Last updated: May 24, 2025 · Effective immediately</div>
+
+  <p>VidPost AI ("Company", "we", "us", "our") is operated by an individual developer based in Jaipur, Rajasthan, India. We operate the website vidpost-ai.vercel.app and related services (collectively, the "Service"). This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our Service. Please read this carefully. If you disagree, please discontinue use.</p>
+
+  <h2>1. Information We Collect</h2>
+  <p><strong>Account Information:</strong> When you register, we collect your email address and a hashed password. We never store plaintext passwords — authentication is handled by Supabase with industry-standard encryption.</p>
+  <p><strong>OAuth Tokens:</strong> When you connect social media accounts (LinkedIn, YouTube, Instagram, TikTok, X/Twitter, Facebook), we store encrypted OAuth access tokens and refresh tokens. These are stored with AES-256 encryption in our Supabase database. We request only the minimum permissions necessary to post content on your behalf.</p>
+  <p><strong>Video Content:</strong> Videos you upload or process via YouTube URL are temporarily stored on Railway servers for processing. All source video files are automatically and permanently deleted within 1 hour of processing completion. Generated clips are retained for up to 24 hours for download, then deleted.</p>
+  <p><strong>Usage Data:</strong> We collect information about how you use the Service, including: clips created, posts published, platforms connected, feature usage, and error logs. This data is used to improve the Service and is never sold.</p>
+  <p><strong>Payment Information:</strong> Billing is handled entirely by Stripe, Inc. We never see, store, or process your payment card details. Stripe's privacy policy applies to all payment data.</p>
+  <p><strong>Log Data:</strong> Our servers automatically record: IP address, browser type, pages visited, time and date of access, and referring URL. This is standard server log data used for security and debugging.</p>
+
+  <h2>2. How We Use Your Information</h2>
   <ul>
-    <li><strong>Account information:</strong> Email address and password when you create an account.</li>
-    <li><strong>OAuth tokens:</strong> Access tokens from LinkedIn, YouTube, Instagram, and TikTok when you connect your accounts. These are encrypted and stored securely.</li>
-    <li><strong>Video content:</strong> Videos you upload for processing. These are deleted from our servers within 1 hour of processing completion.</li>
-    <li><strong>Usage data:</strong> Information about how you use our service, including clips created and posts published.</li>
+    <li>To provide, operate, and maintain the Service</li>
+    <li>To process video clips and generate AI content on your behalf</li>
+    <li>To post content to connected social media platforms when you instruct us to</li>
+    <li>To send transactional emails (account confirmation, password reset, billing receipts)</li>
+    <li>To improve our AI models and clip detection algorithms using anonymised aggregate data</li>
+    <li>To detect, prevent, and address fraud, abuse, and security incidents</li>
+    <li>To comply with legal obligations</li>
   </ul>
-  <h2>How We Use Your Information</h2>
+  <p>We will never send you marketing emails without your explicit consent. We will never sell your personal data to third parties.</p>
+
+  <h2>3. Data Storage and Security</h2>
+  <p>Your account data is stored on Supabase (PostgreSQL) servers in the United States with row-level security (RLS) enabled — meaning each user can only access their own data. OAuth tokens are encrypted at rest. All data transmission uses TLS 1.3 encryption.</p>
+  <p>We implement reasonable technical and organisational security measures. However, no method of transmission over the Internet or electronic storage is 100% secure. We cannot guarantee absolute security.</p>
+
+  <h2>4. Third-Party Services</h2>
+  <p>We use the following third-party services which have their own privacy policies:</p>
   <ul>
-    <li>To provide clip generation and auto-posting services</li>
-    <li>To improve our AI models and clip detection accuracy</li>
-    <li>To send service-related emails (no marketing without consent)</li>
-    <li>To prevent fraud and ensure security</li>
+    <li><strong>Supabase</strong> (database and authentication) — supabase.com/privacy</li>
+    <li><strong>Railway</strong> (backend hosting) — railway.app/privacy</li>
+    <li><strong>Vercel</strong> (frontend hosting) — vercel.com/legal/privacy-policy</li>
+    <li><strong>Stripe</strong> (payment processing) — stripe.com/privacy</li>
+    <li><strong>Groq</strong> (AI text generation) — groq.com/privacy</li>
+    <li><strong>Supadata</strong> (YouTube transcript fetching) — supadata.ai/privacy</li>
   </ul>
-  <h2>Data Storage and Security</h2>
-  <p>Your data is stored on Supabase (PostgreSQL) with row-level security enabled. OAuth tokens are encrypted at rest. Video files are stored temporarily on Railway servers and deleted within 1 hour.</p>
-  <h2>Third-Party Services</h2>
-  <p>We use: Supabase (database), Railway (backend hosting), Vercel (frontend hosting), Groq (AI generation), Supadata (transcript fetching). Each has their own privacy policy.</p>
-  <h2>Your Rights</h2>
-  <p>You can request deletion of your account and all associated data at any time by emailing hello@vidpostai.com. We will process deletion requests within 30 days.</p>
-  <h2>OAuth Permissions</h2>
-  <p>We request only the minimum permissions needed to post content on your behalf. We never read your private messages, contacts, or personal data from connected platforms.</p>
-  <h2>Contact</h2>
-  <p>Questions about privacy? Email us at <a href="mailto:hello@vidpostai.com">hello@vidpostai.com</a></p>
+
+  <h2>5. Data Retention</h2>
+  <p>We retain your account data for as long as your account is active. Video files are deleted within 1 hour. Generated clips are deleted within 24 hours. You may request deletion of your account and all associated data at any time (see Section 7). We will process deletion requests within 30 days.</p>
+
+  <h2>6. OAuth Permissions — What We Access</h2>
+  <p>We request only the permissions necessary to post content on your behalf. We do not access your private messages, follower lists, or personal profile data from connected platforms. Specific permissions requested:</p>
+  <ul>
+    <li><strong>LinkedIn:</strong> w_member_social (post on your behalf)</li>
+    <li><strong>YouTube:</strong> youtube.upload (upload videos)</li>
+    <li><strong>Instagram / Facebook:</strong> pages_manage_posts, publish_video</li>
+    <li><strong>TikTok:</strong> video.publish</li>
+    <li><strong>X/Twitter:</strong> tweet.write, media.write</li>
+  </ul>
+
+  <h2>7. Your Rights</h2>
+  <p>You have the right to: access your personal data, correct inaccurate data, request deletion of your data, withdraw consent at any time, and lodge a complaint with a relevant data protection authority. To exercise any right, email <a href="mailto:hello@vidpostai.com">hello@vidpostai.com</a>.</p>
+
+  <h2>8. Children's Privacy</h2>
+  <p>Our Service is not directed to children under 13. We do not knowingly collect personal information from children under 13. If we discover we have collected such information, we will delete it immediately.</p>
+
+  <h2>9. Changes to This Policy</h2>
+  <p>We may update this Privacy Policy periodically. We will notify users by email of material changes at least 14 days before they take effect. Your continued use after changes constitutes acceptance.</p>
+
+  <h2>10. Contact</h2>
+  <p>VidPost AI · Jaipur, Rajasthan, India · <a href="mailto:hello@vidpostai.com">hello@vidpostai.com</a></p>
 </div>
 
 <div class="legal-page" id="legal-terms">
   <a href="#" onclick="showLanding();return false" style="font-family:var(--font-mono);font-size:12px;color:var(--lime);text-decoration:none;display:block;margin-bottom:24px">← Back to home</a>
   <h1>Terms of Service</h1>
-  <div class="updated">Last updated: May 19, 2025</div>
-  <p>By using VidPost AI, you agree to these Terms of Service. Please read them carefully.</p>
-  <h2>Acceptable Use</h2>
+  <div class="updated">Last updated: May 24, 2025 · Effective immediately</div>
+
+  <p>These Terms of Service ("Terms") govern your access to and use of VidPost AI ("Service"), operated by an individual developer in Jaipur, Rajasthan, India ("we", "us"). By creating an account or using the Service, you agree to be bound by these Terms. If you do not agree, do not use the Service.</p>
+
+  <h2>1. Eligibility</h2>
+  <p>You must be at least 13 years old to use the Service. By using the Service, you represent that you meet this requirement. If you are under 18, you represent that you have your parent or guardian's permission.</p>
+
+  <h2>2. Account Registration</h2>
+  <p>You are responsible for maintaining the confidentiality of your account credentials. You are responsible for all activity that occurs under your account. Notify us immediately at hello@vidpostai.com if you suspect unauthorised access. We reserve the right to terminate accounts that violate these Terms.</p>
+
+  <h2>3. Acceptable Use</h2>
   <p>You agree not to use VidPost AI to:</p>
   <ul>
-    <li>Post content that violates the terms of service of any connected platform</li>
-    <li>Upload or distribute copyrighted content without permission</li>
-    <li>Spam or harass other users on any platform</li>
-    <li>Attempt to reverse engineer or circumvent our systems</li>
-    <li>Use the service for any illegal purpose</li>
+    <li>Upload, process, or distribute content that infringes the intellectual property rights of others</li>
+    <li>Post content that violates the Terms of Service of any connected social media platform</li>
+    <li>Upload content that is defamatory, obscene, threatening, or otherwise unlawful</li>
+    <li>Attempt to reverse engineer, decompile, or extract source code from the Service</li>
+    <li>Use automated scripts, bots, or tools to access the Service in a manner that exceeds reasonable use</li>
+    <li>Resell or sublicense the Service without our written permission</li>
+    <li>Engage in any activity that disrupts, damages, or impairs the Service</li>
+    <li>Circumvent any access controls or security measures</li>
+    <li>Use the Service for any illegal purpose under applicable law</li>
   </ul>
-  <h2>Content Ownership</h2>
-  <p>You retain full ownership of all videos you upload and content you generate. By using our service, you grant us a temporary license to process your content for the purpose of generating clips and posts.</p>
-  <h2>Service Availability</h2>
-  <p>We aim for 99% uptime but do not guarantee uninterrupted service. We are not liable for any losses resulting from service downtime.</p>
-  <h2>Platform Compliance</h2>
-  <p>You are responsible for ensuring your use of auto-posting complies with each platform's terms of service. We are not responsible for account suspensions resulting from policy violations on connected platforms.</p>
-  <h2>Subscriptions and Billing</h2>
-  <p>Paid plans are billed monthly. You can cancel at any time. No refunds for partial months except as described in our Refund Policy.</p>
-  <h2>Limitation of Liability</h2>
-  <p>VidPost AI is provided "as is". We are not liable for any indirect, incidental, or consequential damages arising from your use of the service.</p>
-  <h2>Changes to Terms</h2>
-  <p>We may update these terms. We will notify users by email of material changes. Continued use after changes constitutes acceptance.</p>
-  <h2>Contact</h2>
-  <p>Questions? Email <a href="mailto:hello@vidpostai.com">hello@vidpostai.com</a></p>
+
+  <h2>4. Content Ownership and Licence</h2>
+  <p>You retain full ownership of all videos you upload and all content you generate using the Service. By uploading content, you grant us a limited, non-exclusive, royalty-free, worldwide licence to process your content solely for the purpose of providing the Service (generating clips, captions, and posts). This licence terminates when your content is deleted from our servers.</p>
+  <p>You represent and warrant that you own or have the necessary rights, licences, and permissions to upload any content you submit, and that such content does not violate any third-party rights.</p>
+
+  <h2>5. Platform Compliance</h2>
+  <p>You are solely responsible for ensuring that your use of the auto-posting feature complies with the Terms of Service of each connected social media platform (LinkedIn, YouTube, Instagram, TikTok, X/Twitter, Facebook). We are not liable for any account suspensions, bans, or penalties imposed by third-party platforms as a result of content posted through our Service.</p>
+
+  <h2>6. Subscriptions and Billing</h2>
+  <p>Paid subscriptions are billed monthly in advance. Your subscription automatically renews each month unless cancelled. You may cancel at any time; access continues until the end of the current billing period. We use Stripe for payment processing. All prices are in USD and exclude applicable taxes.</p>
+  <p>We reserve the right to change pricing with 30 days' advance notice. Price changes will not affect your current billing period.</p>
+
+  <h2>7. Service Availability</h2>
+  <p>We aim for maximum uptime but do not guarantee uninterrupted or error-free service. The Service is provided "as is" and "as available". We may perform maintenance, updates, or modifications at any time. We are not liable for any losses resulting from service interruptions.</p>
+
+  <h2>8. AI-Generated Content</h2>
+  <p>VidPost AI uses artificial intelligence to generate captions, post text, and identify viral moments. AI-generated content may contain errors, inaccuracies, or inappropriate suggestions. You are solely responsible for reviewing and approving all AI-generated content before publishing. We are not liable for the accuracy, completeness, or appropriateness of AI-generated content.</p>
+
+  <h2>9. Limitation of Liability</h2>
+  <p>To the maximum extent permitted by applicable law, VidPost AI and its operators shall not be liable for any indirect, incidental, special, consequential, or punitive damages, including loss of profits, data, business, or goodwill, arising from your use of or inability to use the Service, even if we have been advised of the possibility of such damages.</p>
+  <p>Our total liability to you for any claim arising from the Service shall not exceed the amount you paid us in the 3 months preceding the claim.</p>
+
+  <h2>10. Indemnification</h2>
+  <p>You agree to indemnify, defend, and hold harmless VidPost AI and its operators from any claims, damages, liabilities, costs, and expenses (including legal fees) arising from: (a) your use of the Service; (b) content you upload or post; (c) your violation of these Terms; or (d) your violation of any third-party rights.</p>
+
+  <h2>11. Termination</h2>
+  <p>We may terminate or suspend your account immediately, without prior notice, for breach of these Terms. You may terminate your account at any time by emailing hello@vidpostai.com. Upon termination, your right to use the Service ceases and your data will be deleted per our Privacy Policy.</p>
+
+  <h2>12. Governing Law</h2>
+  <p>These Terms shall be governed by the laws of India. Any disputes shall be subject to the exclusive jurisdiction of the courts in Jaipur, Rajasthan, India.</p>
+
+  <h2>13. Changes to Terms</h2>
+  <p>We may update these Terms. We will notify registered users by email of material changes at least 14 days before they take effect. Continued use after the effective date constitutes acceptance of the updated Terms.</p>
+
+  <h2>14. Contact</h2>
+  <p>VidPost AI · Jaipur, Rajasthan, India · <a href="mailto:hello@vidpostai.com">hello@vidpostai.com</a></p>
 </div>
 
 <div class="legal-page" id="legal-refund">
   <a href="#" onclick="showLanding();return false" style="font-family:var(--font-mono);font-size:12px;color:var(--lime);text-decoration:none;display:block;margin-bottom:24px">← Back to home</a>
   <h1>Refund Policy</h1>
-  <div class="updated">Last updated: May 19, 2025</div>
-  <p>We want you to be happy with VidPost AI. Here's our refund policy:</p>
-  <h2>7-Day Money-Back Guarantee</h2>
-  <p>If you're not satisfied within the first 7 days of your paid subscription, contact us at hello@vidpostai.com for a full refund. No questions asked.</p>
-  <h2>After 7 Days</h2>
-  <p>After the first 7 days, refunds are handled on a case-by-case basis. If you experienced a technical issue that prevented you from using the service, we will issue a prorated refund.</p>
-  <h2>Cancellations</h2>
-  <p>You can cancel your subscription at any time. You will retain access until the end of your current billing period. No refund is issued for the remaining period unless under the 7-day guarantee.</p>
-  <h2>How to Request a Refund</h2>
-  <p>Email <a href="mailto:hello@vidpostai.com">hello@vidpostai.com</a> with your account email and reason. We process all refund requests within 5 business days.</p>
+  <div class="updated">Last updated: May 24, 2025 · Effective immediately</div>
+
+  <p>At VidPost AI, we want you to be completely satisfied with your subscription. This Refund Policy explains when and how you can request a refund.</p>
+
+  <h2>1. Our Refund Commitment</h2>
+  <p>We offer a <strong>3-day refund window</strong> on all new subscriptions. If you subscribe to any paid plan (Starter, Creator, or Agency) and are not satisfied for any reason, you may request a full refund within 3 days of the initial charge. No questions asked.</p>
+
+  <h2>2. Eligibility for Refund</h2>
+  <p>You are eligible for a full refund if:</p>
+  <ul>
+    <li>You request the refund within 3 days of the initial subscription charge</li>
+    <li>You have not exceeded 10 clip generations since subscribing (to prevent abuse)</li>
+    <li>This is your first subscription (first-time subscribers only for the 3-day guarantee)</li>
+  </ul>
+  <p>You may also be eligible for a refund outside this window if:</p>
+  <ul>
+    <li>A verified technical issue on our end prevented you from using the Service for more than 72 consecutive hours</li>
+    <li>You were charged incorrectly due to a billing error</li>
+    <li>Duplicate charges occurred</li>
+  </ul>
+
+  <h2>3. How to Request a Refund</h2>
+  <p>Email <a href="mailto:hello@vidpostai.com">hello@vidpostai.com</a> with:</p>
+  <ul>
+    <li>Subject line: "Refund Request — [your email address]"</li>
+    <li>Your account email address</li>
+    <li>The date of the charge</li>
+    <li>Reason for the refund (optional, but helps us improve)</li>
+  </ul>
+  <p>We respond to all refund requests within <strong>24 hours</strong>. Approved refunds are processed within <strong>5–10 business days</strong> to your original payment method, depending on your bank or card issuer.</p>
+
+  <h2>4. Renewals and Cancellations</h2>
+  <p>Monthly subscription renewals (after the first month) are not eligible for refund. To avoid being charged for the next month, cancel your subscription at least 24 hours before your renewal date via the Billing tab in your dashboard or by emailing us.</p>
+  <p>Cancellation takes effect at the end of your current billing period. You retain full access to all paid features until then.</p>
+
+  <h2>5. Partial Refunds</h2>
+  <p>We do not issue partial or prorated refunds for mid-cycle cancellations except in cases of verified technical failures or billing errors on our part.</p>
+
+  <h2>6. Plan Changes</h2>
+  <p>If you upgrade from Starter to Creator or Agency, your billing date resets and you are charged the new plan amount immediately. The unused days of your old plan are not refunded but are prorated as a credit applied to your first invoice on the new plan (handled automatically by Stripe).</p>
+
+  <h2>7. Agency Plan</h2>
+  <p>The Agency plan refund policy is the same as other plans. The 3-day refund window applies to the first Agency subscription charge.</p>
+
+  <h2>8. Contact</h2>
+  <p>For any billing questions, disputes, or refund requests: <a href="mailto:hello@vidpostai.com">hello@vidpostai.com</a><br>
+  VidPost AI · Jaipur, Rajasthan, India</p>
 </div>
 
 <!-- ── App View ─────────────────────────────────────────────────────────────── -->
@@ -951,6 +1125,9 @@ input::placeholder,textarea::placeholder{color:var(--ink3)}
       <button class="app-tab on" onclick="switchTab('clips')">✂ Video Clips</button>
       <button class="app-tab" onclick="switchTab('editor')">✏ Editor</button>
       <button class="app-tab" onclick="switchTab('posts')">✍ Text Posts</button>
+      <button class="app-tab" onclick="switchTab('schedule')">📅 Schedule</button>
+      <button class="app-tab" onclick="switchTab('analytics')">📊 Analytics</button>
+      <button class="app-tab" onclick="switchTab('billing')">💳 Billing</button>
       <button class="app-tab" onclick="switchTab('connect')">🔗 Connect</button>
     </div>
 
@@ -1005,7 +1182,7 @@ input::placeholder,textarea::placeholder{color:var(--ink3)}
         <div class="ed-load-card">
           <div style="font-size:52px;margin-bottom:16px">🎬</div>
           <div style="font-family:var(--font-head);font-size:24px;font-weight:900;margin-bottom:8px;letter-spacing:-.5px">All-in-one AI editor</div>
-          <div style="font-size:13px;color:var(--ink2);margin-bottom:6px;line-height:1.7">Everything Opus Clip charges $29–149/month for — free on VidPost AI</div>
+          <div style="font-size:13px;color:var(--ink2);margin-bottom:6px;line-height:1.7">Your complete AI content studio — all in one platform</div>
           <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin-bottom:24px">
             <span style="padding:4px 10px;background:rgba(200,255,0,.1);border:1px solid rgba(200,255,0,.2);border-radius:12px;font-size:10px;font-family:var(--font-mono);color:var(--lime)">✂ Smart trim</span>
             <span style="padding:4px 10px;background:rgba(200,255,0,.1);border:1px solid rgba(200,255,0,.2);border-radius:12px;font-size:10px;font-family:var(--font-mono);color:var(--lime)">🗑 Filler removal</span>
@@ -1142,7 +1319,7 @@ input::placeholder,textarea::placeholder{color:var(--ink3)}
 
               <div class="ed-v-card">
                 <div style="font-family:var(--font-head);font-size:13px;font-weight:700;margin-bottom:4px">🔥 Virality score</div>
-                <div style="font-size:11px;color:var(--ink2);margin-bottom:10px;line-height:1.6">AI scores your clip's hook strength, pacing, and emotional pull — like Opus Clip's virality score but completely free</div>
+                <div style="font-size:11px;color:var(--ink2);margin-bottom:10px;line-height:1.6">AI scores your clip's hook strength, pacing, and emotional pull — powered by Groq AI</div>
                 <button onclick="runViralityScore()" style="width:100%;padding:8px;background:rgba(200,255,0,.12);border:1px solid rgba(200,255,0,.3);border-radius:var(--r);color:var(--lime);font-size:12px;font-family:var(--font-head);font-weight:700;cursor:pointer;transition:all .15s" id="ed-vscore-btn">Analyse →</button>
                 <div id="ed-virality-result" style="display:none;margin-top:12px">
                   <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
@@ -1164,7 +1341,7 @@ input::placeholder,textarea::placeholder{color:var(--ink3)}
                 <label class="ed-toggle"><input type="checkbox" id="ed-captions" checked onchange="updateCapPreview()"/><span class="ed-slider"></span></label>
               </div>
 
-              <div class="ed-field-label">STYLE — 6 templates (Opus Clip has 4)</div>
+              <div class="ed-field-label">STYLE — 6 templates</div>
               <div class="ed-cap-grid">
                 <button class="ed-cap-btn on" data-style="bold" onclick="selectCapStyle(this)">
                   <div class="ed-cap-preview-box" style="background:#111"><span style="color:#fff;font-weight:900;text-shadow:2px 2px 0 #000,-2px -2px 0 #000;font-size:13px;font-family:var(--font-head)">Bold</span></div>
@@ -1237,7 +1414,7 @@ input::placeholder,textarea::placeholder{color:var(--ink3)}
             <div id="rt-broll" class="ed-rpanel" style="display:none">
               <div style="padding:12px;background:linear-gradient(135deg,rgba(200,255,0,.06),rgba(0,200,255,.04));border:1px solid rgba(200,255,0,.15);border-radius:var(--r2)">
                 <div style="font-family:var(--font-head);font-size:13px;font-weight:700;margin-bottom:4px">🎬 AI B-Roll — free</div>
-                <div style="font-size:11px;color:var(--ink2);line-height:1.6">Opus Clip charges $29/mo for B-Roll. Ours is included. Automatically inserts relevant stock footage to break up talking-head shots.</div>
+                <div style="font-size:11px;color:var(--ink2);line-height:1.6">Automatically inserts relevant stock footage between talking-head segments. Keyword-matched to your transcript.</div>
               </div>
 
               <div style="display:flex;align-items:center;gap:8px">
@@ -1356,7 +1533,7 @@ input::placeholder,textarea::placeholder{color:var(--ink3)}
             <div id="rt-thumb" class="ed-rpanel" style="display:none">
               <div style="padding:12px;background:var(--bg3);border-radius:var(--r2);border:1px solid var(--border);margin-bottom:4px">
                 <div style="font-family:var(--font-head);font-size:13px;font-weight:700;margin-bottom:4px">🖼 AI Thumbnail Generator</div>
-                <div style="font-size:11px;color:var(--ink2);line-height:1.6">AI picks the most expressive frame from your clip and adds bold text + colour for maximum CTR. Opus Clip charges $29/mo for this.</div>
+                <div style="font-size:11px;color:var(--ink2);line-height:1.6">AI picks the most expressive frame from your clip and adds bold text + colour for maximum CTR. Included in Creator and Agency plans.</div>
               </div>
               <button onclick="generateThumbnails()" style="width:100%;padding:9px;background:rgba(200,255,0,.12);border:1px solid rgba(200,255,0,.3);border-radius:var(--r);color:var(--lime);font-size:12px;font-family:var(--font-head);font-weight:700;cursor:pointer" id="ed-thumb-btn">Generate thumbnails →</button>
               <div id="ed-thumb-grid" class="ed-thumb-grid" style="display:none"></div>
@@ -1399,6 +1576,173 @@ input::placeholder,textarea::placeholder{color:var(--ink3)}
         </div><!-- /ed-columns -->
       </div><!-- /ed-workspace -->
     </div>
+    <!-- SCHEDULE -->
+    <div id="tab-schedule" class="app-panel">
+      <div class="a-card" style="margin-bottom:14px">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+          <div>
+            <div style="font-family:var(--font-head);font-size:16px;font-weight:800;margin-bottom:3px">📅 Post Scheduler</div>
+            <div style="font-size:12px;color:var(--ink2)">Schedule posts to any platform at any time — no manual posting needed</div>
+          </div>
+          <button onclick="showScheduleForm()" style="padding:9px 18px;background:var(--lime);color:#000;border:none;border-radius:var(--r);font-family:var(--font-head);font-size:13px;font-weight:800;cursor:pointer">+ New scheduled post</button>
+        </div>
+      </div>
+
+      <!-- New post form -->
+      <div id="sched-form" class="a-card" style="display:none;margin-bottom:14px">
+        <div style="font-family:var(--font-head);font-size:13px;font-weight:700;margin-bottom:12px">Schedule a new post</div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <textarea id="sched-text" rows="3" placeholder="Post text / caption…" style="padding:10px;border-radius:var(--r);border:1px solid var(--border2);background:var(--bg3);color:var(--ink);font-family:var(--font-body);font-size:13px;resize:vertical"></textarea>
+          <input type="text" id="sched-video" placeholder="Video URL (optional — leave blank for text-only post)" style="padding:9px 12px;border-radius:var(--r);border:1px solid var(--border2);background:var(--bg3);color:var(--ink);font-family:var(--font-mono);font-size:12px"/>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+            <span style="font-size:11px;font-family:var(--font-mono);color:var(--ink3)">PLATFORMS:</span>
+            <div id="sched-plat-btns" style="display:flex;gap:6px;flex-wrap:wrap"></div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <span style="font-size:11px;font-family:var(--font-mono);color:var(--ink3)">DATE &amp; TIME:</span>
+            <input type="datetime-local" id="sched-dt" style="padding:7px 10px;border-radius:var(--r);border:1px solid var(--border2);background:var(--bg3);color:var(--ink);font-family:var(--font-mono);font-size:12px"/>
+            <span style="font-size:10px;color:var(--ink3);font-family:var(--font-mono)">Your local time</span>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button onclick="submitSchedule()" style="flex:1;padding:10px;background:var(--lime);color:#000;border:none;border-radius:var(--r);font-family:var(--font-head);font-size:13px;font-weight:800;cursor:pointer">Schedule post →</button>
+            <button onclick="$('sched-form').style.display='none'" style="padding:10px 16px;background:var(--bg4);border:1px solid var(--border2);border-radius:var(--r);color:var(--ink2);font-family:var(--font-mono);font-size:12px;cursor:pointer">Cancel</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Calendar view -->
+      <div class="a-card" style="margin-bottom:14px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+          <div style="font-family:var(--font-head);font-size:13px;font-weight:700">Calendar</div>
+          <div style="display:flex;gap:6px">
+            <button onclick="calPrev()" class="ed-ctrl-btn">‹</button>
+            <span id="cal-month-lbl" style="font-family:var(--font-mono);font-size:12px;color:var(--ink2);min-width:100px;text-align:center"></span>
+            <button onclick="calNext()" class="ed-ctrl-btn">›</button>
+          </div>
+        </div>
+        <div id="cal-grid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px"></div>
+      </div>
+
+      <!-- Upcoming queue -->
+      <div class="a-card">
+        <div style="font-family:var(--font-head);font-size:13px;font-weight:700;margin-bottom:10px">Upcoming queue</div>
+        <div id="sched-list"><div style="text-align:center;padding:32px;color:var(--ink3);font-family:var(--font-mono);font-size:12px">Loading…</div></div>
+      </div>
+    </div>
+
+    <!-- ANALYTICS -->
+    <div id="tab-analytics" class="app-panel">
+      <!-- Top stats row -->
+      <div id="analytics-stats" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px">
+        <div class="stat-card"><div class="stat-num" id="an-clips">—</div><div class="stat-label">Total clips</div></div>
+        <div class="stat-card"><div class="stat-num" id="an-posts">—</div><div class="stat-label">Posts published</div></div>
+        <div class="stat-card"><div class="stat-num" id="an-posts30">—</div><div class="stat-label">Posts (30 days)</div></div>
+        <div class="stat-card"><div class="stat-num" id="an-sched">—</div><div class="stat-label">Scheduled</div></div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+        <!-- Platform breakdown -->
+        <div class="a-card">
+          <div style="font-family:var(--font-head);font-size:13px;font-weight:700;margin-bottom:12px">Posts by platform</div>
+          <div id="an-platforms"></div>
+        </div>
+        <!-- Clip activity chart -->
+        <div class="a-card">
+          <div style="font-family:var(--font-head);font-size:13px;font-weight:700;margin-bottom:12px">Clip activity (14 days)</div>
+          <div id="an-chart" style="height:120px;display:flex;align-items:flex-end;gap:3px"></div>
+        </div>
+      </div>
+
+      <!-- Recent posts -->
+      <div class="a-card">
+        <div style="font-family:var(--font-head);font-size:13px;font-weight:700;margin-bottom:10px">Recent posts</div>
+        <div id="an-recent"></div>
+      </div>
+    </div>
+
+    <!-- BILLING -->
+    <div id="tab-billing" class="app-panel">
+      <!-- Current plan card -->
+      <div id="billing-plan-card" class="a-card" style="margin-bottom:14px;background:linear-gradient(135deg,rgba(200,255,0,.06),rgba(0,200,255,.03));border:1px solid rgba(200,255,0,.2)">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px">
+          <div>
+            <div style="font-size:11px;font-family:var(--font-mono);color:var(--ink3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">Current plan</div>
+            <div style="font-family:var(--font-head);font-size:28px;font-weight:900;color:var(--lime)" id="bill-plan-name">Free</div>
+            <div style="font-size:12px;color:var(--ink2);margin-top:4px" id="bill-plan-sub">5 clips/month · LinkedIn + YouTube</div>
+          </div>
+          <div style="text-align:right">
+            <div id="bill-usage-wrap">
+              <div style="font-size:11px;font-family:var(--font-mono);color:var(--ink3);margin-bottom:4px">CLIPS THIS MONTH</div>
+              <div style="font-family:var(--font-head);font-size:22px;font-weight:800"><span id="bill-used">0</span><span style="color:var(--ink3);font-size:14px">/<span id="bill-limit">5</span></span></div>
+              <div style="height:4px;background:var(--border);border-radius:2px;margin-top:6px;width:120px"><div id="bill-usage-bar" style="height:100%;background:var(--lime);border-radius:2px;transition:width .5s;width:0%"></div></div>
+            </div>
+            <button id="bill-portal-btn" onclick="openBillingPortal()" style="display:none;margin-top:10px;padding:7px 14px;background:var(--bg4);border:1px solid var(--border2);border-radius:var(--r);color:var(--ink2);font-size:11px;font-family:var(--font-mono);cursor:pointer">Manage subscription →</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Plan cards -->
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px" id="billing-plans">
+        <!-- Starter -->
+        <div class="bill-plan-card" id="bpc-free">
+          <div class="bill-plan-name">Starter</div>
+          <div class="bill-plan-price">$9<span>/mo</span></div>
+          <ul class="bill-plan-features">
+            <li>✓ 15 clips / month</li>
+            <li>✓ LinkedIn + YouTube + TikTok</li>
+            <li>✓ AI text posts</li>
+            <li>✓ 1080p export</li>
+            <li>✓ 3 caption styles</li>
+            <li style="color:var(--ink3)">✗ B-Roll &amp; filler removal</li>
+            <li style="color:var(--ink3)">✗ Brand kit</li>
+          </ul>
+          <button class="bill-cta" id="free-btn" onclick="startCheckout('starter')">Upgrade to Starter →</button>
+        </div>
+        <!-- Creator -->
+        <div class="bill-plan-card popular" id="bpc-creator">
+          <div class="bill-plan-badge">Most Popular</div>
+          <div class="bill-plan-name">Creator</div>
+          <div class="bill-plan-price">$29<span>/mo</span></div>
+          <ul class="bill-plan-features">
+            <li>✓ Unlimited clips</li>
+            <li>✓ All 6 platforms</li>
+            <li>✓ No watermark</li>
+            <li>✓ AI B-Roll + filler removal</li>
+            <li>✓ All 6 caption styles</li>
+            <li>✓ Brand kit + templates</li>
+            <li>✓ AI thumbnails + virality score</li>
+            <li>✓ Analytics + scheduling</li>
+          </ul>
+          <button class="bill-cta lime" onclick="startCheckout('creator')" id="creator-btn">Upgrade to Creator →</button>
+        </div>
+        <!-- Agency -->
+        <div class="bill-plan-card" id="bpc-agency">
+          <div class="bill-plan-name">Agency</div>
+          <div class="bill-plan-price">$79<span>/mo</span></div>
+          <ul class="bill-plan-features">
+            <li>✓ Everything in Creator</li>
+            <li>✓ 10 client workspaces</li>
+            <li>✓ White-label dashboard</li>
+            <li>✓ Client approval flow</li>
+            <li>✓ Priority support</li>
+            <li>✓ API access + team seats</li>
+          </ul>
+          <button class="bill-cta" onclick="startCheckout('agency')" id="agency-btn">Upgrade to Agency →</button>
+        </div>
+      </div>
+
+      <!-- FAQ -->
+      <div class="a-card">
+        <div style="font-family:var(--font-head);font-size:13px;font-weight:700;margin-bottom:10px">Billing FAQ</div>
+        <div style="display:flex;flex-direction:column;gap:8px;font-size:12px;color:var(--ink2);line-height:1.7">
+          <div><strong style="color:var(--ink)">Can I cancel anytime?</strong> Yes — one click in Manage Subscription. No questions asked. Access continues until end of billing period.</div>
+          <div><strong style="color:var(--ink)">What payment methods?</strong> All major credit/debit cards via Stripe. 100% secure — we never see your card details.</div>
+          <div><strong style="color:var(--ink)">Refunds?</strong> Full refund within 3 days of any new subscription. Email hello@vidpostai.com and we respond within 24 hours.</div>
+          <div><strong style="color:var(--ink)">Can I switch plans?</strong> Yes — upgrade or downgrade anytime. Charges are prorated automatically.</div>
+        </div>
+      </div>
+    </div>
+
     <!-- POSTS -->
     <div id="tab-posts" class="app-panel">
       <div class="a-card">
@@ -1507,11 +1851,14 @@ function toggleFaq(el){
 
 // ── App tabs ──────────────────────────────────────────────────────────────────
 function switchTab(t){
-  const tabs=['clips','editor','posts','connect'];
+  const tabs=['clips','editor','posts','schedule','analytics','billing','connect'];
   document.querySelectorAll('.app-tab').forEach((b,i)=>b.classList.toggle('on',tabs[i]===t));
   document.querySelectorAll('.app-panel').forEach(p=>p.classList.remove('on'));
   document.getElementById('tab-'+t).classList.add('on');
-  if(t==='connect') renderConnect();
+  if(t==='connect')  renderConnect();
+  if(t==='analytics') loadAnalytics();
+  if(t==='billing')   loadBilling();
+  if(t==='schedule')  loadSchedule();
 }
 
 function switchSrc(s){
@@ -2229,6 +2576,252 @@ function pollEditorJob(jid){
     }catch(e){clearInterval(iv);}
   },2000);
 }
+// ═══════════════════════════════════════════════════════════════════════════
+// BILLING
+// ═══════════════════════════════════════════════════════════════════════════
+let userPlan='free', userUsage=0, userLimit=5;
+
+async function loadBilling(){
+  if(!currentUser) return;
+  try{
+    const d=await apiFetch(`/billing/status?user_id=${currentUser.id}`,'GET');
+    userPlan=d.plan||'free'; userUsage=d.usage||0; userLimit=d.limit||5;
+    renderBillingUI(d);
+  }catch(e){ console.log('billing:',e); }
+}
+
+function renderBillingUI(d){
+  const planNames={free:'Free Plan',creator:'Creator Plan',agency:'Agency Plan'};
+  const planSubs={free:'5 clips/month · LinkedIn + YouTube',creator:'Unlimited clips · All 6 platforms · No watermark',agency:'10 client workspaces · White-label · Priority support'};
+  $('bill-plan-name').textContent=planNames[d.plan]||'Free Plan';
+  $('bill-plan-sub').textContent=planSubs[d.plan]||'';
+  $('bill-used').textContent=d.usage||0;
+  $('bill-limit').textContent=d.limit>=999?'∞':d.limit;
+  const pct=d.limit>=999?((d.usage/50)*100):((d.usage/d.limit)*100);
+  $('bill-usage-bar').style.width=Math.min(100,pct)+'%';
+  $('bill-usage-bar').style.background=pct>80?'#f44336':pct>60?'#ff9800':'var(--lime)';
+  // Update plan card CTAs
+  if(d.plan==='free'){
+    $('free-btn').textContent='Current plan'; $('free-btn').disabled=true;
+    $('creator-btn').textContent='Upgrade to Creator →'; $('creator-btn').disabled=false;
+    $('agency-btn').textContent='Upgrade to Agency →'; $('agency-btn').disabled=false;
+    $('bill-portal-btn').style.display='none';
+  } else if(d.plan==='creator'){
+    $('free-btn').textContent='Downgrade'; $('free-btn').disabled=false;
+    $('creator-btn').textContent='Current plan'; $('creator-btn').disabled=true;
+    $('agency-btn').textContent='Upgrade to Agency →'; $('agency-btn').disabled=false;
+    $('bill-portal-btn').style.display='inline-block';
+  } else if(d.plan==='agency'){
+    $('free-btn').textContent='Downgrade'; $('free-btn').disabled=false;
+    $('creator-btn').textContent='Downgrade'; $('creator-btn').disabled=false;
+    $('agency-btn').textContent='Current plan'; $('agency-btn').disabled=true;
+    $('bill-portal-btn').style.display='inline-block';
+  }
+}
+
+async function startCheckout(plan){
+  if(!currentUser){showErr('Sign in first');return;}
+  const btn=$(plan==='creator'?'creator-btn':'agency-btn');
+  btn.textContent='Loading…'; btn.disabled=true;
+  try{
+    const d=await apiFetch('/billing/create-checkout',{user_id:currentUser.id,plan});
+    if(d.url) window.open(d.url,'_blank');
+    else showErr(d.error||'Checkout failed');
+  }catch(e){showErr('Checkout error: '+e.message);}
+  btn.disabled=false; btn.textContent=plan==='creator'?'Upgrade to Creator →':'Upgrade to Agency →';
+}
+
+async function openBillingPortal(){
+  if(!currentUser) return;
+  try{
+    const d=await apiFetch('/billing/portal',{user_id:currentUser.id});
+    if(d.url) window.open(d.url,'_blank');
+    else showErr(d.error||'Portal unavailable');
+  }catch(e){showErr('Portal error: '+e.message);}
+}
+
+// Check billing on stripe redirect
+const bParams=new URLSearchParams(window.location.search);
+if(bParams.get('billing')==='success'){
+  showOk('🎉 Payment successful! Your plan has been upgraded.');
+  window.history.replaceState({},'','/');
+  setTimeout(loadBilling,2000);
+}
+
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ANALYTICS
+// ═══════════════════════════════════════════════════════════════════════════
+async function loadAnalytics(){
+  if(!currentUser) return;
+  try{
+    const d=await apiFetch(`/analytics/summary?user_id=${currentUser.id}`,'GET');
+    renderAnalytics(d);
+  }catch(e){ console.log('analytics:',e); }
+}
+
+function renderAnalytics(d){
+  $('an-clips').textContent=d.total_clips||0;
+  $('an-posts').textContent=d.total_posts||0;
+  $('an-posts30').textContent=d.posts_30d||0;
+  $('an-sched').textContent=d.scheduled_pending||0;
+
+  // Platform breakdown bars
+  const bp=d.platform_breakdown||{};
+  const total=Object.values(bp).reduce((a,b)=>a+b,0)||1;
+  const plColors={linkedin:'#0a66c2',youtube:'#ff0000',instagram:'#e1306c',tiktok:'#ff0050',twitter:'#000',facebook:'#1877f2'};
+  $('an-platforms').innerHTML=Object.entries(bp).length
+    ? Object.entries(bp).sort((a,b)=>b[1]-a[1]).map(([p,n])=>`
+        <div style="margin-bottom:8px">
+          <div style="display:flex;justify-content:space-between;font-size:11px;font-family:var(--font-mono);color:var(--ink2);margin-bottom:3px">
+            <span style="text-transform:capitalize">${p}</span><span>${n}</span>
+          </div>
+          <div style="height:5px;background:var(--border);border-radius:2px">
+            <div style="height:100%;width:${(n/total*100).toFixed(0)}%;background:${plColors[p]||'var(--lime)'};border-radius:2px;transition:width .6s"></div>
+          </div>
+        </div>`).join('')
+    : '<div style="color:var(--ink3);font-size:12px;font-family:var(--font-mono)">No posts yet</div>';
+
+  // Clip activity bar chart (last 14 days)
+  const daily=d.daily_clips||[];
+  const maxV=Math.max(...daily.map(x=>x.count),1);
+  // Generate last 14 days
+  const days=[]; const now=new Date();
+  for(let i=13;i>=0;i--){const d2=new Date(now);d2.setDate(d2.getDate()-i);days.push(d2.toISOString().slice(0,10));}
+  const dayMap=Object.fromEntries(daily.map(x=>[x.date,x.count]));
+  $('an-chart').innerHTML=days.map(day=>{
+    const v=dayMap[day]||0;
+    const h=v>0?Math.max(8,(v/maxV*100)):4;
+    const label=day.slice(5);
+    return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px" title="${day}: ${v} clips">
+      <div style="width:100%;height:${h}%;background:${v>0?'var(--lime)':'var(--border)'};border-radius:2px 2px 0 0;transition:height .4s;min-height:4px"></div>
+      <div style="font-size:8px;font-family:var(--font-mono);color:var(--ink3);writing-mode:vertical-lr;transform:rotate(180deg)">${label}</div>
+    </div>`;
+  }).join('');
+
+  // Recent posts
+  const recent=d.recent_posts||[];
+  $('an-recent').innerHTML=recent.length
+    ? recent.map(p=>`<div class="sched-item">
+        <span class="sched-plat-badge">${p.platform||'—'}</span>
+        <div style="flex:1;font-size:12px;color:var(--ink2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(p.content||'').slice(0,80)}</div>
+        <span class="sched-status-posted">✓ Posted</span>
+      </div>`).join('')
+    : '<div style="color:var(--ink3);font-size:12px;font-family:var(--font-mono);padding:16px;text-align:center">No posts yet — start posting to see your analytics here</div>';
+}
+
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SCHEDULING
+// ═══════════════════════════════════════════════════════════════════════════
+let schedPosts=[], calDate=new Date();
+let schedSelPlats=new Set(['linkedin']);
+
+function showScheduleForm(){
+  $('sched-form').style.display='block';
+  // Set default datetime to tomorrow 9am
+  const t=new Date(); t.setDate(t.getDate()+1); t.setHours(9,0,0,0);
+  $('sched-dt').value=t.toISOString().slice(0,16);
+  // Render platform buttons
+  const plats=['linkedin','youtube','instagram','tiktok','twitter','facebook'];
+  $('sched-plat-btns').innerHTML=plats.map(p=>`
+    <button class="ed-pill ${schedSelPlats.has(p)?'on':''}" onclick="toggleSchedPlat(this,'${p}')">${p}</button>
+  `).join('');
+}
+
+function toggleSchedPlat(btn,p){
+  if(schedSelPlats.has(p)) schedSelPlats.delete(p); else schedSelPlats.add(p);
+  btn.classList.toggle('on',schedSelPlats.has(p));
+}
+
+async function submitSchedule(){
+  if(!currentUser){showErr('Sign in first');return;}
+  const text=$('sched-text').value.trim();
+  const dt=$('sched-dt').value;
+  if(!text||!dt||schedSelPlats.size===0){showErr('Fill in text, platforms and date/time');return;}
+  try{
+    const d=await apiFetch('/schedule/create',{
+      user_id:currentUser.id,
+      platforms:[...schedSelPlats],
+      text, video_url:$('sched-video').value.trim(),
+      scheduled_at:new Date(dt).toISOString()
+    });
+    showOk(`✅ Scheduled for ${[...schedSelPlats].join(', ')}`);
+    $('sched-form').style.display='none';
+    $('sched-text').value=''; $('sched-video').value='';
+    loadSchedule();
+  }catch(e){showErr('Schedule failed: '+e.message);}
+}
+
+async function loadSchedule(){
+  if(!currentUser) return;
+  try{
+    const d=await apiFetch(`/schedule/list?user_id=${currentUser.id}`,'GET');
+    schedPosts=d.posts||[];
+    renderScheduleList();
+    renderCalendar();
+  }catch(e){ console.log('schedule:',e); }
+}
+
+function renderScheduleList(){
+  const upcoming=schedPosts.filter(p=>p.status==='pending').sort((a,b)=>a.scheduled_at>b.scheduled_at?1:-1);
+  const past=schedPosts.filter(p=>p.status!=='pending').slice(-5).reverse();
+  const all=[...upcoming,...past];
+  $('sched-list').innerHTML=all.length
+    ? all.map(p=>{
+        const dt=new Date(p.scheduled_at);
+        const dtStr=dt.toLocaleDateString()+' '+dt.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+        const statusCls={'pending':'sched-status-pending','posted':'sched-status-posted','failed':'sched-status-failed'}[p.status]||'sched-status-pending';
+        return `<div class="sched-item">
+          <span class="sched-plat-badge">${p.platform}</span>
+          <div style="flex:1">
+            <div style="font-size:12px;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(p.text||'').slice(0,60)}</div>
+            <div style="font-size:10px;font-family:var(--font-mono);color:var(--ink3);margin-top:2px">${dtStr}</div>
+          </div>
+          <span class="${statusCls}">${p.status==='pending'?'⏰ Pending':p.status==='posted'?'✓ Posted':'✗ Failed'}</span>
+          ${p.status==='pending'?`<button onclick="deleteScheduled('${p.id}')" style="padding:3px 8px;background:transparent;border:1px solid var(--border2);border-radius:var(--r);color:var(--ink3);font-size:10px;cursor:pointer;font-family:var(--font-mono)">✕</button>`:''}
+        </div>`;
+      }).join('')
+    : '<div style="color:var(--ink3);font-size:12px;font-family:var(--font-mono);padding:24px;text-align:center">No scheduled posts yet. Click "+ New scheduled post" to get started.</div>';
+}
+
+async function deleteScheduled(id){
+  if(!currentUser) return;
+  try{
+    await apiFetch(`/schedule/delete/${id}?user_id=${currentUser.id}`,'DELETE');
+    schedPosts=schedPosts.filter(p=>p.id!==id);
+    renderScheduleList(); renderCalendar();
+  }catch(e){showErr('Delete failed');}
+}
+
+// Calendar
+function renderCalendar(){
+  const y=calDate.getFullYear(), m=calDate.getMonth();
+  $('cal-month-lbl').textContent=calDate.toLocaleDateString('en',{month:'long',year:'numeric'});
+  const first=new Date(y,m,1), last=new Date(y,m+1,0);
+  const today=new Date(); today.setHours(0,0,0,0);
+  // Day headers
+  const dayLabels=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  let html=dayLabels.map(d=>`<div class="cal-header">${d}</div>`).join('');
+  // Empty cells
+  for(let i=0;i<first.getDay();i++) html+=`<div></div>`;
+  // Post map
+  const postMap={};
+  schedPosts.forEach(p=>{const d=new Date(p.scheduled_at).toDateString();postMap[d]=(postMap[d]||0)+1;});
+  // Day cells
+  for(let d=1;d<=last.getDate();d++){
+    const dt=new Date(y,m,d); const key=dt.toDateString();
+    const isToday=dt.getTime()===today.getTime();
+    const hasPosts=postMap[key]||0;
+    html+=`<div class="cal-day ${isToday?'today':''} ${hasPosts?'has-post':''}" title="${hasPosts?hasPosts+' post(s)':''}">
+      <div class="cal-day-num">${d}</div>
+      ${hasPosts?Array(Math.min(hasPosts,3)).fill('<span class="cal-dot"></span>').join(''):''}
+    </div>`;
+  }
+  $('cal-grid').innerHTML=html;
+}
+function calPrev(){calDate=new Date(calDate.getFullYear(),calDate.getMonth()-1,1);renderCalendar();}
+function calNext(){calDate=new Date(calDate.getFullYear(),calDate.getMonth()+1,1);renderCalendar();}
 </script>
 </body>
 </html>
