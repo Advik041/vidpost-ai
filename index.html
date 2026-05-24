@@ -481,11 +481,10 @@ input::placeholder,textarea::placeholder{color:var(--ink3)}
 
 /* ── Schedule queue items ─────────────────────────────────────────────────── */
 .sched-item{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg3);border-radius:var(--r);border:1px solid var(--border);margin-bottom:6px}
-.sched-plat-badge{padding:2px 8px;border-radius:12px;font-size:10px;font-family:var(--font-mono);background:rgba(200,255,0,.1);color:var(--lime);border:1px solid rgba(200,255,0,.2);white-space:nowrap}
+.sched-plat-badge{padding:2px 8px;border-radius:12px;font-size:10px;font-family:var(--font-mono);background:rgba(139,92,246,.1);color:var(--lime);border:1px solid rgba(139,92,246,.2);white-space:nowrap}
 .sched-status-posted{color:#4caf50;font-size:10px;font-family:var(--font-mono)}
 .sched-status-pending{color:var(--ink3);font-size:10px;font-family:var(--font-mono)}
 .sched-status-failed{color:#f44336;font-size:10px;font-family:var(--font-mono)}
-</style>
 .hero-stats{display:flex;align-items:center;justify-content:center;gap:0;margin:28px auto 0;flex-wrap:wrap;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r2);padding:16px 24px;max-width:600px}
 .hero-stat{text-align:center;padding:0 20px}
 .hero-stat-num{font-family:var(--font-head);font-size:22px;font-weight:900;color:var(--lime);line-height:1}
@@ -493,17 +492,13 @@ input::placeholder,textarea::placeholder{color:var(--ink3)}
 .hero-stat-div{width:1px;height:32px;background:var(--border2)}
 .hero-badge-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--lime);margin-right:6px;animation:pulse-dot 2s infinite}
 @keyframes pulse-dot{0%,100%{opacity:1}50%{opacity:.4}}
-/* ── Proof banner ────────────────────────────────────────────────────────── */
-.proof-banner{background:rgba(200,255,0,.05);border-top:1px solid rgba(200,255,0,.12);border-bottom:1px solid rgba(200,255,0,.12);padding:14px 20px}
+.proof-banner{background:rgba(139,92,246,.05);border-top:1px solid rgba(139,92,246,.12);border-bottom:1px solid rgba(139,92,246,.12);padding:14px 20px}
 .proof-inner{display:flex;align-items:center;justify-content:center;gap:16px;flex-wrap:wrap;max-width:1200px;margin:0 auto;font-size:12px;color:var(--ink2);font-family:var(--font-mono)}
 .proof-item strong{color:var(--lime)}
 .proof-sep{color:var(--border2)}
-/* ── Feature tag ─────────────────────────────────────────────────────────── */
 .feat-tag{margin-top:8px;font-size:10px;font-family:var(--font-mono);color:var(--lime);background:rgba(139,92,246,.1);border:1px solid rgba(139,92,246,.25);border-radius:12px;padding:3px 8px;display:inline-block}
-/* ── Testimonial stars ───────────────────────────────────────────────────── */
 .testi-stars{color:#f5a623;font-size:14px;margin-bottom:10px;letter-spacing:2px}
-/* ── Popular badge ───────────────────────────────────────────────────────── */
-.popular-badge{position:absolute;top:-14px;left:50%;transform:translateX(-50%);background:var(--lime);color:#000;font-family:var(--font-head);font-size:11px;font-weight:800;padding:4px 14px;border-radius:12px;white-space:nowrap}
+.popular-badge{position:absolute;top:-14px;left:50%;transform:translateX(-50%);background:var(--lime);color:#fff;font-family:var(--font-head);font-size:11px;font-weight:800;padding:4px 14px;border-radius:12px;white-space:nowrap}
 .price-card.popular{position:relative}
 </style>
 </head>
@@ -685,44 +680,84 @@ input::placeholder,textarea::placeholder{color:var(--ink3)}
       <div class="section-label">See it in action</div>
       <h2 class="section-title">Watch one video become<br><span class="accent">a week of content.</span></h2>
       <p class="section-sub">Paste a YouTube URL → AI detects the best moments → clips are ready in under 60 seconds.</p>
-      <!-- Demo preview mockup -->
+      <!-- Demo mockup - static HTML -->
       <div style="margin-top:48px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r2);overflow:hidden;max-width:860px;margin-left:auto;margin-right:auto">
-        <!-- Fake browser bar -->
+        <!-- Browser chrome -->
         <div style="padding:10px 16px;background:var(--bg4);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px">
           <div style="width:10px;height:10px;border-radius:50%;background:#ff5f57"></div>
           <div style="width:10px;height:10px;border-radius:50%;background:#febc2e"></div>
           <div style="width:10px;height:10px;border-radius:50%;background:#28c840"></div>
           <div style="flex:1;background:var(--bg3);border-radius:6px;padding:4px 12px;font-size:11px;font-family:var(--font-mono);color:var(--ink3);margin:0 12px">vidpost-ai.vercel.app</div>
         </div>
-        <!-- Demo content -->
+        <!-- Two-column demo -->
         <div style="padding:24px;display:grid;grid-template-columns:1fr 1fr;gap:16px">
-          <!-- Input side -->
+          <!-- LEFT: input + clip list -->
           <div>
             <div style="font-size:10px;font-family:var(--font-mono);color:var(--ink3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px">Input</div>
             <div style="background:var(--bg4);border:1px solid var(--border2);border-radius:var(--r);padding:10px 12px;font-size:12px;font-family:var(--font-mono);color:var(--ink2);margin-bottom:10px">youtube.com/watch?v=dQw4w9WgXcQ</div>
-            <div style="background:var(--lime);color:#fff;text-align:center;padding:10px;border-radius:var(--r);font-family:var(--font-head);font-size:13px;font-weight:700;cursor:pointer">✨ Generate clips →</div>
+            <div style="background:var(--lime);color:#fff;text-align:center;padding:10px;border-radius:var(--r);font-family:var(--font-head);font-size:13px;font-weight:700">✨ Generate clips →</div>
             <div style="margin-top:12px;padding:12px;background:var(--bg4);border-radius:var(--r);border:1px solid var(--border)">
-              <div style="font-size:10px;font-family:var(--font-mono);color:var(--ink3);margin-bottom:8px">AI DETECTED 5 VIRAL MOMENTS</div>
-              ${['Hook: The opening 30s','"Key insight at 2:14"','Most emotional moment','Strongest CTA','Best soundbite'].map((t,i)=>`
+              <div style="font-size:10px;font-family:var(--font-mono);color:var(--ink3);margin-bottom:8px;text-transform:uppercase;letter-spacing:.06em">AI detected 5 viral moments</div>
               <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border)">
-                <div style="width:18px;height:18px;border-radius:50%;background:rgba(139,92,246,.2);border:1px solid var(--lime);font-size:9px;font-family:var(--font-mono);color:var(--lime);display:flex;align-items:center;justify-content:center">${i+1}</div>
-                <div style="font-size:11px;font-family:var(--font-mono);color:var(--ink2)">${t}</div>
-                <div style="margin-left:auto;font-size:10px;color:var(--lime);font-family:var(--font-mono)">${[8,9,7,8,9][i]}/10</div>
-              </div>`).join('')}
+                <div style="width:18px;height:18px;border-radius:50%;background:rgba(139,92,246,.2);border:1px solid var(--lime);font-size:9px;font-family:var(--font-mono);color:var(--lime);display:flex;align-items:center;justify-content:center;flex-shrink:0">1</div>
+                <div style="font-size:11px;font-family:var(--font-mono);color:var(--ink2);flex:1">Hook: The opening 30s</div>
+                <div style="font-size:10px;color:var(--lime);font-family:var(--font-mono)">8/10</div>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border)">
+                <div style="width:18px;height:18px;border-radius:50%;background:rgba(139,92,246,.2);border:1px solid var(--lime);font-size:9px;font-family:var(--font-mono);color:var(--lime);display:flex;align-items:center;justify-content:center;flex-shrink:0">2</div>
+                <div style="font-size:11px;font-family:var(--font-mono);color:var(--ink2);flex:1">Key insight at 2:14</div>
+                <div style="font-size:10px;color:var(--lime);font-family:var(--font-mono)">9/10</div>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border)">
+                <div style="width:18px;height:18px;border-radius:50%;background:rgba(139,92,246,.2);border:1px solid var(--lime);font-size:9px;font-family:var(--font-mono);color:var(--lime);display:flex;align-items:center;justify-content:center;flex-shrink:0">3</div>
+                <div style="font-size:11px;font-family:var(--font-mono);color:var(--ink2);flex:1">Most emotional moment</div>
+                <div style="font-size:10px;color:var(--lime);font-family:var(--font-mono)">7/10</div>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border)">
+                <div style="width:18px;height:18px;border-radius:50%;background:rgba(139,92,246,.2);border:1px solid var(--lime);font-size:9px;font-family:var(--font-mono);color:var(--lime);display:flex;align-items:center;justify-content:center;flex-shrink:0">4</div>
+                <div style="font-size:11px;font-family:var(--font-mono);color:var(--ink2);flex:1">Strongest CTA</div>
+                <div style="font-size:10px;color:var(--lime);font-family:var(--font-mono)">8/10</div>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;padding:5px 0">
+                <div style="width:18px;height:18px;border-radius:50%;background:rgba(139,92,246,.2);border:1px solid var(--lime);font-size:9px;font-family:var(--font-mono);color:var(--lime);display:flex;align-items:center;justify-content:center;flex-shrink:0">5</div>
+                <div style="font-size:11px;font-family:var(--font-mono);color:var(--ink2);flex:1">Best soundbite</div>
+                <div style="font-size:10px;color:var(--lime);font-family:var(--font-mono)">9/10</div>
+              </div>
             </div>
           </div>
-          <!-- Output side -->
+          <!-- RIGHT: output platforms -->
           <div>
             <div style="font-size:10px;font-family:var(--font-mono);color:var(--ink3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px">Output — 6 platforms</div>
-            ${[['💼','LinkedIn','Professional insight post with 3 key takeaways...'],['▶','YouTube Short','Hook script ready for Shorts upload...'],['📸','Instagram','Reel caption with 15 hashtags...'],['🎵','TikTok','45-sec viral script with hook...'],['𝕏','X/Twitter','6-tweet thread with engagement...'],['👍','Facebook','Page post driving comments...']].map(([ic,pl,tx])=>`
-            <div style="padding:6px 10px;background:var(--bg4);border-radius:var(--r);border:1px solid var(--border);margin-bottom:5px;display:flex;align-items:center;gap:8px">
-              <span style="font-size:14px">${ic}</span>
-              <div style="flex:1">
-                <div style="font-size:10px;font-weight:700;color:var(--ink);font-family:var(--font-head)">${pl}</div>
-                <div style="font-size:9px;color:var(--ink3);font-family:var(--font-mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${tx}</div>
-              </div>
+            <div style="padding:7px 10px;background:var(--bg4);border-radius:var(--r);border:1px solid var(--border);margin-bottom:5px;display:flex;align-items:center;gap:8px">
+              <span style="font-size:14px">💼</span>
+              <div style="flex:1"><div style="font-size:11px;font-weight:700;color:var(--ink);font-family:var(--font-head)">LinkedIn</div><div style="font-size:10px;color:var(--ink3);font-family:var(--font-mono)">Professional insight post with 3 key takeaways...</div></div>
               <div style="font-size:9px;color:var(--lime);font-family:var(--font-mono)">✓ Ready</div>
-            </div>`).join('')}
+            </div>
+            <div style="padding:7px 10px;background:var(--bg4);border-radius:var(--r);border:1px solid var(--border);margin-bottom:5px;display:flex;align-items:center;gap:8px">
+              <span style="font-size:14px">▶</span>
+              <div style="flex:1"><div style="font-size:11px;font-weight:700;color:var(--ink);font-family:var(--font-head)">YouTube Short</div><div style="font-size:10px;color:var(--ink3);font-family:var(--font-mono)">Hook script ready for Shorts upload...</div></div>
+              <div style="font-size:9px;color:var(--lime);font-family:var(--font-mono)">✓ Ready</div>
+            </div>
+            <div style="padding:7px 10px;background:var(--bg4);border-radius:var(--r);border:1px solid var(--border);margin-bottom:5px;display:flex;align-items:center;gap:8px">
+              <span style="font-size:14px">📸</span>
+              <div style="flex:1"><div style="font-size:11px;font-weight:700;color:var(--ink);font-family:var(--font-head)">Instagram</div><div style="font-size:10px;color:var(--ink3);font-family:var(--font-mono)">Reel caption with 15 hashtags...</div></div>
+              <div style="font-size:9px;color:var(--lime);font-family:var(--font-mono)">✓ Ready</div>
+            </div>
+            <div style="padding:7px 10px;background:var(--bg4);border-radius:var(--r);border:1px solid var(--border);margin-bottom:5px;display:flex;align-items:center;gap:8px">
+              <span style="font-size:14px">🎵</span>
+              <div style="flex:1"><div style="font-size:11px;font-weight:700;color:var(--ink);font-family:var(--font-head)">TikTok</div><div style="font-size:10px;color:var(--ink3);font-family:var(--font-mono)">45-sec viral script with hook...</div></div>
+              <div style="font-size:9px;color:var(--lime);font-family:var(--font-mono)">✓ Ready</div>
+            </div>
+            <div style="padding:7px 10px;background:var(--bg4);border-radius:var(--r);border:1px solid var(--border);margin-bottom:5px;display:flex;align-items:center;gap:8px">
+              <span style="font-size:14px">𝕏</span>
+              <div style="flex:1"><div style="font-size:11px;font-weight:700;color:var(--ink);font-family:var(--font-head)">X / Twitter</div><div style="font-size:10px;color:var(--ink3);font-family:var(--font-mono)">6-tweet thread with engagement...</div></div>
+              <div style="font-size:9px;color:var(--lime);font-family:var(--font-mono)">✓ Ready</div>
+            </div>
+            <div style="padding:7px 10px;background:var(--bg4);border-radius:var(--r);border:1px solid var(--border);display:flex;align-items:center;gap:8px">
+              <span style="font-size:14px">👍</span>
+              <div style="flex:1"><div style="font-size:11px;font-weight:700;color:var(--ink);font-family:var(--font-head)">Facebook</div><div style="font-size:10px;color:var(--ink3);font-family:var(--font-mono)">Page post driving comments...</div></div>
+              <div style="font-size:9px;color:var(--lime);font-family:var(--font-mono)">✓ Ready</div>
+            </div>
           </div>
         </div>
       </div>
@@ -2620,15 +2655,24 @@ function renderBillingUI(d){
 }
 
 async function startCheckout(plan){
-  if(!currentUser){showErr('Sign in first');return;}
-  const btn=$(plan==='creator'?'creator-btn':'agency-btn');
-  btn.textContent='Loading…'; btn.disabled=true;
+  if(!currentUser){showErr('Sign in first to upgrade');return;}
+  const btn=$(plan==='creator'?'creator-btn':plan==='agency'?'agency-btn':'free-btn');
+  if(btn){btn.textContent='Loading…';btn.disabled=true;}
   try{
     const d=await apiFetch('/billing/create-checkout',{user_id:currentUser.id,plan});
-    if(d.url) window.open(d.url,'_blank');
-    else showErr(d.error||'Checkout failed');
-  }catch(e){showErr('Checkout error: '+e.message);}
-  btn.disabled=false; btn.textContent=plan==='creator'?'Upgrade to Creator →':'Upgrade to Agency →';
+    if(d.url){
+      window.location.href=d.url;
+    } else if(d.error && d.error.includes('not configured')){
+      // Stripe not yet configured — show friendly message
+      showErr('💳 Stripe billing is being set up. Email hello@vidpostai.com to get early access pricing.');
+    } else {
+      showErr(d.error||'Checkout failed — please try again');
+    }
+  }catch(e){
+    showErr('Checkout error: '+e.message);
+  }finally{
+    if(btn){btn.disabled=false;btn.textContent=plan==='creator'?'Upgrade to Creator →':plan==='agency'?'Upgrade to Agency →':'Upgrade to Starter →';}
+  }
 }
 
 async function openBillingPortal(){
