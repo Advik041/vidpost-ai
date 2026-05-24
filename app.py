@@ -45,6 +45,8 @@ os.makedirs(UPLOADS_DIR, exist_ok=True)
 GROQ_KEY    = os.environ.get("GROQ_API_KEY", "")
 SUPADATA    = os.environ.get("SUPADATA_API_KEY", "")
 PROXY       = os.environ.get("PROXY_URL", "")
+PEXELS_KEY  = os.environ.get("PEXELS_API_KEY", "")
+OPENAI_KEY  = os.environ.get("OPENAI_API_KEY", "")   # for Whisper transcription
 
 def find_ytdlp():
     for p in ["/usr/bin/yt-dlp","/usr/local/bin/yt-dlp","/root/.nix-profile/bin/yt-dlp"]:
@@ -1118,6 +1120,197 @@ Rules:
                 })
     return clips
 
+
+# ════════════════════════════════════════════════════════════════════════════════
+# WHISPER TRANSCRIPTION
+# ════════════════════════════════════════════════════════════════════════════════
+def transcribe_with_whisper(audio_path):
+    segments = []
+    # Groq Whisper (free + fast)
+    if GROQ_KEY and os.path.exists(audio_path):
+        try:
+            with open(audio_path, "rb") as f:
+                resp = requests.post(
+                    "https://api.groq.com/openai/v1/audio/transcriptions",
+                    headers={"Authorization": f"Bearer {GROQ_KEY}"},
+                    files={"file": (os.path.basename(audio_path), f, "audio/mp4")},
+                    data={"model": "whisper-large-v3", "response_format": "verbose_json",
+                          "timestamp_granularities[]": "segment"},
+                    timeout=120)
+            if resp.ok:
+                segs = resp.json().get("segments", [])
+                segments = [{"start": s["start"], "end": s["end"], "text": s["text"].strip()} for s in segs]
+                print(f"Groq Whisper OK: {len(segments)} segments")
+                return segments
+        except Exception as e:
+            print(f"Groq Whisper: {e}")
+    # OpenAI Whisper fallback
+    if OPENAI_KEY and os.path.exists(audio_path):
+        try:
+            with open(audio_path, "rb") as f:
+                resp = requests.post(
+                    "https://api.openai.com/v1/audio/transcriptions",
+                    headers={"Authorization": f"Bearer {OPENAI_KEY}"},
+                    files={"file": (os.path.basename(audio_path), f, "audio/mp4")},
+                    data={"model": "whisper-1", "response_format": "verbose_json",
+                          "timestamp_granularities[]": "segment"},
+                    timeout=120)
+            if resp.ok:
+                segs = resp.json().get("segments", [])
+                segments = [{"start": s["start"], "end": s["end"], "text": s["text"].strip()} for s in segs]
+                print(f"OpenAI Whisper OK: {len(segments)} segments")
+                return segments
+        except Exception as e:
+            print(f"OpenAI Whisper: {e}")
+    return segments
+
+def segments_to_srt(segments, offset=0.0):
+    def ts(s):
+        s = max(0, s - offset)
+        return f"{int(s//3600):02d}:{int((s%3600)//60):02d}:{int(s%60):02d},{int((s%1)*1000):03d}"
+    return "\n".join(f"{i}\n{ts(s['start'])} --> {ts(s['end'])}\n{s['text']}\n" for i,s in enumerate(segments,1))
+
+def burn_captions_ffmpeg(inp, srt_path, out, style="bold", size="medium", accent="#8b5cf6"):
+    fs = {"small":16,"medium":22,"large":30}.get(size,22)
+    def hex_ass(h):
+        h=h.lstrip("#"); r,g,b=int(h[0:2],16),int(h[2:4],16),int(h[4:6],16)
+        return f"&H00{b:02X}{g:02X}{r:02X}"
+    acc=hex_ass(accent)
+    sm = {
+        "bold":    f"FontName=Arial,FontSize={fs},PrimaryColour=&H00FFFFFF,Bold=1,Outline=2,OutlineColour=&H00000000,Shadow=1,Alignment=2",
+        "outline": f"FontName=Arial,FontSize={fs},PrimaryColour=&H00FFFFFF,Bold=0,Outline=2,OutlineColour=&H00000000,Alignment=2",
+        "box":     f"FontName=Arial,FontSize={fs},PrimaryColour=&H00FFFFFF,Bold=1,BackColour=&H80000000,BorderStyle=3,Alignment=2",
+        "lime":    f"FontName=Arial,FontSize={fs},PrimaryColour={acc},Bold=1,Outline=2,OutlineColour=&H00000000,Alignment=2",
+        "neon":    f"FontName=Arial,FontSize={fs},PrimaryColour=&H00FFFFFF,Bold=1,Outline=3,OutlineColour={acc},Shadow=2,Alignment=2",
+        "karaoke": f"FontName=Arial,FontSize={fs},PrimaryColour=&H00FFFFFF,SecondaryColour={acc},Bold=1,Outline=1,Alignment=2",
+    }
+    r = subprocess.run(["ffmpeg","-y","-i",inp,"-vf",f"subtitles={srt_path}:force_style='{sm.get(style,sm[chr(98)+chr(111)+chr(108)+chr(100)])}'","-c:v","libx264","-preset","fast","-crf","20","-c:a","copy",out], capture_output=True, text=True, timeout=300)
+    return r.returncode == 0
+
+
+# ════════════════════════════════════════════════════════════════════════════════
+# PEXELS B-ROLL
+# ════════════════════════════════════════════════════════════════════════════════
+def fetch_pexels_videos(keywords, count=3):
+    if not PEXELS_KEY: return []
+    results = []
+    for kw in [k.strip() for k in keywords.replace(","," ").split() if k.strip()][:3]:
+        try:
+            resp = requests.get("https://api.pexels.com/videos/search",
+                headers={"Authorization": PEXELS_KEY},
+                params={"query":kw,"per_page":3,"orientation":"portrait","size":"medium"},
+                timeout=15)
+            if resp.ok:
+                for v in resp.json().get("videos",[]):
+                    for vf in v.get("video_files",[]):
+                        if vf.get("quality") in ("hd","sd") and vf.get("width",0)<=1080:
+                            results.append(vf["link"]); break
+        except Exception as e:
+            print(f"Pexels {kw}: {e}")
+    return results[:count]
+
+def download_pexels_clip(url, out_path, duration=5):
+    try:
+        r = requests.get(url, stream=True, timeout=60)
+        raw = out_path+".raw.mp4"
+        with open(raw,"wb") as f:
+            for chunk in r.iter_content(65536): f.write(chunk)
+        subprocess.run(["ffmpeg","-y","-i",raw,"-t",str(duration),"-c:v","libx264","-preset","fast","-crf","22","-an",out_path], capture_output=True, timeout=60)
+        if os.path.exists(raw): os.remove(raw)
+        return os.path.exists(out_path) and os.path.getsize(out_path)>1000
+    except Exception as e:
+        print(f"Pexels dl: {e}"); return False
+
+def insert_broll(main_video, broll_clips, output_path, frequency="medium"):
+    if not broll_clips: shutil.copy(main_video, output_path); return True
+    try:
+        probe = subprocess.run(["ffprobe","-v","quiet","-print_format","json","-show_format",main_video], capture_output=True, text=True)
+        total = float(json.loads(probe.stdout).get("format",{}).get("duration",60))
+        interval = {"low":30,"medium":20,"high":12}.get(frequency,20)
+        job_dir = os.path.dirname(output_path)
+        concat_list, pos, bi = [], 0.0, 0
+        while pos < total:
+            seg_end = min(pos+interval, total)
+            sp = os.path.join(job_dir, f"bseg_{int(pos)}.mp4")
+            subprocess.run(["ffmpeg","-y","-i",main_video,"-ss",str(pos),"-t",str(seg_end-pos),"-c","copy",sp], capture_output=True, timeout=60)
+            if os.path.exists(sp): concat_list.append(sp)
+            if bi < len(broll_clips) and seg_end < total: concat_list.append(broll_clips[bi]); bi += 1
+            pos = seg_end
+        cf = os.path.join(job_dir,"broll_concat.txt")
+        with open(cf,"w") as f:
+            for p in concat_list: f.write(f"file '{p}'\n")
+        r = subprocess.run(["ffmpeg","-y","-f","concat","-safe","0","-i",cf,"-c:v","libx264","-preset","fast","-crf","20","-c:a","aac","-b:a","128k",output_path], capture_output=True, text=True, timeout=300)
+        return r.returncode==0
+    except Exception as e:
+        print(f"B-Roll: {e}"); shutil.copy(main_video, output_path); return False
+
+
+# ════════════════════════════════════════════════════════════════════════════════
+# FILLER REMOVAL
+# ════════════════════════════════════════════════════════════════════════════════
+def remove_fillers_from_video(video_path, segments, filler_words, output_path):
+    if not segments or not filler_words: shutil.copy(video_path, output_path); return True
+    try:
+        fw_set = {w.lower().strip() for w in filler_words}
+        cuts = [(s["start"],s["end"]) for s in segments
+                if s["end"]-s["start"]<2.5 and
+                any(fw in s["text"].lower() for fw in fw_set)]
+        if not cuts: shutil.copy(video_path, output_path); return True
+        probe = subprocess.run(["ffprobe","-v","quiet","-print_format","json","-show_format",video_path], capture_output=True, text=True)
+        total = float(json.loads(probe.stdout).get("format",{}).get("duration",60))
+        keep, pos = [], 0.0
+        for s,e in sorted(cuts):
+            if s > pos+0.1: keep.append((pos,s))
+            pos = e
+        if pos < total-0.1: keep.append((pos,total))
+        job_dir = os.path.dirname(output_path)
+        segs, cf = [], os.path.join(job_dir,"fill_concat.txt")
+        for i,(s,e) in enumerate(keep):
+            sp = os.path.join(job_dir,f"fk_{i}.mp4")
+            subprocess.run(["ffmpeg","-y","-i",video_path,"-ss",str(s),"-t",str(e-s),"-c","copy",sp], capture_output=True, timeout=60)
+            if os.path.exists(sp) and os.path.getsize(sp)>100: segs.append(sp)
+        with open(cf,"w") as f:
+            for p in segs: f.write(f"file '{p}'\n")
+        r = subprocess.run(["ffmpeg","-y","-f","concat","-safe","0","-i",cf,"-c:v","libx264","-preset","fast","-crf","20","-c:a","aac","-b:a","128k",output_path], capture_output=True, text=True, timeout=300)
+        print(f"Filler removal: {len(cuts)} cuts")
+        return r.returncode==0
+    except Exception as e:
+        print(f"Filler: {e}"); shutil.copy(video_path,output_path); return False
+
+
+# ════════════════════════════════════════════════════════════════════════════════
+# THUMBNAIL GENERATION
+# ════════════════════════════════════════════════════════════════════════════════
+def generate_thumbnail(video_path, output_path, title="", style="bold", accent="#8b5cf6"):
+    try:
+        probe = subprocess.run(["ffprobe","-v","quiet","-print_format","json","-show_format",video_path], capture_output=True, text=True)
+        dur = float(json.loads(probe.stdout).get("format",{}).get("duration",30))
+        job_dir = os.path.dirname(output_path)
+        frames = []
+        for i in range(1,8):
+            fp = os.path.join(job_dir,f"tc_{i}.jpg")
+            subprocess.run(["ffmpeg","-y","-ss",str(dur*i/8),"-i",video_path,"-vframes","1","-q:v","2",fp], capture_output=True, timeout=30)
+            if os.path.exists(fp) and os.path.getsize(fp)>1000: frames.append(fp)
+        if not frames: return False
+        best = frames[len(frames)//2]
+        safe = (title[:40] if title else "Watch this").replace("'","").replace('"','').replace(':','')
+        vf = f"scale=1280:720:force_original_aspect_ratio=increase,crop=1280:720,drawbox=x=0:y=ih-160:w=iw:h=160:color=black@0.75:t=fill,drawtext=text='{safe}':fontsize=52:fontcolor=white:x=(w-text_w)/2:y=h-130:shadowcolor=black:shadowx=2:shadowy=2"
+        r = subprocess.run(["ffmpeg","-y","-i",best,"-vf",vf,"-q:v","1",output_path], capture_output=True, text=True, timeout=60)
+        if r.returncode!=0:
+            subprocess.run(["ffmpeg","-y","-i",best,"-vf","scale=1280:720:force_original_aspect_ratio=increase,crop=1280:720","-q:v","1",output_path], capture_output=True, timeout=60)
+        for f in frames:
+            if os.path.exists(f): os.remove(f)
+        return os.path.exists(output_path)
+    except Exception as e:
+        print(f"Thumb: {e}"); return False
+
+@app.route("/thumbnail/<job_id>", methods=["GET"])
+def get_thumbnail(job_id):
+    p = os.path.join(CLIPS_DIR, job_id, "thumbnail.jpg")
+    if os.path.exists(p): return send_file(p, mimetype="image/jpeg")
+    return jsonify({"error":"Not found"}), 404
+
+
 @app.route("/clip",methods=["POST","OPTIONS"])
 def create_clip():
     if request.method=="OPTIONS": return jsonify({}),200
@@ -1513,6 +1706,299 @@ def generate_posts():
         except Exception as e: errors[platform]=str(e)
     if not results: return jsonify({"error":"Generation failed — check your GROQ_API_KEY in Railway","details":errors}),500
     return jsonify({"results":results,"errors":errors,"title":title})
+
+
+# ════════════════════════════════════════════════════════════════════════════════
+# STRIPE BILLING
+# ════════════════════════════════════════════════════════════════════════════════
+STRIPE_SECRET      = os.environ.get("STRIPE_SECRET_KEY", "")
+STRIPE_WEBHOOK_SEC = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
+STRIPE_PRICE_CREATOR = os.environ.get("STRIPE_PRICE_CREATOR", "")  # $19/mo price ID
+STRIPE_PRICE_AGENCY  = os.environ.get("STRIPE_PRICE_AGENCY",  "")  # $99/mo price ID
+
+PLAN_LIMITS = {
+    "free":    {"clips_per_month": 5,  "platforms": ["linkedin","youtube"], "watermark": True},
+    "creator": {"clips_per_month": 999,"platforms": ["linkedin","youtube","instagram","tiktok","twitter","facebook"], "watermark": False},
+    "agency":  {"clips_per_month": 999,"platforms": ["linkedin","youtube","instagram","tiktok","twitter","facebook"], "watermark": False, "white_label": True},
+}
+
+def get_user_plan(user_id):
+    """Get user's current plan from Supabase."""
+    if not supa: return "free"
+    try:
+        res = supa.table("subscriptions").select("plan,status").eq("user_id", user_id).execute()
+        if res.data:
+            row = res.data[0]
+            if row.get("status") in ("active","trialing"): return row.get("plan","free")
+    except: pass
+    return "free"
+
+def get_usage_this_month(user_id):
+    """Count clips created this month."""
+    if not supa: return 0
+    try:
+        import datetime
+        start = datetime.datetime.utcnow().replace(day=1,hour=0,minute=0,second=0,microsecond=0).isoformat()
+        res = supa.table("clip_usage").select("id",count="exact").eq("user_id",user_id).gte("created_at",start).execute()
+        return res.count or 0
+    except: return 0
+
+def record_usage(user_id, job_id):
+    """Record a clip creation event."""
+    if not supa: return
+    try:
+        supa.table("clip_usage").insert({"user_id":user_id,"job_id":job_id,"created_at":"now()"}).execute()
+    except: pass
+
+@app.route("/billing/create-checkout", methods=["POST","OPTIONS"])
+def create_checkout():
+    if request.method=="OPTIONS": return jsonify({}),200
+    if not STRIPE_SECRET: return jsonify({"error":"Stripe not configured"}),400
+    import stripe as st
+    st.api_key = STRIPE_SECRET
+    data = request.get_json() or {}
+    user_id  = data.get("user_id","")
+    plan     = data.get("plan","creator")
+    price_id = STRIPE_PRICE_CREATOR if plan=="creator" else STRIPE_PRICE_AGENCY
+    if not price_id: return jsonify({"error":f"Price ID for {plan} not set in Railway Variables"}),400
+    try:
+        session_obj = st.checkout.Session.create(
+            payment_method_types=["card"],
+            line_items=[{"price": price_id, "quantity": 1}],
+            mode="subscription",
+            success_url=f"{FRONTEND_URL}?billing=success&plan={plan}",
+            cancel_url=f"{FRONTEND_URL}?billing=cancelled",
+            client_reference_id=user_id,
+            metadata={"user_id": user_id, "plan": plan},
+            allow_promotion_codes=True,
+        )
+        return jsonify({"url": session_obj.url})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/billing/portal", methods=["POST","OPTIONS"])
+def billing_portal():
+    if request.method=="OPTIONS": return jsonify({}),200
+    if not STRIPE_SECRET: return jsonify({"error":"Stripe not configured"}),400
+    import stripe as st
+    st.api_key = STRIPE_SECRET
+    data = request.get_json() or {}
+    user_id = data.get("user_id","")
+    try:
+        res = supa.table("subscriptions").select("stripe_customer_id").eq("user_id",user_id).execute()
+        cust_id = res.data[0]["stripe_customer_id"] if res.data else None
+        if not cust_id: return jsonify({"error":"No subscription found"}),404
+        portal = st.billing_portal.Session.create(
+            customer=cust_id,
+            return_url=f"{FRONTEND_URL}?tab=billing"
+        )
+        return jsonify({"url": portal.url})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/billing/webhook", methods=["POST"])
+def stripe_webhook():
+    if not STRIPE_SECRET: return jsonify({}),200
+    import stripe as st
+    st.api_key = STRIPE_SECRET
+    payload = request.get_data()
+    sig     = request.headers.get("Stripe-Signature","")
+    try:
+        event = st.Webhook.construct_event(payload, sig, STRIPE_WEBHOOK_SEC)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+    def upsert_sub(user_id, customer_id, plan, status):
+        if not supa: return
+        supa.table("subscriptions").upsert({
+            "user_id": user_id, "stripe_customer_id": customer_id,
+            "plan": plan, "status": status, "updated_at": "now()"
+        }, on_conflict="user_id").execute()
+
+    if event["type"] == "checkout.session.completed":
+        s = event["data"]["object"]
+        upsert_sub(s["metadata"]["user_id"], s["customer"], s["metadata"]["plan"], "active")
+    elif event["type"] == "customer.subscription.updated":
+        s = event["data"]["object"]
+        res = supa.table("subscriptions").select("user_id").eq("stripe_customer_id",s["customer"]).execute()
+        if res.data:
+            plan = "creator" if STRIPE_PRICE_CREATOR in str(s.get("items","")) else "agency"
+            upsert_sub(res.data[0]["user_id"], s["customer"], plan, s["status"])
+    elif event["type"] == "customer.subscription.deleted":
+        s = event["data"]["object"]
+        res = supa.table("subscriptions").select("user_id").eq("stripe_customer_id",s["customer"]).execute()
+        if res.data:
+            upsert_sub(res.data[0]["user_id"], s["customer"], "free", "cancelled")
+    return jsonify({"received": True})
+
+@app.route("/billing/status", methods=["GET","OPTIONS"])
+def billing_status():
+    if request.method=="OPTIONS": return jsonify({}),200
+    user_id = request.args.get("user_id","")
+    if not user_id: return jsonify({"plan":"free","usage":0,"limit":5}),200
+    plan    = get_user_plan(user_id)
+    usage   = get_usage_this_month(user_id)
+    limits  = PLAN_LIMITS.get(plan, PLAN_LIMITS["free"])
+    return jsonify({"plan": plan, "usage": usage, "limit": limits["clips_per_month"],
+                    "watermark": limits.get("watermark",True),
+                    "platforms": limits["platforms"]})
+
+
+# ════════════════════════════════════════════════════════════════════════════════
+# POST SCHEDULING
+# ════════════════════════════════════════════════════════════════════════════════
+
+@app.route("/schedule/create", methods=["POST","OPTIONS"])
+def schedule_create():
+    if request.method=="OPTIONS": return jsonify({}),200
+    data = request.get_json() or {}
+    user_id      = data.get("user_id","")
+    platforms    = data.get("platforms",[])
+    text         = data.get("text","")
+    video_url    = data.get("video_url","")
+    scheduled_at = data.get("scheduled_at","")  # ISO8601 string
+    if not user_id or not platforms or not scheduled_at:
+        return jsonify({"error":"Missing user_id, platforms, or scheduled_at"}),400
+    if not supa: return jsonify({"error":"Supabase not configured"}),400
+    created = []
+    for platform in platforms:
+        try:
+            row = supa.table("scheduled_posts").insert({
+                "user_id":      user_id,
+                "platform":     platform,
+                "text":         text,
+                "video_url":    video_url,
+                "scheduled_at": scheduled_at,
+                "status":       "pending",
+                "created_at":   "now()"
+            }).execute()
+            created.append({"platform": platform, "id": row.data[0]["id"] if row.data else None})
+        except Exception as e:
+            created.append({"platform": platform, "error": str(e)})
+    return jsonify({"created": created})
+
+@app.route("/schedule/list", methods=["GET","OPTIONS"])
+def schedule_list():
+    if request.method=="OPTIONS": return jsonify({}),200
+    user_id = request.args.get("user_id","")
+    if not user_id or not supa: return jsonify({"posts":[]}),200
+    try:
+        res = supa.table("scheduled_posts").select("*").eq("user_id",user_id).order("scheduled_at").execute()
+        return jsonify({"posts": res.data or []})
+    except Exception as e:
+        return jsonify({"error": str(e)}),500
+
+@app.route("/schedule/delete/<post_id>", methods=["DELETE","OPTIONS"])
+def schedule_delete(post_id):
+    if request.method=="OPTIONS": return jsonify({}),200
+    user_id = request.args.get("user_id","")
+    if not supa: return jsonify({"error":"No DB"}),400
+    try:
+        supa.table("scheduled_posts").delete().eq("id",post_id).eq("user_id",user_id).execute()
+        return jsonify({"deleted": True})
+    except Exception as e:
+        return jsonify({"error": str(e)}),500
+
+@app.route("/schedule/run", methods=["POST","OPTIONS"])
+def schedule_run():
+    """Called by a cron job (Railway Cron) every minute to publish due posts."""
+    if request.method=="OPTIONS": return jsonify({}),200
+    # Simple auth: shared secret in header
+    if request.headers.get("X-Cron-Secret","") != os.environ.get("CRON_SECRET",""):
+        return jsonify({"error":"Unauthorized"}),401
+    if not supa: return jsonify({"published":0}),200
+    import datetime
+    now = datetime.datetime.utcnow().isoformat()
+    try:
+        due = supa.table("scheduled_posts").select("*").eq("status","pending").lte("scheduled_at",now).execute()
+        published, failed = 0, 0
+        for post in (due.data or []):
+            try:
+                token_data = get_token(post["user_id"], post["platform"])
+                if not token_data: raise Exception("No token")
+                result = None
+                p = post["platform"]
+                if p=="linkedin":  result = post_linkedin(token_data, post["text"], post.get("video_url",""))
+                elif p=="youtube": result = post_youtube(token_data, post["text"], post.get("video_url",""))
+                elif p=="instagram": result = post_instagram(token_data, post["text"], post.get("video_url",""))
+                elif p=="tiktok":  result = post_tiktok(token_data, post["text"], post.get("video_url",""))
+                elif p=="twitter": result = post_twitter(token_data, post["text"], post.get("video_url",""))
+                elif p=="facebook": result = post_facebook(token_data, post["text"], post.get("video_url",""))
+                supa.table("scheduled_posts").update({"status":"posted","platform_post_id":str(result or {}),"posted_at":"now()"}).eq("id",post["id"]).execute()
+                save_post(post["user_id"],p,post["text"],str(result),None,"posted")
+                published += 1
+            except Exception as e:
+                supa.table("scheduled_posts").update({"status":"failed","error_msg":str(e)[:200]}).eq("id",post["id"]).execute()
+                failed += 1
+        return jsonify({"published": published, "failed": failed, "total": len(due.data or [])})
+    except Exception as e:
+        return jsonify({"error": str(e)}),500
+
+
+# ════════════════════════════════════════════════════════════════════════════════
+# ANALYTICS
+# ════════════════════════════════════════════════════════════════════════════════
+
+@app.route("/analytics/summary", methods=["GET","OPTIONS"])
+def analytics_summary():
+    if request.method=="OPTIONS": return jsonify({}),200
+    user_id = request.args.get("user_id","")
+    if not user_id or not supa: return jsonify({"error":"Missing user_id"}),400
+    try:
+        # Posts per platform
+        posts_res = supa.table("posts").select("platform,status,created_at").eq("user_id",user_id).execute()
+        posts = posts_res.data or []
+
+        # Clip usage
+        usage_res = supa.table("clip_usage").select("created_at").eq("user_id",user_id).execute()
+        usage = usage_res.data or []
+
+        # Scheduled posts
+        sched_res = supa.table("scheduled_posts").select("platform,status,scheduled_at").eq("user_id",user_id).execute()
+        sched = sched_res.data or []
+
+        # Aggregations
+        platform_counts = {}
+        for p in posts:
+            platform_counts[p["platform"]] = platform_counts.get(p["platform"],0)+1
+
+        # Last 30 days activity
+        import datetime
+        thirty_ago = (datetime.datetime.utcnow()-datetime.timedelta(days=30)).isoformat()
+        recent_posts = [p for p in posts if p.get("created_at","") >= thirty_ago]
+
+        # Daily clip trend (last 14 days)
+        daily = {}
+        for u in usage:
+            day = u.get("created_at","")[:10]
+            daily[day] = daily.get(day,0)+1
+
+        # Pending scheduled
+        pending_sched = [s for s in sched if s.get("status")=="pending"]
+
+        return jsonify({
+            "total_posts":    len(posts),
+            "total_clips":    len(usage),
+            "posts_30d":      len(recent_posts),
+            "platform_breakdown": platform_counts,
+            "daily_clips":    sorted([{"date":k,"count":v} for k,v in daily.items()], key=lambda x:x["date"]),
+            "scheduled_pending": len(pending_sched),
+            "scheduled_posts": sched[:20],
+            "recent_posts":   posts[-10:][::-1],
+            "plan":           get_user_plan(user_id),
+            "clips_this_month": get_usage_this_month(user_id),
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}),500
+
+@app.route("/analytics/record-post", methods=["POST","OPTIONS"])
+def record_post_analytics():
+    if request.method=="OPTIONS": return jsonify({}),200
+    data = request.get_json() or {}
+    save_post(data.get("user_id",""), data.get("platform",""), data.get("content",""),
+              data.get("post_id",""), None, data.get("status","posted"))
+    return jsonify({"saved": True})
+
 
 if __name__=="__main__":
     port=int(os.environ.get("PORT",5000))
