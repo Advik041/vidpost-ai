@@ -1382,8 +1382,38 @@ def generate_thumbnail(video_path, output_path, title="", style="bold", accent="
     except Exception as e:
         print(f"Thumb: {e}"); return False
 
-@app.route("/thumbnail/<job_id>", methods=["GET"])
-def get_thumbnail(job_id):
+@app.route("/virality-score", methods=["POST","OPTIONS"])
+def virality_score():
+    if request.method=="OPTIONS": return jsonify({}),200
+    data = request.get_json() or {}
+    title    = data.get("title","Unknown")
+    duration = data.get("duration","30")
+    vid_dur  = data.get("video_duration","60")
+    prompt = f"""You are a viral video expert. Score this clip 1-10 for virality potential.
+Title: "{title}"
+Clip duration: {duration}s from {vid_dur}s video
+
+Respond ONLY with valid JSON, no other text:
+{{"score":7,"verdict":"Strong potential","tips":["tip1","tip2","tip3"]}}"""
+    try:
+        result = _groq_chat([{"role":"user","content":prompt}], max_tokens=200, temperature=0.3)
+        if result:
+            import re as re2
+            match = re2.search(r'\{[\s\S]*\}', result)
+            if match:
+                parsed = json.loads(match.group())
+                return jsonify({
+                    "score": min(10, max(1, int(parsed.get("score",7)))),
+                    "verdict": parsed.get("verdict","Good potential"),
+                    "tips": parsed.get("tips",["Add a strong hook","Use captions","Keep it under 60s"])
+                })
+    except Exception as e:
+        print(f"Virality score: {e}")
+    # Fallback score
+    return jsonify({"score":7,"verdict":"Good potential","tips":["Strong hook in first 3s","Add captions for silent viewers","Keep under 60s for best retention"]})
+
+
+
     p = os.path.join(CLIPS_DIR, job_id, "thumbnail.jpg")
     if os.path.exists(p): return send_file(p, mimetype="image/jpeg")
     return jsonify({"error":"Not found"}), 404
