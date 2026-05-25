@@ -2138,7 +2138,20 @@ function pollJob(jid,ci){
       const pf=$(`pf-${ci}`),pm=$(`pm-${ci}`);
       if(pf)pf.style.width=j.progress+'%';if(pm)pm.textContent=j.message;
       if(j.status==='done'){clearInterval(iv);renderDownloads(jid,ci,j.files);}
-      else if(j.status==='error'){clearInterval(iv);$(`jb-${ci}`).innerHTML=`<div class="err2" style="display:block;margin-top:10px">⚠ ${esc(j.message)}</div>`;}
+      else if(j.status==='error'){
+        clearInterval(iv);
+        const msg=j.message||'Processing failed';
+        const isYtBlock=msg.toLowerCase().includes('youtube')||msg.toLowerCase().includes('download failed')||msg.toLowerCase().includes('blocks');
+        $(`jb-${ci}`).innerHTML=`<div class="err2" style="display:block;margin-top:10px">
+          ⚠ ${esc(msg)}
+          ${isYtBlock?`<div style="margin-top:10px;padding:10px;background:rgba(139,92,246,.1);border-radius:var(--r);font-size:12px;color:var(--ink2)">
+            <strong style="color:var(--lime)">Fix:</strong> YouTube blocks server downloads. 
+            <span style="cursor:pointer;color:var(--lime);text-decoration:underline" onclick="switchSrc('upload');this.closest('.err2').style.display='none'">
+              Click here to switch to Upload tab
+            </span> — upload the MP4 directly and it will work instantly.
+          </div>`:''}
+        </div>`;
+      }
     }catch(e){clearInterval(iv);}
   },2000);
 }
@@ -2147,19 +2160,20 @@ function renderDownloads(jid,ci,files){
     `<a href="${API}${info.downloadUrl}" download class="dl-btn">⬇ ${fmt==='vertical'?'📱 9:16':'🖥 16:9'} ${info.sizeMb||'?'}MB</a>`
   ).join('');
 
-  // Edit button — uses download URL so editor can play the clip
-  const firstFile=Object.values(files)[0];
+  // Use stream-clip for editor (inline playback, not forced download)
   const firstFmt=Object.keys(files)[0];
-  const editUrl=firstFile?`${API}${firstFile.downloadUrl}`:'';
-  const editBtn=editUrl
-    ? `<button onclick="editorOpenClip('${editUrl}','${esc(currentTitle)}','${jid}','${firstFmt}')" class="dl-btn" style="background:var(--bg4);color:var(--ink);border:1px solid var(--border2)">✏ Edit in studio</button>`
+  const streamUrl=firstFmt?`${API}/stream-clip/${jid}/${firstFmt}`:'';
+  const editBtn=streamUrl
+    ? `<button onclick="editorOpenClip('${streamUrl}','${esc(currentTitle||'')}','${jid}','${firstFmt}')" class="dl-btn" style="background:var(--bg4);color:var(--ink);border:1px solid var(--border2)">✏ Edit in studio</button>`
     : '';
 
   const conn=connectedPlats.filter(p=>['linkedin','youtube','instagram','tiktok','twitter','facebook'].includes(p));
+  const firstFile=Object.values(files)[0];
+  const postUrl=firstFile?.publicUrl||streamUrl||'';
   const ap=conn.length>0?`<div style="margin-top:12px;padding:14px;background:var(--bg3);border-radius:var(--r)">
     <div style="font-family:var(--font-head);font-size:13px;font-weight:700;margin-bottom:10px">🚀 Auto-post this clip</div>
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px" id="apt-${ci}">${conn.map(p=>`<div class="pt on" data-plat="${p}" onclick="this.classList.toggle('on')">${p}</div>`).join('')}</div>
-    <div style="display:flex;gap:8px"><input type="text" id="cap-${ci}" placeholder="Caption..." style="flex:1;font-size:12px;padding:8px 10px"/><button onclick="autoPost(${ci},'${firstFile?.publicUrl||editUrl||''}')" style="padding:8px 16px;background:var(--lime);color:#000;border:none;border-radius:var(--r);font-family:var(--font-head);font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">Post now →</button></div>
+    <div style="display:flex;gap:8px"><input type="text" id="cap-${ci}" placeholder="Caption..." style="flex:1;font-size:12px;padding:8px 10px"/><button onclick="autoPost(${ci},'${postUrl}')" style="padding:8px 16px;background:var(--lime);color:#000;border:none;border-radius:var(--r);font-family:var(--font-head);font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">Post now →</button></div>
   </div>`:currentUser?`<div style="font-size:11px;color:var(--ink3);font-family:var(--font-mono);margin-top:10px">Connect social accounts to enable auto-posting → <span style="cursor:pointer;color:var(--lime);text-decoration:underline" onclick="switchTab('connect')">Connect now</span></div>`:'';
 
   $(`jb-${ci}`).innerHTML=`<div style="background:rgba(139,92,246,.05);border:1px solid rgba(139,92,246,.2);border-radius:var(--r);padding:14px;margin-top:10px">
