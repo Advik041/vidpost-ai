@@ -1,0 +1,67 @@
+# VidPost AI — Railway Environment Variables
+# Go to Railway → your project → Variables tab → add each one
+
+# ── Already set (keep these) ─────────────────────────────────
+SUPABASE_URL=https://kwkrmnkqrwxyltxbmaru.supabase.co
+SUPABASE_SERVICE_KEY=          # your service_role key (NOT anon key)
+GROQ_API_KEY=                  # your Groq key
+FRONTEND_URL=https://vidpost-ai.vercel.app
+BACKEND_URL=https://vidpost-ai-production.up.railway.app
+
+# ── Add now — Stripe (get from stripe.com/dashboard) ─────────
+# 1. Go to stripe.com → Developers → API keys
+STRIPE_SECRET_KEY=sk_live_...           # or sk_test_... for testing first
+
+# 2. Go to Stripe → Products → Create product "Creator Plan"
+#    → Add price $29/month recurring → copy Price ID
+STRIPE_PRICE_CREATOR=price_...
+
+# 3. Create product "Agency Plan" → $79/month → copy Price ID
+STRIPE_PRICE_AGENCY=price_...
+
+# 4. Go to Stripe → Developers → Webhooks → Add endpoint
+#    URL: https://vidpost-ai-production.up.railway.app/billing/webhook
+#    Events to listen: customer.subscription.updated
+#                      customer.subscription.deleted
+#                      checkout.session.completed
+#    → copy Signing secret
+STRIPE_WEBHOOK_SECRET=whsec_...
+
+# ── Add now — Pexels B-Roll (free at pexels.com/api) ─────────
+# 1. Go to pexels.com/api → "Get Started" (free, instant)
+# 2. Copy your API key
+PEXELS_API_KEY=...
+
+# ── Add now — YouTube cookies (fixes download blocking) ──────
+# 1. In Chrome, go to youtube.com and make sure you're logged in
+# 2. Install "Get cookies.txt LOCALLY" Chrome extension
+# 3. On youtube.com → click extension → Export → save as cookies.txt
+# 4. In Railway → Files tab → upload cookies.txt to /app/cookies.txt
+YT_COOKIES_FILE=/app/cookies.txt
+
+# ── Optional — OpenAI Whisper (Groq Whisper is free & used first) ──
+# Only add if Groq Whisper quota is exhausted
+# OPENAI_API_KEY=sk-...
+
+# ── OAuth platforms (add when you create the apps) ───────────
+# Instagram + Facebook (same Meta app):
+# INSTAGRAM_CLIENT_ID=
+# INSTAGRAM_CLIENT_SECRET=
+# FACEBOOK_CLIENT_ID=
+# FACEBOOK_CLIENT_SECRET=
+
+# Twitter / X:
+# TWITTER_CLIENT_ID=
+# TWITTER_CLIENT_SECRET=
+
+# TikTok:
+# TIKTOK_CLIENT_ID=
+# TIKTOK_CLIENT_SECRET=
+
+# LinkedIn (if not already set):
+# LINKEDIN_CLIENT_ID=
+# LINKEDIN_CLIENT_SECRET=
+
+# YouTube / Google (if not already set):
+# GOOGLE_CLIENT_ID=
+# GOOGLE_CLIENT_SECRET=
