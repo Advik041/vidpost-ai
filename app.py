@@ -166,39 +166,54 @@ def save_token(user_id, platform, access_token, refresh_token=None, extra=None):
         "platform": platform,
         "access_token": access_token,
         "refresh_token": refresh_token or "",
-        "extra": json.dumps(extra or {}),
+        "extra": extra or {},          # JSONB column — pass dict directly
         "updated_at": "now()"
     }
-    supa.table("platform_tokens").upsert(data, on_conflict="user_id,platform").execute()
+    try:
+        supa.table("platform_tokens").upsert(data, on_conflict="user_id,platform").execute()
+    except Exception as e:
+        print(f"save_token error: {e}")
 
 def get_token(user_id, platform):
     """Get OAuth token for a user+platform."""
     if not supa: return None
-    res = supa.table("platform_tokens").select("*").eq("user_id", user_id).eq("platform", platform).execute()
-    if res.data:
-        row = res.data[0]
-        extra = json.loads(row.get("extra", "{}"))
-        return {"access_token": row["access_token"], "refresh_token": row["refresh_token"], **extra}
+    try:
+        res = supa.table("platform_tokens").select("*").eq("user_id", user_id).eq("platform", platform).execute()
+        if res.data:
+            row = res.data[0]
+            extra = row.get("extra") or {}
+            if isinstance(extra, str):
+                try: extra = json.loads(extra)
+                except: extra = {}
+            return {"access_token": row["access_token"], "refresh_token": row.get("refresh_token",""), **extra}
+    except Exception as e:
+        print(f"get_token error: {e}")
     return None
 
 def get_connected_platforms(user_id):
     """List all platforms a user has connected."""
     if not supa: return []
-    res = supa.table("platform_tokens").select("platform,updated_at").eq("user_id", user_id).execute()
-    return [r["platform"] for r in (res.data or [])]
+    try:
+        res = supa.table("platform_tokens").select("platform,updated_at").eq("user_id", user_id).execute()
+        return [r["platform"] for r in (res.data or [])]
+    except Exception as e:
+        print(f"get_connected_platforms error: {e}")
+        return []
 
 def save_post(user_id, platform, content, post_id=None, scheduled_at=None, status="posted"):
     """Save a post record."""
     if not supa: return
-    supa.table("posts").insert({
-        "user_id": user_id,
-        "platform": platform,
-        "content": content,
-        "platform_post_id": post_id or "",
-        "scheduled_at": scheduled_at,
-        "status": status,
-        "created_at": "now()"
-    }).execute()
+    try:
+        supa.table("posts").insert({
+            "user_id": user_id,
+            "platform": platform,
+            "content": content,
+            "platform_post_id": post_id or "",
+            "status": status,
+            "created_at": "now()"
+        }).execute()
+    except Exception as e:
+        print(f"save_post error: {e}")
 
 
 # ════════════════════════════════════════════════════════════════════════════════
