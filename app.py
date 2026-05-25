@@ -46,10 +46,56 @@ GROQ_KEY    = os.environ.get("GROQ_API_KEY", "")
 SUPADATA    = os.environ.get("SUPADATA_API_KEY", "")
 PROXY       = os.environ.get("PROXY_URL", "")
 PEXELS_KEY  = os.environ.get("PEXELS_API_KEY", "")
-OPENAI_KEY  = os.environ.get("OPENAI_API_KEY", "")   # for Whisper transcription
+OPENAI_KEY  = os.environ.get("OPENAI_API_KEY", "")
+YT_COOKIES  = os.environ.get("YT_COOKIES_FILE", "")
+YT_COOKIES_B64 = os.environ.get("YT_COOKIES_B64", "")
+
+# ── Auto-decode base64 cookies if provided ────────────────────────────────────
+def setup_yt_cookies():
+    """
+    Supports 3 ways to provide YouTube cookies:
+    1. YT_COOKIES_FILE = path to existing cookies.txt on disk (Railway Volume)
+    2. YT_COOKIES_B64  = base64-encoded cookies.txt content (Railway Variable)
+    3. Neither          = yt-dlp runs without cookies (may get blocked)
+    Returns path to cookies file or empty string.
+    """
+    global YT_COOKIES
+
+    # Option 1: file path already set and exists
+    if YT_COOKIES and os.path.exists(YT_COOKIES):
+        print(f"YT cookies: using file at {YT_COOKIES}")
+        return YT_COOKIES
+
+    # Option 2: base64 encoded content in env var
+    if YT_COOKIES_B64:
+        try:
+            import base64
+            decoded = base64.b64decode(YT_COOKIES_B64).decode("utf-8")
+            cookie_path = "/tmp/yt_cookies.txt"
+            with open(cookie_path, "w") as f:
+                f.write(decoded)
+            YT_COOKIES = cookie_path
+            print(f"YT cookies: decoded from YT_COOKIES_B64 → {cookie_path}")
+            return cookie_path
+        except Exception as e:
+            print(f"YT cookies B64 decode error: {e}")
+
+    # Option 3: try common paths (Railway Volume default)
+    for p in ["/app/data/cookies.txt", "/app/cookies.txt", "/tmp/cookies.txt"]:
+        if os.path.exists(p):
+            YT_COOKIES = p
+            print(f"YT cookies: found at {p}")
+            return p
+
+    print("YT cookies: not configured — downloads may be blocked by YouTube")
+    return ""
+
+YT_COOKIES = setup_yt_cookies()
 
 def find_ytdlp():
-    for p in ["/usr/bin/yt-dlp","/usr/local/bin/yt-dlp","/root/.nix-profile/bin/yt-dlp"]:
+    # Pip-installed yt-dlp (preferred — always latest)
+    for p in ["/opt/venv/bin/yt-dlp", "/usr/local/bin/yt-dlp",
+              "/root/.nix-profile/bin/yt-dlp", "/usr/bin/yt-dlp"]:
         if os.path.exists(p): return p
     try:
         r = subprocess.run(["which","yt-dlp"], capture_output=True, text=True)
@@ -58,7 +104,25 @@ def find_ytdlp():
     return "yt-dlp"
 
 YTDLP = find_ytdlp()
-print(f"VidPost AI | yt-dlp:{YTDLP} | proxy:{'yes' if PROXY else 'no'} | supabase:{'yes' if supa else 'no'}")
+
+# Auto-update yt-dlp on startup to get latest YouTube fixes
+def update_ytdlp():
+    try:
+        r = subprocess.run([YTDLP, "-U"], capture_output=True, text=True, timeout=60)
+        if "up to date" in r.stdout.lower() or "updated" in r.stdout.lower():
+            print(f"yt-dlp: {r.stdout.strip()[:80]}")
+        else:
+            # Try pip update
+            subprocess.run(
+                ["/opt/venv/bin/pip", "install", "-U", "yt-dlp", "-q"],
+                capture_output=True, timeout=60
+            )
+            print("yt-dlp: updated via pip")
+    except Exception as e:
+        print(f"yt-dlp update: {e}")
+
+threading.Thread(target=update_ytdlp, daemon=True).start()
+print(f"VidPost AI | yt-dlp:{YTDLP} | cookies:{'yes → '+YT_COOKIES if YT_COOKIES else 'no'} | proxy:{'yes' if PROXY else 'no'} | supabase:{'yes' if supa else 'no'}")
 
 
 
@@ -877,23 +941,18 @@ def ytdlp_base():
     cmd = [
         YTDLP,
         "--no-playlist",
-        "--user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+        "--extractor-args", "youtube:player_client=android,web",
+        "--user-agent", "com.google.android.youtube/19.09.37 (Linux; U; Android 14) gzip",
         "--add-header", "Accept-Language:en-US,en;q=0.9",
-        "--add-header", "Accept:text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        "--extractor-args", "youtube:player_client=web,mweb",
-        "--sleep-interval", "1",
-        "--max-sleep-interval", "3",
         "--retries", "5",
         "--fragment-retries", "5",
         "--socket-timeout", "30",
+        "--no-check-certificates",
     ]
-    if PROXY:
-        cmd += ["--proxy", PROXY]
     if YT_COOKIES and os.path.exists(YT_COOKIES):
         cmd += ["--cookies", YT_COOKIES]
-    else:
-        # Use browser cookies if available (helps bypass bot detection)
-        cmd += ["--cookies-from-browser", "chrome"] if not PROXY else []
+    if PROXY:
+        cmd += ["--proxy", PROXY]
     return cmd
 
 def ytdlp_download(video_id, out_path, height=1080):
@@ -930,28 +989,15 @@ def ytdlp_download(video_id, out_path, height=1080):
             print(f"yt-dlp exception: {e}")
             if os.path.exists(out_path): os.remove(out_path)
 
-    # Strategy 2: yt-dlp with android client (bypasses many restrictions)
-    try:
-        cmd = [YTDLP, "--no-playlist",
-               "--extractor-args", "youtube:player_client=android",
-               "--user-agent", "com.google.android.youtube/17.36.4 (Linux; U; Android 12) gzip",
-               "-f", "best[ext=mp4]/best",
-               "-o", out_path, url]
-        if PROXY: cmd += ["--proxy", PROXY]
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
-        if result.returncode == 0 and os.path.exists(out_path) and os.path.getsize(out_path) > 10000:
-            print(f"yt-dlp android OK: {out_path}")
-            return True
-        if os.path.exists(out_path): os.remove(out_path)
-    except Exception as e:
-        print(f"android client failed: {e}")
-
-    # Strategy 3: yt-dlp with iOS client
+    # Strategy 2: yt-dlp with iOS client
     try:
         cmd = [YTDLP, "--no-playlist",
                "--extractor-args", "youtube:player_client=ios",
+               "--user-agent", "com.google.ios.youtube/19.09.3 (iPhone16,2; U; CPU iOS 17_4_1 like Mac OS X)",
                "-f", "best[ext=mp4]/best",
+               "--no-check-certificates",
                "-o", out_path, url]
+        if YT_COOKIES and os.path.exists(YT_COOKIES): cmd += ["--cookies", YT_COOKIES]
         if PROXY: cmd += ["--proxy", PROXY]
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
         if result.returncode == 0 and os.path.exists(out_path) and os.path.getsize(out_path) > 10000:
@@ -960,6 +1006,23 @@ def ytdlp_download(video_id, out_path, height=1080):
         if os.path.exists(out_path): os.remove(out_path)
     except Exception as e:
         print(f"iOS client failed: {e}")
+
+    # Strategy 3: yt-dlp with tv_embedded client (often bypasses restrictions)
+    try:
+        cmd = [YTDLP, "--no-playlist",
+               "--extractor-args", "youtube:player_client=tv_embedded",
+               "-f", "best[ext=mp4]/best",
+               "--no-check-certificates",
+               "-o", out_path, url]
+        if YT_COOKIES and os.path.exists(YT_COOKIES): cmd += ["--cookies", YT_COOKIES]
+        if PROXY: cmd += ["--proxy", PROXY]
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+        if result.returncode == 0 and os.path.exists(out_path) and os.path.getsize(out_path) > 10000:
+            print(f"yt-dlp tv_embedded OK: {out_path}")
+            return True
+        if os.path.exists(out_path): os.remove(out_path)
+    except Exception as e:
+        print(f"tv_embedded client failed: {e}")
 
     return False
 
