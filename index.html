@@ -2507,30 +2507,19 @@ async function runViralityScore(){
   if(!edVideoUrl){showErr('Load a video first');return;}
   const btn=$('ed-vscore-btn'); btn.disabled=true; btn.textContent='Analysing…';
   try{
-    const prompt=`You are a viral video expert. Analyse this clip title/description and score it 1-10 for virality potential on social media.
-Title: "${currentTitle||'Unknown'}"
-Duration: ${(edEnd-edStart).toFixed(0)}s clip from ${edDuration.toFixed(0)}s video
-
-Respond ONLY with valid JSON:
-{"score":7,"verdict":"Strong potential","tips":["tip1","tip2","tip3"]}`;
-    const resp=await fetch('https://api.anthropic.com/v1/messages',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:300,messages:[{role:'user',content:prompt}]})
+    const d=await apiFetch('/virality-score',{
+      title: currentTitle||'Unknown',
+      duration: (edEnd-edStart).toFixed(0),
+      video_duration: edDuration.toFixed(0)
     });
-    const data=await resp.json();
-    const text=data.content?.[0]?.text||'';
-    let parsed;
-    try{parsed=JSON.parse(text.replace(/```json|```/g,'').trim());}
-    catch{parsed={score:7,verdict:'Good potential',tips:['Strong hook in first 3s','Add captions for silent viewers','Use trending audio']};}
-    const score=Math.min(10,Math.max(1,Math.round(parsed.score)));
+    const score=Math.min(10,Math.max(1,Math.round(d.score)));
     $('ed-vnum').textContent=score;
     $('ed-vscore').textContent=score;
     $('ed-vpill').style.display='flex';
-    $('ed-vverdict').textContent=parsed.verdict||'—';
+    $('ed-vverdict').textContent=d.verdict||'—';
     $('ed-vfill').style.width=(score*10)+'%';
-    $('ed-vfill').style.background=score>=8?'#c8ff00':score>=5?'#ffaa00':'#ff4444';
-    $('ed-vtips').innerHTML=(parsed.tips||[]).map(t=>`• ${esc(t)}`).join('<br>');
+    $('ed-vfill').style.background=score>=8?'var(--lime)':score>=5?'#ffaa00':'#ff4444';
+    $('ed-vtips').innerHTML=(d.tips||[]).map(t=>`• ${esc(t)}`).join('<br>');
     $('ed-virality-result').style.display='block';
   }catch(e){showErr('Score failed: '+e.message);}
   btn.disabled=false; btn.textContent='Analyse →';
