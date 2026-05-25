@@ -1844,8 +1844,9 @@ def generate_posts():
 # ════════════════════════════════════════════════════════════════════════════════
 STRIPE_SECRET      = os.environ.get("STRIPE_SECRET_KEY", "")
 STRIPE_WEBHOOK_SEC = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
-STRIPE_PRICE_CREATOR = os.environ.get("STRIPE_PRICE_CREATOR", "")  # $19/mo price ID
-STRIPE_PRICE_AGENCY  = os.environ.get("STRIPE_PRICE_AGENCY",  "")  # $99/mo price ID
+STRIPE_PRICE_STARTER = os.environ.get("STRIPE_PRICE_STARTER", "")
+STRIPE_PRICE_CREATOR = os.environ.get("STRIPE_PRICE_CREATOR", "")
+STRIPE_PRICE_AGENCY  = os.environ.get("STRIPE_PRICE_AGENCY",  "")
 
 PLAN_LIMITS = {
     "free":    {"clips_per_month": 5,  "platforms": ["linkedin","youtube"], "watermark": True},
@@ -1890,8 +1891,9 @@ def create_checkout():
     data = request.get_json() or {}
     user_id  = data.get("user_id","")
     plan     = data.get("plan","creator")
-    price_id = STRIPE_PRICE_CREATOR if plan=="creator" else STRIPE_PRICE_AGENCY
-    if not price_id: return jsonify({"error":f"Price ID for {plan} not set in Railway Variables"}),400
+    price_map = {"starter": STRIPE_PRICE_STARTER, "creator": STRIPE_PRICE_CREATOR, "agency": STRIPE_PRICE_AGENCY}
+    price_id = price_map.get(plan, "")
+    if not price_id: return jsonify({"error":f"Price ID for '{plan}' not set in Railway Variables. Add STRIPE_PRICE_{plan.upper()} to Railway."}),400
     try:
         session_obj = st.checkout.Session.create(
             payment_method_types=["card"],
