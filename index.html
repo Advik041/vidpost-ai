@@ -1948,10 +1948,23 @@ function hideErr(){$('eb').style.display='none';}
 function showOk(m){$('ob').textContent=m;$('ob').style.display='block';}
 function hideOk(){$('ob').style.display='none';}
 async function apiFetch(path,body,fd=false){
+  // If body is a string starting with '?', it's a GET with query params
+  // If body is the string 'GET', do a plain GET
+  if(body==='GET'||path.includes('?')&&body===undefined){
+    const r=await fetch(API+path,{method:'GET'});
+    if(!r.ok){const d=await r.json().catch(()=>({}));throw new Error(d.error||`Error ${r.status}`);}
+    return r.json();
+  }
+  if(typeof body==='string'&&body.startsWith('?')){
+    const r=await fetch(API+path+body,{method:'GET'});
+    if(!r.ok){const d=await r.json().catch(()=>({}));throw new Error(d.error||`Error ${r.status}`);}
+    return r.json();
+  }
   const o={method:'POST'};
   if(fd){o.body=body;}else{o.headers={'Content-Type':'application/json'};o.body=JSON.stringify(body);}
   const r=await fetch(API+path,o);
-  const d=await r.json();
+  const text=await r.text();
+  let d;try{d=JSON.parse(text);}catch(e){throw new Error(`Server error (${r.status}): ${text.slice(0,100)}`);}
   if(!r.ok) throw new Error(d.error||`Error ${r.status}`);
   return d;
 }
@@ -2589,7 +2602,9 @@ async function editorExport(){
 function pollEditorJob(jid){
   const iv=setInterval(async()=>{
     try{
-      const r=await fetch(`${API}/job/${jid}`); const j=await r.json();
+      const r=await fetch(`${API}/job/${jid}`);
+      if(!r.ok){clearInterval(iv);$('ed-export-btn').disabled=false;$('ed-export-btn').textContent='✂  Trim, enhance & export';return;}
+      const j=await r.json();
       const pb=$('ed-pbar'),pm=$('ed-pmsg');
       if(pb) pb.style.width=(j.progress||0)+'%';
       if(pm) pm.textContent=j.message||'Processing…';
@@ -2619,7 +2634,9 @@ let userPlan='free', userUsage=0, userLimit=5;
 async function loadBilling(){
   if(!currentUser) return;
   try{
-    const d=await apiFetch(`/billing/status?user_id=${currentUser.id}`,'GET');
+    const r=await fetch(`${API}/billing/status?user_id=${encodeURIComponent(currentUser.id)}`);
+    if(!r.ok){console.log('billing status:',r.status);return;}
+    const d=await r.json();
     userPlan=d.plan||'free'; userUsage=d.usage||0; userLimit=d.limit||5;
     renderBillingUI(d);
   }catch(e){ console.log('billing:',e); }
@@ -2699,7 +2716,9 @@ if(bParams.get('billing')==='success'){
 async function loadAnalytics(){
   if(!currentUser) return;
   try{
-    const d=await apiFetch(`/analytics/summary?user_id=${currentUser.id}`,'GET');
+    const r=await fetch(`${API}/analytics/summary?user_id=${encodeURIComponent(currentUser.id)}`);
+    if(!r.ok){console.log('analytics:',r.status);return;}
+    const d=await r.json();
     renderAnalytics(d);
   }catch(e){ console.log('analytics:',e); }
 }
@@ -2800,7 +2819,9 @@ async function submitSchedule(){
 async function loadSchedule(){
   if(!currentUser) return;
   try{
-    const d=await apiFetch(`/schedule/list?user_id=${currentUser.id}`,'GET');
+    const r2=await fetch(`${API}/schedule/list?user_id=${encodeURIComponent(currentUser.id)}`);
+    if(!r2.ok){console.log('schedule:',r2.status);return;}
+    const d=await r2.json();
     schedPosts=d.posts||[];
     renderScheduleList();
     renderCalendar();
