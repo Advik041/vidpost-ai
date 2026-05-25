@@ -2143,15 +2143,30 @@ function pollJob(jid,ci){
   },2000);
 }
 function renderDownloads(jid,ci,files){
-  const btns=Object.entries(files).map(([fmt,info])=>`<a href="${API}${info.downloadUrl}" download class="dl-btn">⬇ ${fmt==='vertical'?'9:16':'16:9'} ${info.sizeMb}MB</a>`).join('');
-  const editBtn=Object.values(files)[0]?.publicUrl?`<button onclick="editorOpen('${Object.values(files)[0].publicUrl}',${edDuration||0},'${esc(currentTitle)}')" class="dl-btn" style="background:var(--bg4);color:var(--ink);text-decoration:none;border:1px solid var(--border2);cursor:pointer">✏ Edit this clip</button>`:'';
+  const btns=Object.entries(files).map(([fmt,info])=>
+    `<a href="${API}${info.downloadUrl}" download class="dl-btn">⬇ ${fmt==='vertical'?'📱 9:16':'🖥 16:9'} ${info.sizeMb||'?'}MB</a>`
+  ).join('');
+
+  // Edit button — uses download URL so editor can play the clip
+  const firstFile=Object.values(files)[0];
+  const firstFmt=Object.keys(files)[0];
+  const editUrl=firstFile?`${API}${firstFile.downloadUrl}`:'';
+  const editBtn=editUrl
+    ? `<button onclick="editorOpenClip('${editUrl}','${esc(currentTitle)}','${jid}','${firstFmt}')" class="dl-btn" style="background:var(--bg4);color:var(--ink);border:1px solid var(--border2)">✏ Edit in studio</button>`
+    : '';
+
   const conn=connectedPlats.filter(p=>['linkedin','youtube','instagram','tiktok','twitter','facebook'].includes(p));
   const ap=conn.length>0?`<div style="margin-top:12px;padding:14px;background:var(--bg3);border-radius:var(--r)">
     <div style="font-family:var(--font-head);font-size:13px;font-weight:700;margin-bottom:10px">🚀 Auto-post this clip</div>
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px" id="apt-${ci}">${conn.map(p=>`<div class="pt on" data-plat="${p}" onclick="this.classList.toggle('on')">${p}</div>`).join('')}</div>
-    <div style="display:flex;gap:8px"><input type="text" id="cap-${ci}" placeholder="Caption..." style="flex:1;font-size:12px;padding:8px 10px"/><button onclick="autoPost(${ci},'${Object.values(files)[0]?.publicUrl||''}')" style="padding:8px 16px;background:var(--lime);color:#000;border:none;border-radius:var(--r);font-family:var(--font-head);font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">Post now →</button></div>
+    <div style="display:flex;gap:8px"><input type="text" id="cap-${ci}" placeholder="Caption..." style="flex:1;font-size:12px;padding:8px 10px"/><button onclick="autoPost(${ci},'${firstFile?.publicUrl||editUrl||''}')" style="padding:8px 16px;background:var(--lime);color:#000;border:none;border-radius:var(--r);font-family:var(--font-head);font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">Post now →</button></div>
   </div>`:currentUser?`<div style="font-size:11px;color:var(--ink3);font-family:var(--font-mono);margin-top:10px">Connect social accounts to enable auto-posting → <span style="cursor:pointer;color:var(--lime);text-decoration:underline" onclick="switchTab('connect')">Connect now</span></div>`:'';
-  $(`jb-${ci}`).innerHTML=`<div style="background:rgba(200,255,0,.05);border:1px solid rgba(200,255,0,.2);border-radius:var(--r);padding:14px;margin-top:10px"><div style="font-size:12px;font-family:var(--font-mono);color:var(--lime);margin-bottom:10px">✅ Clip ready!</div><div style="display:flex;gap:8px;flex-wrap:wrap">${btns}</div>${ap}</div>`;
+
+  $(`jb-${ci}`).innerHTML=`<div style="background:rgba(139,92,246,.05);border:1px solid rgba(139,92,246,.2);border-radius:var(--r);padding:14px;margin-top:10px">
+    <div style="font-size:12px;font-family:var(--font-mono);color:var(--lime);margin-bottom:10px">✅ Clip ready!</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">${btns}${editBtn}</div>
+    ${ap}
+  </div>`;
 }
 async function autoPost(ci,videoUrl){
   if(!currentUser){openAuth();return;}
@@ -2246,9 +2261,61 @@ async function _editorLoad(raw){
     editorMount(raw, null, raw.split('/').pop().split('?')[0]);
   }
 }
-function editorOpen(videoUrl,dur,title){
+// Open a processed clip in editor (called from clip cards)
+function editorOpenClip(videoUrl, title, jobId, fmt){
+  // Switch to editor tab
   switchTab('editor');
-  editorMount(videoUrl,dur,title);
+  // Set state
+  edVideoUrl = videoUrl;
+  currentTitle = title || currentTitle;
+  // Show workspace, hide empty
+  $('ed-empty').style.display = 'none';
+  $('ed-workspace').style.display = 'block';
+  $('ed-title-lbl').textContent = (title||'Clip').slice(0,40);
+  $('ed-export-status').innerHTML = '';
+  // Load video
+  const vid = $('ed-video');
+  vid.src = videoUrl;
+  vid.load();
+  vid.onloadedmetadata = () => {
+    edDuration = vid.duration || 60;
+    edStart = 0;
+    edEnd = edDuration;
+    buildWaveform();
+    buildRuler();
+    updateHandles();
+    updateTimeInputs();
+    $('ed-time-tot').textContent = fmtTime(edDuration);
+  };
+  vid.ontimeupdate = () => {
+    if(!edDuration) return;
+    $('ed-playhead').style.left = (vid.currentTime/edDuration*100)+'%';
+    $('ed-time-cur').textContent = fmtTime(vid.currentTime);
+    if(vid.currentTime >= edEnd) vid.currentTime = edStart;
+    document.querySelectorAll('.ed-wv-bar').forEach((b,i)=>{
+      b.classList.toggle('sel', (i/60)*edDuration >= edStart && (i/60)*edDuration <= edEnd);
+    });
+  };
+  $('ed-timeline').onclick = function(e){
+    if(e.target.closest('.ed-handle')) return;
+    const r = this.getBoundingClientRect();
+    vid.currentTime = Math.max(0,Math.min(1,(e.clientX-r.left)/r.width))*edDuration;
+  };
+  initHandleDrag('ed-handle-start',v=>{
+    edStart=Math.max(0,Math.min(v,edEnd-1));
+    updateHandles(); updateTimeInputs(); vid.currentTime=edStart;
+  });
+  initHandleDrag('ed-handle-end',v=>{
+    edEnd=Math.max(edStart+1,Math.min(v,edDuration));
+    updateHandles(); updateTimeInputs(); vid.currentTime=edEnd;
+  });
+  updateCapPreview();
+  // Show success message
+  showOk('✅ Clip loaded in editor — trim, caption and export below');
+}
+
+function editorOpen(videoUrl, dur, title){
+  editorOpenClip(videoUrl, title, '', '');
 }
 function editorMount(url,dur,title){
   edVideoUrl=url;
