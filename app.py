@@ -290,6 +290,8 @@ def health():
         "status": "ok",
         "ytdlp": YTDLP,
         "ffmpeg": bool(shutil.which("ffmpeg")),
+        "cookies": "configured" if (YT_COOKIES and os.path.exists(YT_COOKIES)) else "not set",
+        "cookies_path": YT_COOKIES if YT_COOKIES else "none",
         "proxy": "configured" if PROXY else "not set",
         "supadata": "configured" if SUPADATA else "not set",
         "supabase": "configured" if supa else "not set",
@@ -933,8 +935,8 @@ def post_snapchat(token_data, text, video_url=""):
 # EXISTING ENDPOINTS (clip generation etc — kept from before)
 # ════════════════════════════════════════════════════════════════════════════════
 
-YT_COOKIES   = os.environ.get("YT_COOKIES_FILE", "")   # path to cookies.txt exported from browser
-YT_API_KEY   = os.environ.get("YOUTUBE_API_KEY", "")   # optional YouTube Data API v3 key
+# YT_COOKIES already set by setup_yt_cookies() above — do NOT reassign here
+YT_API_KEY = os.environ.get("YOUTUBE_API_KEY", "")
 
 def ytdlp_base():
     """Build yt-dlp command with all anti-bot bypass flags."""
@@ -1586,6 +1588,17 @@ def get_job(job_id):
     job=JOBS.get(job_id)
     if not job: return jsonify({"error":"Not found"}),404
     return jsonify(job)
+
+@app.route("/stream-clip/<job_id>/<fmt>", methods=["GET"])
+def stream_clip(job_id, fmt):
+    """Stream a processed clip inline for editor playback."""
+    filepath = os.path.join(CLIPS_DIR, job_id, f"{fmt}.mp4")
+    if not os.path.exists(filepath):
+        # Check job dict too
+        job = JOBS.get(job_id)
+        if not job: return jsonify({"error": "Job not found"}), 404
+    if not os.path.exists(filepath): return jsonify({"error": "File not found"}), 404
+    return send_file(filepath, mimetype="video/mp4", conditional=True)
 
 @app.route("/download/<job_id>/<fmt>",methods=["GET"])
 def download_clip(job_id,fmt):
