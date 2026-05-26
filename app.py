@@ -957,74 +957,98 @@ def ytdlp_base():
         cmd += ["--proxy", PROXY]
     return cmd
 
+def get_po_token():
+    """Try to get a visitor_data + po_token pair for Railway IP bypass."""
+    try:
+        # Use yt-dlp's built-in token fetcher
+        result = subprocess.run(
+            [YTDLP, "--print", "%(webpage_url)s", "--no-download",
+             "--extractor-args", "youtube:player_client=web",
+             "https://www.youtube.com/watch?v=jNQXAC9IVRw"],
+            capture_output=True, text=True, timeout=30)
+    except: pass
+    return None
+
 def ytdlp_download(video_id, out_path, height=1080):
-    """
-    Download YouTube video with full fallback chain:
-    1. yt-dlp with anti-bot flags
-    2. yt-dlp with po_token workaround
-    3. YouTube embed URL
-    4. pytube fallback
-    Returns True on success.
-    """
+    """Download YouTube video — 5 strategy fallback chain."""
     url = f"https://www.youtube.com/watch?v={video_id}"
+    cookies_args = ["--cookies", YT_COOKIES] if YT_COOKIES and os.path.exists(YT_COOKIES) else []
+    proxy_args   = ["--proxy", PROXY] if PROXY else []
+    common = ["--no-playlist", "--no-check-certificates",
+              "--retries", "3", "--socket-timeout", "30",
+              "--merge-output-format", "mp4"]
 
-    # Strategy 1: yt-dlp with best quality format ladder
-    format_ladder = [
-        f"bestvideo[height<={height}][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<={height}]+bestaudio/best[height<={height}][ext=mp4]/best[ext=mp4]/best",
-        f"best[height<={height}][ext=mp4]/best[ext=mp4]/best",
-        "best",
-    ]
-    for fmt in format_ladder:
-        cmd = ytdlp_base() + [
-            "-f", fmt,
-            "--merge-output-format", "mp4",
-            "-o", out_path, url
-        ]
+    def try_dl(extra_args, label):
+        cmd = [YTDLP] + common + extra_args + cookies_args + proxy_args + ["-o", out_path, url]
         try:
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
-            if result.returncode == 0 and os.path.exists(out_path) and os.path.getsize(out_path) > 10000:
-                print(f"yt-dlp OK: {out_path} ({os.path.getsize(out_path)//1024}KB)")
+            r = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+            ok = r.returncode == 0 and os.path.exists(out_path) and os.path.getsize(out_path) > 10000
+            if ok:
+                print(f"yt-dlp [{label}] OK: {os.path.getsize(out_path)//1024}KB")
                 return True
-            if os.path.exists(out_path): os.remove(out_path)
-            print(f"yt-dlp fmt {fmt} failed: {result.stderr[-200:]}")
+            err = (r.stderr or "")[-300:]
+            print(f"yt-dlp [{label}] failed: {err}")
         except Exception as e:
-            print(f"yt-dlp exception: {e}")
-            if os.path.exists(out_path): os.remove(out_path)
+            print(f"yt-dlp [{label}] exception: {e}")
+        if os.path.exists(out_path):
+            try: os.remove(out_path)
+            except: pass
+        return False
 
-    # Strategy 2: yt-dlp with iOS client
-    try:
-        cmd = [YTDLP, "--no-playlist",
-               "--extractor-args", "youtube:player_client=ios",
-               "--user-agent", "com.google.ios.youtube/19.09.3 (iPhone16,2; U; CPU iOS 17_4_1 like Mac OS X)",
-               "-f", "best[ext=mp4]/best",
-               "--no-check-certificates",
-               "-o", out_path, url]
-        if YT_COOKIES and os.path.exists(YT_COOKIES): cmd += ["--cookies", YT_COOKIES]
-        if PROXY: cmd += ["--proxy", PROXY]
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
-        if result.returncode == 0 and os.path.exists(out_path) and os.path.getsize(out_path) > 10000:
-            print(f"yt-dlp iOS OK: {out_path}")
-            return True
-        if os.path.exists(out_path): os.remove(out_path)
-    except Exception as e:
-        print(f"iOS client failed: {e}")
+    fmt = f"best[height<={height}][ext=mp4]/best[ext=mp4]/best"
 
-    # Strategy 3: yt-dlp with tv_embedded client (often bypasses restrictions)
+    # Strategy 1: Android client (most reliable on server IPs)
+    if try_dl([
+        "--extractor-args", "youtube:player_client=android",
+        "--user-agent", "com.google.android.youtube/19.09.37 (Linux; U; Android 14) gzip",
+        "-f", fmt
+    ], "android"): return True
+
+    # Strategy 2: Android VR client (different endpoint, bypasses many blocks)
+    if try_dl([
+        "--extractor-args", "youtube:player_client=android_vr",
+        "--user-agent", "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36",
+        "-f", "best[ext=mp4]/best"
+    ], "android_vr"): return True
+
+    # Strategy 3: iOS client
+    if try_dl([
+        "--extractor-args", "youtube:player_client=ios",
+        "--user-agent", "com.google.ios.youtube/19.09.3 (iPhone16,2; U; CPU iOS 17_4_1 like Mac OS X)",
+        "-f", "best[ext=mp4]/best"
+    ], "ios"): return True
+
+    # Strategy 4: TV embedded (no auth needed, works on many restricted videos)
+    if try_dl([
+        "--extractor-args", "youtube:player_client=tv_embedded",
+        "-f", "best[ext=mp4]/best"
+    ], "tv_embedded"): return True
+
+    # Strategy 5: mweb client with random user agent
+    if try_dl([
+        "--extractor-args", "youtube:player_client=mweb",
+        "--user-agent", "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 Chrome/124.0.0.0 Mobile Safari/537.36",
+        "-f", "best[ext=mp4]/best"
+    ], "mweb"): return True
+
+    # Strategy 6: pytubefix (completely different approach, bypasses yt-dlp blocks)
     try:
-        cmd = [YTDLP, "--no-playlist",
-               "--extractor-args", "youtube:player_client=tv_embedded",
-               "-f", "best[ext=mp4]/best",
-               "--no-check-certificates",
-               "-o", out_path, url]
-        if YT_COOKIES and os.path.exists(YT_COOKIES): cmd += ["--cookies", YT_COOKIES]
-        if PROXY: cmd += ["--proxy", PROXY]
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
-        if result.returncode == 0 and os.path.exists(out_path) and os.path.getsize(out_path) > 10000:
-            print(f"yt-dlp tv_embedded OK: {out_path}")
-            return True
-        if os.path.exists(out_path): os.remove(out_path)
+        from pytubefix import YouTube
+        yt = YouTube(url)
+        stream = yt.streams.filter(progressive=True, file_extension='mp4').order_by('resolution').last()
+        if not stream:
+            stream = yt.streams.filter(file_extension='mp4').order_by('resolution').last()
+        if stream:
+            import tempfile
+            dl = stream.download(output_path=os.path.dirname(out_path),
+                               filename=os.path.basename(out_path))
+            if os.path.exists(out_path) and os.path.getsize(out_path) > 10000:
+                print(f"pytubefix OK: {os.path.getsize(out_path)//1024}KB")
+                return True
+    except ImportError:
+        print("pytubefix not installed — add to requirements.txt")
     except Exception as e:
-        print(f"tv_embedded client failed: {e}")
+        print(f"pytubefix failed: {e}")
 
     return False
 
@@ -1658,6 +1682,7 @@ def editor_export():
     video_id        = gf("videoId","")
     remove_fillers  = gfb("remove_fillers", False)
     filler_words    = data.get("filler_words", gf("filler_words","um,uh,like").split(",")) if not is_form else gf("filler_words","um,uh,like").split(",")
+    middle_cuts     = data.get("middle_cuts", []) if not is_form else []  # [{start,end}] sections to cut
     remove_pauses   = gfb("remove_pauses", False)
     audio_norm      = gfb("audio_norm", True)
     broll           = gfb("broll", False)
@@ -1736,6 +1761,32 @@ def editor_export():
                 remove_fillers_from_video(current, adj_segs, filler_words, filler_out)
                 if os.path.exists(filler_out) and os.path.getsize(filler_out) > 10000:
                     current = filler_out
+
+            # Middle cuts — user-selected sections to remove
+            if middle_cuts:
+                JOBS[job_id].update({"progress":35,"message":f"Applying {len(middle_cuts)} middle cut(s)..."})
+                mid_out = os.path.join(job_dir,"mid_cuts.mp4")
+                try:
+                    dur_trimmed = end - start
+                    adj_cuts = [(max(0, c["start"]-start), max(0, c["end"]-start)) for c in middle_cuts if c["end"]>c["start"]]
+                    keep, pos = [], 0.0
+                    for cs,ce in sorted(adj_cuts):
+                        if cs > pos+0.1: keep.append((pos,cs))
+                        pos = ce
+                    if pos < dur_trimmed-0.1: keep.append((pos,dur_trimmed))
+                    if keep:
+                        segs_mc, cf_mc = [], os.path.join(job_dir,"mc_concat.txt")
+                        for i,(ks,ke) in enumerate(keep):
+                            sp=os.path.join(job_dir,f"mc_{i}.mp4")
+                            subprocess.run(["ffmpeg","-y","-i",current,"-ss",str(ks),"-t",str(ke-ks),"-c","copy",sp],capture_output=True,timeout=60)
+                            if os.path.exists(sp) and os.path.getsize(sp)>100: segs_mc.append(sp)
+                        with open(cf_mc,"w") as fmc:
+                            for sp in segs_mc: fmc.write(f"file '{sp}'\n")
+                        r_mc=subprocess.run(["ffmpeg","-y","-f","concat","-safe","0","-i",cf_mc,"-c:v","libx264","-preset","fast","-crf","20","-c:a","aac","-b:a","128k",mid_out],capture_output=True,timeout=300)
+                        if r_mc.returncode==0 and os.path.exists(mid_out) and os.path.getsize(mid_out)>1000:
+                            current=mid_out; print(f"Middle cuts: {len(adj_cuts)} cuts applied")
+                except Exception as e:
+                    print(f"Middle cuts: {e}")
 
             # Pause removal (silence detection)
             if remove_pauses:
