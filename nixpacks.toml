@@ -4,9 +4,15 @@ nixPkgs = ["python313", "ffmpeg"]
 [phases.install]
 cmds = [
   "python -m venv /opt/venv",
-  "/opt/venv/bin/pip install -r requirements.txt",
-  "/opt/venv/bin/pip install -U yt-dlp"
+  "/opt/venv/bin/pip install --upgrade pip -q",
+  "/opt/venv/bin/pip install -r requirements.txt -q",
+  "/opt/venv/bin/pip install -U yt-dlp -q"
+]
+
+[phases.build]
+cmds = [
+  "mkdir -p /tmp/vidpost_clips /tmp/vidpost_uploads"
 ]
 
 [start]
-cmd = "/opt/venv/bin/gunicorn app:app --bind 0.0.0.0:$PORT --workers 1 --timeout 300"
+cmd = "/opt/venv/bin/gunicorn app:app --bind 0.0.0.0:$PORT --workers 2 --worker-class gthread --threads 4 --timeout 600 --graceful-timeout 30 --keep-alive 5 --max-requests 100 --max-requests-jitter 20 --log-level info"
