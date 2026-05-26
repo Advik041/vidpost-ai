@@ -7,8 +7,16 @@ import supabase as sb
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET", secrets.token_hex(32))
-CORS(app, resources={r"/*": {"origins": os.environ.get("ALLOWED_ORIGIN", "*")}},
-     supports_credentials=True)
+CORS(app,
+     resources={r"/*": {"origins": [
+         os.environ.get("FRONTEND_URL","https://vidpost-ai.vercel.app"),
+         "https://vidpost-ai.vercel.app",
+         "http://localhost:3000",
+         "*"
+     ]}},
+     supports_credentials=False,
+     expose_headers=["Content-Range","Accept-Ranges","Content-Length"],
+     allow_headers=["Content-Type","Authorization","X-Cron-Secret","Range"])
 app.config['MAX_CONTENT_LENGTH'] = 500 * 1024 * 1024
 
 # ── Supabase client ───────────────────────────────────────────────────────────
@@ -286,6 +294,7 @@ def save_post(user_id, platform, content, post_id=None, scheduled_at=None, statu
 
 @app.route("/health", methods=["GET"])
 def health():
+    import shutil as _shutil
     return jsonify({
         "status": "ok",
         "ytdlp": YTDLP,
@@ -1557,7 +1566,7 @@ def process_clip_job(job_id, video_id, upload_path, start, end, formats):
                 "-vf", f"scale={w}:{h}:force_original_aspect_ratio=decrease,"
                        f"pad={w}:{h}:(ow-iw)/2:(oh-ih)/2:black,"
                        f"setsar=1",
-                "-c:v", "libx264", "-preset", "slow", "-crf", crf,
+                "-c:v", "libx264", "-preset", "fast", "-crf", crf,
                 "-profile:v", "high", "-level", "4.2",
                 "-c:a", "aac", "-b:a", "192k", "-ar", "44100",
                 "-movflags", "+faststart",
@@ -1574,7 +1583,7 @@ def process_clip_job(job_id, video_id, upload_path, start, end, formats):
                 "-vf", f"scale={w}:{h}:force_original_aspect_ratio=decrease,"
                        f"pad={w}:{h}:(ow-iw)/2:(oh-ih)/2:black,"
                        f"setsar=1",
-                "-c:v", "libx264", "-preset", "slow", "-crf", crf,
+                "-c:v", "libx264", "-preset", "fast", "-crf", crf,
                 "-profile:v", "high", "-level", "4.2",
                 "-c:a", "aac", "-b:a", "192k", "-ar", "44100",
                 "-movflags", "+faststart",
@@ -1597,7 +1606,7 @@ def process_clip_job(job_id, video_id, upload_path, start, end, formats):
             for fmt, p in output_files.items()
         }
         update_job(job_id, "done", 100, "Clip ready!", files=refs)
-        threading.Timer(3600, lambda: shutil.rmtree(job_dir, ignore_errors=True)).start()
+        threading.Timer(7200, lambda: shutil.rmtree(job_dir, ignore_errors=True)).start()
 
     except Exception as e:
         print(f"Job {job_id}: {e}")
@@ -1610,41 +1619,86 @@ def update_job(job_id,status,progress,message,files=None):
 @app.route("/job/<job_id>",methods=["GET"])
 def get_job(job_id):
     job=JOBS.get(job_id)
-    if not job: return jsonify({"error":"Not found"}),404
+    if not job: return jsonify({"error":"Not found","status":"not_found"}),404
     return jsonify(job)
 
-@app.route("/stream-clip/<job_id>/<fmt>", methods=["GET"])
+def _serve_video_with_range(filepath):
+    """Serve a video file with proper Range request support for browser playback."""
+    if not os.path.exists(filepath):
+        return jsonify({"error": "File not found"}), 404
+
+    file_size = os.path.getsize(filepath)
+    range_header = request.headers.get("Range", None)
+
+    if range_header:
+        # Parse Range: bytes=start-end
+        try:
+            byte_range = range_header.replace("bytes=", "").split("-")
+            start = int(byte_range[0])
+            end   = int(byte_range[1]) if byte_range[1] else file_size - 1
+        except:
+            start, end = 0, file_size - 1
+
+        end   = min(end, file_size - 1)
+        length = end - start + 1
+
+        with open(filepath, "rb") as f:
+            f.seek(start)
+            data = f.read(length)
+
+        from flask import Response
+        resp = Response(
+            data,
+            206,
+            mimetype="video/mp4",
+            direct_passthrough=True
+        )
+        resp.headers["Content-Range"]  = f"bytes {start}-{end}/{file_size}"
+        resp.headers["Accept-Ranges"]  = "bytes"
+        resp.headers["Content-Length"] = str(length)
+        resp.headers["Cache-Control"]  = "public, max-age=3600"
+        return resp
+
+    # Full file response
+    resp = send_file(filepath, mimetype="video/mp4", conditional=True)
+    resp.headers["Accept-Ranges"]  = "bytes"
+    resp.headers["Content-Length"] = str(file_size)
+    resp.headers["Cache-Control"]  = "public, max-age=3600"
+    return resp
+
+@app.route("/stream-clip/<job_id>/<fmt>", methods=["GET","OPTIONS"])
 def stream_clip(job_id, fmt):
-    """Stream a processed clip inline for editor playback."""
+    """Stream a processed clip with Range support for browser video player."""
+    if request.method == "OPTIONS": return jsonify({}), 200
+    filepath = os.path.join(CLIPS_DIR, job_id, f"{fmt}.mp4")
+    # Fallback: check without job validation (clip may still exist after job cleared)
+    if not os.path.exists(filepath):
+        return jsonify({"error": "Clip not found — it may have expired. Please re-process."}), 404
+    return _serve_video_with_range(filepath)
+
+@app.route("/download/<job_id>/<fmt>", methods=["GET","OPTIONS"])
+def download_clip(job_id, fmt):
+    if request.method == "OPTIONS": return jsonify({}), 200
     filepath = os.path.join(CLIPS_DIR, job_id, f"{fmt}.mp4")
     if not os.path.exists(filepath):
-        # Check job dict too
-        job = JOBS.get(job_id)
-        if not job: return jsonify({"error": "Job not found"}), 404
-    if not os.path.exists(filepath): return jsonify({"error": "File not found"}), 404
-    return send_file(filepath, mimetype="video/mp4", conditional=True)
-
-@app.route("/download/<job_id>/<fmt>",methods=["GET"])
-def download_clip(job_id,fmt):
-    job=JOBS.get(job_id)
-    if not job or job["status"]!="done": return jsonify({"error":"Not ready"}),404
-    filepath=os.path.join(CLIPS_DIR,job_id,f"{fmt}.mp4")
-    if not os.path.exists(filepath): return jsonify({"error":"File not found"}),404
-    return send_file(filepath,as_attachment=True,download_name=f"vidpost_{fmt}_{job_id}.mp4")
-
+        return jsonify({"error": "File not found or expired"}), 404
+    return send_file(filepath, as_attachment=True,
+                     download_name=f"vidpost_{fmt}_{job_id}.mp4")
 
 # ── Stream proxy for YouTube (editor preview) ─────────────────────────────────
-@app.route("/stream/<video_id>", methods=["GET"])
+@app.route("/stream/<video_id>", methods=["GET","OPTIONS"])
 def stream_video(video_id):
+    if request.method == "OPTIONS": return jsonify({}), 200
     try:
         out_path = os.path.join(CLIPS_DIR, f"preview_{video_id}.mp4")
         if not os.path.exists(out_path) or os.path.getsize(out_path) < 10000:
             if os.path.exists(out_path): os.remove(out_path)
+            # Download in background if not cached
             success = ytdlp_download(video_id, out_path, height=480)
         else:
             success = True
         if success and os.path.exists(out_path):
-            return send_file(out_path, mimetype="video/mp4", conditional=True)
+            return _serve_video_with_range(out_path)
         return jsonify({"error": "Could not stream — please upload the file directly"}), 404
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -1846,7 +1900,7 @@ def editor_export():
                 fmt_out = os.path.join(job_dir, f"fmt_{fmt}.mp4")
                 subprocess.run([
                     "ffmpeg","-y","-i",current,"-vf",vf,
-                    "-c:v","libx264","-preset","slow","-crf",crf,
+                    "-c:v","libx264","-preset","fast","-crf",crf,
                     "-profile:v","high","-level","4.2",
                     "-c:a","aac","-b:a","192k","-ar","44100",
                     "-movflags","+faststart","-r","30",fmt_out
@@ -1929,7 +1983,7 @@ def editor_export():
                         output_files[fmt2]["thumbnailUrl"] = f"/thumbnail/{job_id}"
 
             JOBS[job_id].update({"status":"done","progress":100,"message":"Export complete!","files":output_files})
-            threading.Timer(3600, lambda: shutil.rmtree(job_dir, ignore_errors=True)).start()
+            threading.Timer(7200, lambda: shutil.rmtree(job_dir, ignore_errors=True)).start()
 
         except Exception as e:
             import traceback; traceback.print_exc()
