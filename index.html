@@ -1283,13 +1283,18 @@ input::placeholder,textarea::placeholder{color:var(--ink3)}
             </div>
 
             <div class="ed-tl-wrap">
-              <div style="display:flex;justify-content:space-between;align-items:center">
-                <span class="ed-tl-label">TRIM — drag green handles or type seconds</span>
-                <span id="ed-tl-dur" style="font-size:10px;font-family:var(--font-mono);color:var(--lime)"></span>
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+                <span class="ed-tl-label">TRIM — drag green handles · double-click timeline to cut middle</span>
+                <div style="display:flex;gap:6px;align-items:center">
+                  <span id="ed-tl-dur" style="font-size:10px;font-family:var(--font-mono);color:var(--lime)"></span>
+                  <button onclick="edClearCuts()" id="ed-clear-cuts" style="display:none;padding:2px 8px;font-size:10px;font-family:var(--font-mono);border:1px solid var(--border2);background:transparent;color:var(--ink3);border-radius:var(--r);cursor:pointer">Clear cuts</button>
+                </div>
               </div>
               <div id="ed-timeline" class="ed-timeline">
                 <div id="ed-waveform" class="ed-waveform"></div>
                 <div id="ed-filler-layer" style="position:absolute;inset:0;pointer-events:none"></div>
+                <!-- Middle cut segments (rendered by JS) -->
+                <div id="ed-cuts-layer" style="position:absolute;inset:0;pointer-events:none"></div>
                 <div id="ed-shadow-left"  class="ed-shadow"></div>
                 <div id="ed-shadow-right" class="ed-shadow"></div>
                 <div id="ed-range-fill"   class="ed-range-fill"></div>
@@ -1298,6 +1303,11 @@ input::placeholder,textarea::placeholder{color:var(--ink3)}
                 <div id="ed-handle-end"   class="ed-handle ed-handle-r"><div class="ed-handle-grip"></div></div>
               </div>
               <div id="ed-ruler" class="ed-ruler"></div>
+              <!-- Cut segments list -->
+              <div id="ed-cuts-list" style="display:none;margin-top:8px;padding:8px 10px;background:var(--bg3);border-radius:var(--r);border:1px solid var(--border)">
+                <div class="ed-field-label">MIDDLE CUTS — sections that will be removed</div>
+                <div id="ed-cuts-items" style="display:flex;flex-wrap:wrap;gap:5px;margin-top:5px"></div>
+              </div>
               <div class="ed-time-row">
                 <div class="ed-time-chip">
                   <span class="ed-time-chip-label">START</span>
@@ -2344,11 +2354,12 @@ function editorMount(url,dur,title){
   vid.onloadedmetadata=()=>{
     edDuration=dur||vid.duration;
     edStart=0; edEnd=Math.min(edDuration,30);
+    edCuts=[]; renderCuts();
     buildWaveform(); buildRuler(); updateHandles(); updateTimeInputs();
     $('ed-time-tot').textContent=fmtTime(edDuration);
     $('ed-vpill').style.display='none';
-    // Auto-detect filler word keywords for B-Roll
     if(currentTitle) $('ed-broll-kw').value=currentTitle.split(' ').slice(0,4).join(', ').toLowerCase();
+    initTimelineMiddleCut();
   };
   vid.ontimeupdate=()=>{
     if(!edDuration) return;
@@ -2606,6 +2617,114 @@ async function runViralityScore(){
   btn.disabled=false; btn.textContent='Analyse →';
 }
 
+// ── Middle cuts (trim from middle) ───────────────────────────────────────────
+let edCuts = []; // [{start, end}] — sections to remove from middle
+let edCutDragStart = null;
+let edCutDragging = false;
+
+// Double-click timeline to start a new middle cut
+function initTimelineMiddleCut() {
+  const tl = $('ed-timeline');
+  if (!tl) return;
+
+  let clickStart = null, clickTimer = null;
+
+  tl.addEventListener('dblclick', function(e) {
+    if (e.target.closest('.ed-handle')) return;
+    const r = this.getBoundingClientRect();
+    const pct = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width));
+    const t = pct * edDuration;
+    // Start a 3s cut around the click point
+    const s = Math.max(edStart + 0.1, t - 1.5);
+    const en = Math.min(edEnd - 0.1, t + 1.5);
+    if (en > s + 0.2) {
+      edCuts.push({start: s, end: en});
+      renderCuts();
+    }
+  });
+
+  // Drag on cuts-layer to create precise cuts
+  let isDragging = false, dragS = 0;
+  tl.addEventListener('mousedown', function(e) {
+    if (e.target.closest('.ed-handle') || !e.shiftKey) return;
+    e.preventDefault();
+    const r = this.getBoundingClientRect();
+    dragS = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)) * edDuration;
+    isDragging = true;
+
+    const move = ev => {
+      if (!isDragging) return;
+      const pct = Math.max(0, Math.min(1, (ev.clientX - r.left) / r.width));
+      const t = pct * edDuration;
+      const s = Math.min(dragS, t), en = Math.max(dragS, t);
+      // Preview
+      renderCutsPreview(s, en);
+    };
+    const up = ev => {
+      if (!isDragging) return;
+      isDragging = false;
+      const pct = Math.max(0, Math.min(1, (ev.clientX - r.left) / r.width));
+      const t = pct * edDuration;
+      const s = Math.min(dragS, t), en = Math.max(dragS, t);
+      if (en - s > 0.3 && s >= edStart && en <= edEnd) {
+        edCuts.push({start: s, end: en});
+        renderCuts();
+      } else { renderCuts(); }
+      document.removeEventListener('mousemove', move);
+      document.removeEventListener('mouseup', up);
+    };
+    document.addEventListener('mousemove', move);
+    document.addEventListener('mouseup', up);
+  });
+}
+
+function renderCutsPreview(s, en) {
+  const layer = $('ed-cuts-layer');
+  if (!layer || !edDuration) return;
+  const existing = edCuts.map((c,i) => renderCutRect(c.start, c.end, i)).join('');
+  const preview = `<div style="position:absolute;top:0;bottom:0;left:${s/edDuration*100}%;width:${(en-s)/edDuration*100}%;background:rgba(255,80,80,.35);border:1px solid rgba(255,80,80,.8);pointer-events:none"></div>`;
+  layer.innerHTML = existing + preview;
+}
+
+function renderCutRect(s, en, idx) {
+  return `<div data-cut="${idx}" style="position:absolute;top:0;bottom:0;left:${s/edDuration*100}%;width:${(en-s)/edDuration*100}%;background:rgba(255,60,60,.3);border-left:2px solid #ff4444;border-right:2px solid #ff4444;pointer-events:none;cursor:pointer" title="Cut: ${s.toFixed(1)}s–${en.toFixed(1)}s"></div>`;
+}
+
+function renderCuts() {
+  const layer = $('ed-cuts-layer');
+  if (!layer || !edDuration) return;
+  layer.innerHTML = edCuts.map((c,i) => renderCutRect(c.start, c.end, i)).join('');
+
+  // Update cuts list UI
+  const list = $('ed-cuts-list');
+  const items = $('ed-cuts-items');
+  const clearBtn = $('ed-clear-cuts');
+  if (edCuts.length > 0) {
+    list.style.display = 'block';
+    clearBtn.style.display = 'inline-block';
+    items.innerHTML = edCuts.map((c,i) =>
+      `<div style="display:flex;align-items:center;gap:4px;padding:3px 8px;background:rgba(255,60,60,.12);border:1px solid rgba(255,60,60,.3);border-radius:12px;font-size:10px;font-family:var(--font-mono);color:var(--ink2)">
+        ✂ ${c.start.toFixed(1)}s–${c.end.toFixed(1)}s
+        <button onclick="edRemoveCut(${i})" style="border:none;background:none;color:#ff4444;cursor:pointer;font-size:12px;padding:0;line-height:1">×</button>
+      </div>`
+    ).join('');
+  } else {
+    list.style.display = 'none';
+    clearBtn.style.display = 'none';
+    items.innerHTML = '';
+  }
+}
+
+function edRemoveCut(idx) {
+  edCuts.splice(idx, 1);
+  renderCuts();
+}
+
+function edClearCuts() {
+  edCuts = [];
+  renderCuts();
+}
+
 // ── Export summary ────────────────────────────────────────────────────────────
 function updateExportSummary(){
   const items=[];
@@ -2643,6 +2762,7 @@ async function editorExport(){
       logo_opacity:parseInt($('ed-logo-opacity')?.value)||80,
       remove_fillers:!!document.getElementById('ed-filler')?.checked,
       filler_words:[...edActiveFillers],
+      middle_cuts:edCuts,
       remove_pauses:!!document.getElementById('ed-pauses')?.checked,
       audio_norm:!!document.getElementById('ed-audio-norm')?.checked,
       broll:!!document.getElementById('ed-broll')?.checked,
