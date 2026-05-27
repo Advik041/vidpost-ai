@@ -40,7 +40,7 @@ cmds = [
 # --timeout 600: allows 10-minute FFmpeg jobs without worker kill
 # --graceful-timeout 60: allows in-flight jobs 60s to finish on deploy
 # --worker-connections 1000: per-worker connection limit for gthread
-cmd = "/opt/venv/bin/gunicorn app:app \
+cmd = """/opt/venv/bin/gunicorn app:app \
   --bind 0.0.0.0:$PORT \
   --workers 2 \
   --worker-class gthread \
@@ -53,4 +53,4 @@ cmd = "/opt/venv/bin/gunicorn app:app \
   --preload \
   --access-logfile - \
   --error-logfile - \
-  --log-level info"
+  --log-level info"""
