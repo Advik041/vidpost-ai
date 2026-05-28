@@ -10,7 +10,8 @@ cmds = [
 
 [phases.build]
 cmds = [
-  "mkdir -p /tmp/vidpost_clips /tmp/vidpost_uploads"
+  "mkdir -p /tmp/vidpost_clips /tmp/vidpost_uploads",
+  "ffmpeg -version"
 ]
 
 [start]
