@@ -436,11 +436,25 @@ def _serve_video_with_range(filepath: str) -> Response:
 
 @app.route("/health", methods=["GET"])
 def health():
+    # Detect ffmpeg from multiple possible nix store paths
+    ffmpeg_found = bool(shutil.which("ffmpeg"))
+    if not ffmpeg_found:
+        for p in ["/usr/bin/ffmpeg", "/usr/local/bin/ffmpeg", "/run/current-system/sw/bin/ffmpeg"]:
+            if os.path.exists(p):
+                ffmpeg_found = True
+                break
+        if not ffmpeg_found:
+            try:
+                r = subprocess.run(["ffmpeg", "-version"], capture_output=True, timeout=5)
+                ffmpeg_found = r.returncode == 0
+            except Exception:
+                pass
+
     return jsonify({
         "status": "ok",
         "version": "2.0",
         "ytdlp": YTDLP,
-        "ffmpeg": bool(shutil.which("ffmpeg")),
+        "ffmpeg": ffmpeg_found,
         "cookies": "configured" if (YT_COOKIES and os.path.exists(YT_COOKIES)) else "not set",
         "proxy": "configured" if PROXY else "not set",
         "supabase": "configured" if supa else "not set",
