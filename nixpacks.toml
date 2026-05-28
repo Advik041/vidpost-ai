@@ -1,56 +1,17 @@
-# VidPost AI — Railway Deployment v2
-# Key changes from v1:
-#   - Added --preload to Gunicorn: loads app once, forks workers (saves ~150MB RAM per worker)
-#   - Switched to gthread worker class with 4 threads: handles concurrent I/O jobs
-#     without needing 4x RAM of 4 separate worker processes
-#   - Added --max-requests 200 (was 100) and jitter to prevent all workers
-#     restarting simultaneously under load
-#   - timeout 600: FFmpeg jobs can take up to 10 min for long videos
-#   - Added --access-logfile - to pipe access logs to Railway's log viewer
-#   - Added --error-logfile - for structured error capture
-#   - pip install order: requirements.txt first, then latest yt-dlp on top
-#     (yt-dlp is pinned in requirements.txt as a floor, -U upgrades past it)
-
 [phases.setup]
 nixPkgs = ["python313", "ffmpeg"]
 
 [phases.install]
 cmds = [
-  "python -m venv /opt/venv",
-  "/opt/venv/bin/pip install --upgrade pip -q",
-  "/opt/venv/bin/pip install -r requirements.txt -q",
-  # Always install the latest yt-dlp AFTER requirements.txt
-  # (yt-dlp pushes YouTube fixes multiple times per week)
-  "/opt/venv/bin/pip install -U yt-dlp -q"
+  "pip install --upgrade pip -q",
+  "pip install -r requirements.txt -q",
+  "pip install -U yt-dlp -q"
 ]
 
 [phases.build]
 cmds = [
-  "mkdir -p /tmp/vidpost_clips /tmp/vidpost_uploads",
-  # Verify FFmpeg is available
-  "ffmpeg -version | head -1"
+  "mkdir -p /tmp/vidpost_clips /tmp/vidpost_uploads"
 ]
 
 [start]
-# Worker count: 2 processes × 4 threads = 8 concurrent requests
-# This is optimal for Railway's 1-2 vCPU containers.
-# Do NOT increase workers to 4+ without upgrading Railway plan (RAM exhaustion).
-#
-# --preload: app module loaded ONCE before forking (saves ~150MB per worker)
-# --timeout 600: allows 10-minute FFmpeg jobs without worker kill
-# --graceful-timeout 60: allows in-flight jobs 60s to finish on deploy
-# --worker-connections 1000: per-worker connection limit for gthread
-cmd = "/opt/venv/bin/gunicorn app:app \
-  --bind 0.0.0.0:$PORT \
-  --workers 2 \
-  --worker-class gthread \
-  --threads 4 \
-  --timeout 600 \
-  --graceful-timeout 60 \
-  --keep-alive 5 \
-  --max-requests 200 \
-  --max-requests-jitter 30 \
-  --preload \
-  --access-logfile - \
-  --error-logfile - \
-  --log-level info"
+cmd = "gunicorn app:app --bind 0.0.0.0:$PORT --workers 2 --worker-class gthread --threads 4 --timeout 600 --graceful-timeout 60 --keep-alive 5 --max-requests 200 --max-requests-jitter 30 --access-logfile - --error-logfile - --log-level info"
