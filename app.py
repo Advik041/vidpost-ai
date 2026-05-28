@@ -31,16 +31,28 @@ except ImportError:
 app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET", secrets.token_hex(32))
 
-# ── CORS — CRITICAL FIX: do NOT mix "*" with specific origins ─────────────────
-# The old code had both "*" and specific origins in the same list.
-# Flask-CORS treats the first matching rule; having "*" makes credentialed
-# requests (with Authorization headers) silently fail in Safari/Firefox.
-# Allow ALL origins — frontend calls Railway directly (no Vercel proxy)
+# ── CORS ─────────────────────────────────────────────────────────────────────
+# Frontend (Vercel) calls Railway directly — must allow all origins
 CORS(app,
      resources={r"/*": {"origins": "*"}},
      supports_credentials=False,
      expose_headers=["Content-Range", "Accept-Ranges", "Content-Length"],
      allow_headers=["Content-Type", "Authorization", "X-Cron-Secret", "Range"])
+
+@app.after_request
+def add_cors_headers(response):
+    """Guarantee CORS headers on EVERY response including errors."""
+    response.headers["Access-Control-Allow-Origin"]   = "*"
+    response.headers["Access-Control-Allow-Methods"]  = "GET,POST,PUT,DELETE,OPTIONS,PATCH"
+    response.headers["Access-Control-Allow-Headers"]  = "Content-Type,Authorization,X-Cron-Secret,Range,Accept-Ranges"
+    response.headers["Access-Control-Expose-Headers"] = "Content-Range,Accept-Ranges,Content-Length"
+    return response
+
+@app.route("/", defaults={"path": ""}, methods=["OPTIONS"])
+@app.route("/<path:path>", methods=["OPTIONS"])
+def handle_options(path):
+    """Handle all preflight OPTIONS requests globally."""
+    return "", 200
 
 app.config['MAX_CONTENT_LENGTH'] = 500 * 1024 * 1024  # 500 MB
 
