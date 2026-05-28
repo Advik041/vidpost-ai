@@ -17,7 +17,7 @@ supabase==2.11.0
 stripe==11.4.1
 
 # ── YouTube download fallback (yt-dlp is installed separately via nixpacks -U) ─
-pytubefix==8.6.1
+pytubefix==8.6.0
 
 # ── NOTE: yt-dlp is NOT pinned here intentionally.
 #    nixpacks.toml installs it with -U (latest) AFTER this file,
