@@ -1,0 +1,2296 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VidPost AI — Turn Any Video Into Viral Content Automatically</title>
+<meta name="description" content="AI clips your YouTube videos, writes platform-native captions, and auto-posts to LinkedIn, YouTube, Instagram, TikTok, X and Facebook. Zero manual work.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Syne+Mono&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+<style>
+/* ── Design tokens ────────────────────────────────────────────────────────── */
+:root {
+  --purple:#8b5cf6; --purple2:#7c3aed; --purple3:#c4b5fd; --purple4:#6d28d9;
+  --r:8px; --r2:16px; --r3:24px;
+  --font-head:'Syne',sans-serif;
+  --font-body:'Outfit',sans-serif;
+  --font-mono:'Syne Mono',monospace;
+  --transition:.18s cubic-bezier(.4,0,.2,1);
+}
+[data-theme="dark"] {
+  --bg:#07070e; --bg2:#0d0d1a; --bg3:#111120; --bg4:#181828;
+  --ink:#f0f0ff; --ink2:#9090b8; --ink3:#3a3a5c;
+  --border:#1c1c30; --border2:#28284a;
+  --card:#0d0d1a; --card2:#111120;
+  --glow:rgba(139,92,246,.15);
+  --glow2:rgba(139,92,246,.08);
+}
+[data-theme="light"] {
+  --bg:#faf9ff; --bg2:#f2f0ff; --bg3:#ece8ff; --bg4:#e0daff;
+  --ink:#0a0a18; --ink2:#4a4a6a; --ink3:#a0a0c0;
+  --border:#e0daff; --border2:#d0c8ff;
+  --card:#fff; --card2:#f8f6ff;
+  --glow:rgba(139,92,246,.10);
+  --glow2:rgba(139,92,246,.05);
+}
+
+/* ── Reset ───────────────────────────────────────────────────────────────── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:var(--font-body);background:var(--bg);color:var(--ink);min-height:100vh;overflow-x:hidden;transition:background var(--transition),color var(--transition)}
+::selection{background:var(--purple);color:#fff}
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+
+/* ── Nav ─────────────────────────────────────────────────────────────────── */
+nav{position:fixed;top:0;left:0;right:0;z-index:200;display:flex;align-items:center;
+  justify-content:space-between;padding:14px 40px;
+  background:rgba(7,7,14,.85);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
+  border-bottom:1px solid var(--border);transition:background var(--transition)}
+[data-theme="light"] nav{background:rgba(250,249,255,.9)}
+.nav-logo{font-family:var(--font-head);font-size:18px;font-weight:800;letter-spacing:-.5px;
+  color:var(--ink);text-decoration:none;display:flex;align-items:center;gap:8px}
+.logo-mark{width:28px;height:28px;border-radius:8px;background:var(--purple);
+  display:flex;align-items:center;justify-content:center;font-size:14px}
+.nav-links{display:flex;align-items:center;gap:6px}
+.nav-link{font-size:13px;color:var(--ink2);text-decoration:none;padding:6px 13px;
+  border-radius:20px;transition:all var(--transition);font-family:var(--font-head);font-weight:500}
+.nav-link:hover{color:var(--ink);background:var(--bg3)}
+.nav-cta{background:var(--purple);color:#fff;font-size:13px;font-weight:700;padding:8px 20px;
+  border-radius:20px;text-decoration:none;font-family:var(--font-head);
+  transition:all var(--transition);border:none;cursor:pointer;
+  box-shadow:0 0 24px var(--glow)}
+.nav-cta:hover{background:var(--purple2);transform:translateY(-1px);box-shadow:0 4px 32px var(--glow)}
+.theme-btn{width:34px;height:34px;border-radius:50%;border:1px solid var(--border2);
+  background:var(--bg3);cursor:pointer;display:flex;align-items:center;
+  justify-content:center;font-size:15px;transition:all var(--transition);color:var(--ink)}
+.theme-btn:hover{border-color:var(--purple)}
+
+/* ── Hero ────────────────────────────────────────────────────────────────── */
+.hero{min-height:100vh;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;text-align:center;padding:120px 24px 80px;position:relative;z-index:1}
+/* Background mesh gradient */
+.hero::before{content:'';position:absolute;inset:0;z-index:-1;
+  background:radial-gradient(ellipse 60% 40% at 50% 20%,rgba(139,92,246,.12) 0%,transparent 70%)}
+.hero-badge{display:inline-flex;align-items:center;gap:8px;padding:5px 14px 5px 8px;
+  border-radius:20px;border:1px solid var(--border2);background:var(--bg3);
+  font-family:var(--font-mono);font-size:11px;color:var(--ink2);margin-bottom:28px;
+  letter-spacing:.06em;cursor:default}
+.badge-dot{width:20px;height:20px;border-radius:50%;background:rgba(139,92,246,.15);
+  border:1px solid rgba(139,92,246,.3);display:flex;align-items:center;justify-content:center}
+.badge-dot::after{content:'';width:6px;height:6px;border-radius:50%;background:var(--purple);
+  animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.8)}}
+.hero h1{font-family:var(--font-head);font-size:clamp(44px,7vw,92px);line-height:.95;
+  font-weight:800;letter-spacing:-3px;margin-bottom:24px;max-width:940px}
+.hero h1 .accent{
+  background:linear-gradient(135deg,var(--purple3),var(--purple));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.hero h1 .dim{color:var(--ink3)}
+.hero-sub{font-size:clamp(15px,1.8vw,19px);color:var(--ink2);line-height:1.65;
+  max-width:540px;margin-bottom:44px;font-weight:300}
+.hero-actions{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-bottom:56px}
+.btn-hero{padding:14px 30px;border-radius:var(--r2);font-family:var(--font-head);font-size:15px;
+  font-weight:700;cursor:pointer;transition:all var(--transition);
+  text-decoration:none;display:inline-flex;align-items:center;gap:8px}
+.btn-hero.primary{background:var(--purple);color:#fff;border:2px solid var(--purple);
+  box-shadow:0 0 48px var(--glow)}
+.btn-hero.primary:hover{background:var(--purple2);transform:translateY(-2px);box-shadow:0 8px 48px var(--glow)}
+.btn-hero.secondary{background:transparent;color:var(--ink);border:2px solid var(--border2)}
+.btn-hero.secondary:hover{border-color:var(--purple);color:var(--purple)}
+
+/* Stats bar */
+.hero-stats{display:flex;align-items:center;justify-content:center;gap:0;flex-wrap:wrap;
+  background:var(--bg3);border:1px solid var(--border);border-radius:var(--r2);
+  padding:14px 24px;max-width:580px;margin:0 auto 40px}
+.hero-stat{text-align:center;padding:0 20px}
+.hero-stat-num{font-family:var(--font-head);font-size:22px;font-weight:900;
+  color:var(--purple);line-height:1}
+.hero-stat-label{font-size:10px;font-family:var(--font-mono);color:var(--ink3);
+  text-transform:uppercase;letter-spacing:.06em;margin-top:3px}
+.hero-stat-div{width:1px;height:32px;background:var(--border2)}
+
+/* Platform badges */
+.platform-strip{display:flex;gap:10px;align-items:center;justify-content:center;flex-wrap:wrap}
+.plat-badge{display:flex;align-items:center;gap:6px;padding:6px 14px;border-radius:20px;
+  border:1px solid var(--border);background:var(--bg3);font-size:12px;
+  font-family:var(--font-head);font-weight:600;color:var(--ink2);transition:all var(--transition)}
+.plat-badge:hover{border-color:var(--purple);color:var(--purple);background:var(--glow2)}
+.plat-dot{width:8px;height:8px;border-radius:50%}
+
+/* ── Proof banner ─────────────────────────────────────────────────────────── */
+.proof-banner{background:rgba(139,92,246,.04);border-top:1px solid rgba(139,92,246,.1);
+  border-bottom:1px solid rgba(139,92,246,.1);padding:12px 20px}
+.proof-inner{display:flex;align-items:center;justify-content:center;gap:14px;
+  flex-wrap:wrap;max-width:1200px;margin:0 auto;font-size:12px;
+  color:var(--ink2);font-family:var(--font-mono)}
+.proof-item strong{color:var(--purple3)}
+.proof-sep{color:var(--border2)}
+
+/* ── Section ─────────────────────────────────────────────────────────────── */
+section{padding:100px 48px;position:relative;z-index:1;max-width:1200px;margin:0 auto}
+.section-label{font-family:var(--font-mono);font-size:11px;letter-spacing:.15em;
+  text-transform:uppercase;color:var(--purple);margin-bottom:14px}
+.section-title{font-family:var(--font-head);font-size:clamp(30px,4vw,54px);font-weight:800;
+  letter-spacing:-2px;line-height:1;margin-bottom:14px}
+.section-sub{font-size:16px;color:var(--ink2);line-height:1.65;max-width:520px;font-weight:300}
+
+/* ── Steps grid ──────────────────────────────────────────────────────────── */
+.steps-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:56px}
+@media(max-width:900px){.steps-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:500px){.steps-grid{grid-template-columns:1fr}}
+.step-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);
+  padding:28px;position:relative;overflow:hidden;transition:all .3s}
+.step-card:hover{border-color:rgba(139,92,246,.4);transform:translateY(-4px);
+  box-shadow:0 20px 60px rgba(139,92,246,.08)}
+.step-num{font-family:var(--font-mono);font-size:11px;color:var(--purple);
+  margin-bottom:16px;letter-spacing:.1em}
+.step-icon{font-size:30px;margin-bottom:12px}
+.step-title{font-family:var(--font-head);font-size:15px;font-weight:700;margin-bottom:8px}
+.step-desc{font-size:13px;color:var(--ink2);line-height:1.6}
+.step-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,transparent,var(--purple),transparent);
+  opacity:0;transition:opacity .3s}
+.step-card:hover::before{opacity:1}
+
+/* ── Features grid ───────────────────────────────────────────────────────── */
+.features-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:56px}
+@media(max-width:900px){.features-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:500px){.features-grid{grid-template-columns:1fr}}
+.feature-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);
+  padding:28px;transition:all .3s}
+.feature-card:hover{border-color:rgba(139,92,246,.3);transform:translateY(-2px)}
+.feature-card.highlight{background:var(--purple);border-color:var(--purple)}
+.feature-card.highlight .feat-title,.feature-card.highlight .feat-desc{color:#fff}
+.feat-icon{font-size:26px;margin-bottom:14px}
+.feat-title{font-family:var(--font-head);font-size:16px;font-weight:700;margin-bottom:8px}
+.feat-desc{font-size:13px;color:var(--ink2);line-height:1.65}
+
+/* ── Platforms full ───────────────────────────────────────────────────────── */
+.platforms-full{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:44px}
+@media(max-width:700px){.platforms-full{grid-template-columns:repeat(2,1fr)}}
+.plat-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);
+  padding:22px;display:flex;align-items:center;gap:14px;transition:all .3s}
+.plat-card:hover{border-color:var(--border2);transform:translateX(3px)}
+.plat-emoji{font-size:26px;flex-shrink:0}
+.plat-name{font-family:var(--font-head);font-size:14px;font-weight:700;margin-bottom:3px}
+.plat-type{font-size:12px;color:var(--ink2)}
+.plat-status-badge{margin-left:auto;font-family:var(--font-mono);font-size:10px;
+  padding:3px 10px;border-radius:20px;flex-shrink:0}
+.live{background:rgba(139,92,246,.1);color:var(--purple3);border:1px solid rgba(139,92,246,.2)}
+.soon{background:var(--bg3);color:var(--ink3);border:1px solid var(--border)}
+
+/* ── Pricing ─────────────────────────────────────────────────────────────── */
+.pricing-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:56px}
+@media(max-width:800px){.pricing-grid{grid-template-columns:1fr}}
+.price-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);
+  padding:34px;transition:all .3s;position:relative}
+.price-card.popular{border-color:var(--purple);background:var(--card2);
+  box-shadow:0 0 60px var(--glow)}
+.price-card.popular::before{content:'Most Popular';position:absolute;top:-12px;
+  left:50%;transform:translateX(-50%);background:var(--purple);color:#fff;
+  font-family:var(--font-mono);font-size:10px;padding:4px 14px;border-radius:20px;
+  font-weight:700;letter-spacing:.05em;white-space:nowrap}
+.price-tier{font-family:var(--font-mono);font-size:11px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--ink2);margin-bottom:14px}
+.price-amount{font-family:var(--font-head);font-size:48px;font-weight:800;
+  letter-spacing:-2px;margin-bottom:4px}
+.price-period{font-size:13px;color:var(--ink2);margin-bottom:22px}
+.price-features{list-style:none;margin-bottom:28px}
+.price-features li{font-size:13px;color:var(--ink2);padding:7px 0;
+  border-bottom:1px solid var(--border);display:flex;gap:9px;
+  align-items:flex-start;line-height:1.4}
+.price-features li::before{content:'→';color:var(--purple);flex-shrink:0;font-family:var(--font-mono)}
+.btn-price{width:100%;padding:12px;border-radius:var(--r);font-family:var(--font-head);
+  font-size:14px;font-weight:700;cursor:pointer;transition:all var(--transition);
+  border:2px solid var(--border2);background:transparent;color:var(--ink)}
+.btn-price:hover{border-color:var(--purple);color:var(--purple)}
+.price-card.popular .btn-price{background:var(--purple);color:#fff;border-color:var(--purple)}
+.price-card.popular .btn-price:hover{background:var(--purple2)}
+
+/* ── Compare table ───────────────────────────────────────────────────────── */
+.compare-table{width:100%;border-collapse:collapse;margin-top:44px}
+.compare-table th{font-family:var(--font-head);font-size:13px;font-weight:700;
+  padding:14px;text-align:center;border-bottom:2px solid var(--border)}
+.compare-table th:first-child{text-align:left}
+.compare-table td{padding:13px 16px;border-bottom:1px solid var(--border);
+  font-size:13px;color:var(--ink2);text-align:center}
+.compare-table td:first-child{text-align:left;color:var(--ink);font-weight:500}
+.compare-table .us{color:var(--purple3);font-weight:700;font-family:var(--font-head)}
+.compare-table tr:hover td{background:var(--bg3)}
+.check{color:var(--purple3)}.cross{color:var(--ink3)}
+
+/* ── Testimonials ────────────────────────────────────────────────────────── */
+.testimonials-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:44px}
+@media(max-width:800px){.testimonials-grid{grid-template-columns:1fr}}
+.testi-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);
+  padding:26px;transition:all .3s}
+.testi-card:hover{border-color:var(--border2)}
+.testi-stars{color:#f5a623;font-size:13px;margin-bottom:10px;letter-spacing:2px}
+.testi-text{font-size:14px;line-height:1.7;color:var(--ink2);margin-bottom:18px;font-style:italic}
+.testi-text::before{content:'"';font-family:var(--font-head);font-size:36px;
+  color:var(--purple);line-height:.5;display:block;margin-bottom:8px}
+.testi-author{display:flex;align-items:center;gap:10px}
+.testi-avatar{width:34px;height:34px;border-radius:50%;background:var(--purple);
+  display:flex;align-items:center;justify-content:center;font-family:var(--font-head);
+  font-size:13px;font-weight:800;color:#fff;flex-shrink:0}
+.testi-name{font-family:var(--font-head);font-size:13px;font-weight:700}
+.testi-role{font-size:11px;color:var(--ink3);font-family:var(--font-mono)}
+
+/* ── FAQ ─────────────────────────────────────────────────────────────────── */
+.faq-list{margin-top:44px;display:flex;flex-direction:column;gap:6px}
+.faq-item{background:var(--card);border:1px solid var(--border);border-radius:var(--r);overflow:hidden}
+.faq-q{padding:18px 22px;font-family:var(--font-head);font-size:14px;font-weight:700;
+  cursor:pointer;display:flex;justify-content:space-between;align-items:center;transition:background .2s}
+.faq-q:hover{background:var(--bg3)}
+.faq-arrow{font-size:16px;color:var(--purple);transition:transform .3s;flex-shrink:0}
+.faq-item.open .faq-arrow{transform:rotate(45deg)}
+.faq-a{display:none;padding:0 22px 18px;font-size:13px;color:var(--ink2);line-height:1.7}
+.faq-item.open .faq-a{display:block}
+
+/* ── CTA ─────────────────────────────────────────────────────────────────── */
+.cta-section{text-align:center;padding:110px 48px;background:var(--bg2);
+  border-top:1px solid var(--border);border-bottom:1px solid var(--border);
+  position:relative;z-index:1}
+.cta-section::before{content:'';position:absolute;inset:0;z-index:-1;
+  background:radial-gradient(ellipse 50% 60% at 50% 50%,rgba(139,92,246,.08) 0%,transparent 70%)}
+.cta-section h2{font-family:var(--font-head);font-size:clamp(34px,5vw,68px);
+  font-weight:800;letter-spacing:-2px;margin-bottom:18px}
+.cta-section p{font-size:17px;color:var(--ink2);margin-bottom:36px;font-weight:300}
+
+/* ── Footer ──────────────────────────────────────────────────────────────── */
+footer{padding:56px 48px 36px;border-top:1px solid var(--border);position:relative;z-index:1}
+.footer-top{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:40px;margin-bottom:44px}
+@media(max-width:800px){.footer-top{grid-template-columns:1fr 1fr}}
+.footer-brand{font-family:var(--font-head);font-size:18px;font-weight:800;margin-bottom:10px}
+.footer-tagline{font-size:13px;color:var(--ink2);line-height:1.6;max-width:260px}
+.footer-col-title{font-family:var(--font-head);font-size:12px;font-weight:700;
+  letter-spacing:.08em;text-transform:uppercase;color:var(--ink2);margin-bottom:14px}
+.footer-links{list-style:none;display:flex;flex-direction:column;gap:8px}
+.footer-links a{font-size:13px;color:var(--ink2);text-decoration:none;transition:color var(--transition)}
+.footer-links a:hover{color:var(--purple3)}
+.footer-bottom{display:flex;justify-content:space-between;align-items:center;
+  flex-wrap:wrap;gap:12px;padding-top:28px;border-top:1px solid var(--border)}
+.footer-copy{font-size:12px;color:var(--ink3);font-family:var(--font-mono)}
+.footer-legal{display:flex;gap:18px}
+.footer-legal a{font-size:12px;color:var(--ink3);text-decoration:none;transition:color var(--transition)}
+.footer-legal a:hover{color:var(--ink2)}
+
+/* ── Legal pages ─────────────────────────────────────────────────────────── */
+.legal-page{display:none;max-width:760px;margin:80px auto;padding:80px 24px 60px}
+.legal-page.active{display:block}
+.legal-page h1{font-family:var(--font-head);font-size:36px;font-weight:800;
+  letter-spacing:-1px;margin-bottom:8px}
+.legal-page h2{font-family:var(--font-head);font-size:18px;font-weight:700;
+  margin:32px 0 10px}
+.legal-page p,.legal-page li{font-size:14px;color:var(--ink2);line-height:1.75;margin-bottom:10px}
+.legal-page ul{padding-left:20px;margin-bottom:12px}
+.legal-meta{font-size:12px;font-family:var(--font-mono);color:var(--ink3);margin-bottom:32px}
+
+/* ── App view ────────────────────────────────────────────────────────────── */
+.app-section{padding:72px 32px 40px;position:relative;z-index:1;max-width:1240px;margin:0 auto}
+.app-tabs{display:flex;gap:4px;margin-bottom:22px;background:var(--bg3);padding:5px;
+  border-radius:var(--r2);width:fit-content;flex-wrap:wrap}
+.app-tab{padding:7px 16px;border-radius:var(--r);font-family:var(--font-head);font-size:12px;
+  font-weight:600;cursor:pointer;border:none;background:transparent;
+  color:var(--ink2);transition:all var(--transition)}
+.app-tab.on{background:var(--purple);color:#fff;box-shadow:0 2px 12px rgba(139,92,246,.3)}
+.app-panel{display:none}.app-panel.on{display:block}
+
+/* Inputs */
+input[type=text],input[type=email],input[type=password],input[type=number],
+input[type=datetime-local],textarea{
+  font-family:var(--font-mono);font-size:13px;padding:11px 14px;
+  border:1.5px solid var(--border);border-radius:var(--r);background:var(--bg3);
+  color:var(--ink);outline:none;transition:border-color var(--transition);width:100%}
+input:focus,textarea:focus{border-color:var(--purple)}
+input::placeholder,textarea::placeholder{color:var(--ink3)}
+
+.url-row{display:flex;gap:10px;margin-bottom:14px}
+.btn-go{padding:11px 22px;background:var(--purple);color:#fff;border:none;
+  border-radius:var(--r);font-family:var(--font-head);font-size:13px;font-weight:700;
+  cursor:pointer;white-space:nowrap;transition:all var(--transition);
+  box-shadow:0 0 20px var(--glow)}
+.btn-go:hover{background:var(--purple2);transform:translateY(-1px)}
+.btn-go:disabled{opacity:.4;cursor:not-allowed;transform:none}
+
+.a-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);
+  padding:22px;margin-bottom:14px}
+
+/* Clip cards */
+.clip-card2{background:var(--card2);border:1px solid var(--border);border-radius:var(--r);
+  overflow:hidden;margin-bottom:8px;transition:all var(--transition)}
+.clip-card2.sel{border-color:var(--purple);box-shadow:0 0 20px var(--glow2)}
+.clip-head{display:flex;align-items:center;gap:12px;padding:13px 15px;cursor:pointer}
+.clip-head:hover{background:var(--bg3)}
+.clip-n{width:24px;height:24px;border-radius:50%;background:var(--purple);color:#fff;
+  font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;font-family:var(--font-mono)}
+.clip-info2{flex:1}
+.clip-t{font-family:var(--font-head);font-size:13px;font-weight:700}
+.clip-m{font-size:11px;color:var(--ink2);font-family:var(--font-mono);margin-top:2px}
+.clip-score{display:flex;gap:2px}
+.sdot{width:5px;height:5px;border-radius:50%;background:var(--border)}
+.sdot.on{background:var(--purple)}
+.clip-body2{display:none;padding:13px 15px;border-top:1px solid var(--border)}
+.clip-card2.sel .clip-body2{display:block}
+
+/* Platform toggles */
+.pt{padding:5px 11px;border-radius:20px;border:1px solid var(--border);font-size:11px;
+  font-family:var(--font-head);font-weight:600;cursor:pointer;
+  transition:all var(--transition);color:var(--ink2);background:transparent}
+.pt.on{background:var(--purple);color:#fff;border-color:var(--purple)}
+
+/* Status / alerts */
+.status-bar2{display:none;align-items:center;gap:10px;padding:11px 15px;background:var(--bg3);
+  border:1px solid var(--border);border-radius:var(--r);font-family:var(--font-mono);
+  font-size:12px;margin-bottom:12px;color:var(--ink2)}
+.spin2{width:14px;height:14px;border:2px solid var(--border2);border-top-color:var(--purple);
+  border-radius:50%;animation:spin .65s linear infinite;flex-shrink:0}
+@keyframes spin{to{transform:rotate(360deg)}}
+.err2{display:none;padding:11px 15px;background:rgba(220,50,50,.08);
+  border:1px solid rgba(220,50,50,.3);border-radius:var(--r);
+  font-size:12px;color:#ff6b6b;margin-bottom:12px;font-family:var(--font-mono)}
+.ok2{display:none;padding:11px 15px;background:rgba(139,92,246,.08);
+  border:1px solid rgba(139,92,246,.25);border-radius:var(--r);
+  font-size:12px;color:var(--purple3);margin-bottom:12px;font-family:var(--font-mono)}
+
+.dl-btn{padding:9px 16px;background:var(--purple);color:#fff;border:none;border-radius:var(--r);
+  font-size:12px;font-family:var(--font-head);font-weight:700;cursor:pointer;
+  text-decoration:none;display:inline-flex;align-items:center;gap:5px;transition:all var(--transition)}
+.dl-btn:hover{background:var(--purple2)}
+
+/* Connect platform cards */
+.connect-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.conn-card{background:var(--card);border:1.5px solid var(--border);border-radius:var(--r2);
+  padding:18px;text-align:center;transition:all var(--transition)}
+.conn-card.connected{border-color:var(--purple);background:var(--glow2)}
+.conn-icon{font-size:24px;margin-bottom:6px}
+.conn-name{font-family:var(--font-head);font-size:13px;font-weight:700;margin-bottom:4px}
+.conn-status{font-size:11px;color:var(--ink3);font-family:var(--font-mono);margin-bottom:10px}
+.conn-card.connected .conn-status{color:var(--purple3)}
+.conn-btn{width:100%;padding:7px;border-radius:var(--r);font-family:var(--font-head);
+  font-size:12px;font-weight:700;cursor:pointer;border:1.5px solid var(--border2);
+  background:transparent;color:var(--ink2);transition:all var(--transition)}
+.conn-btn:hover{border-color:var(--purple);color:var(--purple)}
+.conn-card.connected .conn-btn{background:rgba(139,92,246,.1);border-color:var(--purple);color:var(--purple3)}
+
+/* Scheduling */
+.sched-item{display:flex;align-items:center;gap:10px;padding:10px 0;
+  border-bottom:1px solid var(--border);font-size:13px}
+.sched-item:last-child{border-bottom:none}
+.sched-plat-badge{font-family:var(--font-mono);font-size:10px;padding:3px 9px;
+  border-radius:20px;background:var(--bg3);border:1px solid var(--border);
+  color:var(--ink2);text-transform:capitalize;white-space:nowrap}
+.sched-status-posted{color:#4caf50;font-size:10px;font-family:var(--font-mono)}
+.sched-status-pending{color:var(--ink3);font-size:10px;font-family:var(--font-mono)}
+.sched-status-failed{color:#f44336;font-size:10px;font-family:var(--font-mono)}
+
+/* Calendar */
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-top:10px}
+.cal-header{font-size:10px;font-family:var(--font-mono);color:var(--ink3);
+  text-align:center;padding:4px;text-transform:uppercase;letter-spacing:.05em}
+.cal-day{border:1px solid var(--border);border-radius:5px;padding:6px 4px 5px;
+  text-align:center;cursor:default;min-height:42px;position:relative;
+  transition:all .2s}
+.cal-day.today{border-color:var(--purple);background:var(--glow2)}
+.cal-day.has-post{background:rgba(139,92,246,.06)}
+.cal-day-num{font-size:12px;font-family:var(--font-mono);color:var(--ink2)}
+.cal-day.today .cal-day-num{color:var(--purple);font-weight:700}
+.cal-dot{width:4px;height:4px;border-radius:50%;background:var(--purple);
+  display:inline-block;margin:1px}
+
+/* Billing plan cards */
+.bill-plan-card{background:var(--card);border:1px solid var(--border);
+  border-radius:var(--r2);padding:24px;position:relative;transition:all .3s}
+.bill-plan-card.popular{border-color:var(--purple);background:var(--glow2)}
+.bill-plan-badge{position:absolute;top:-10px;left:50%;transform:translateX(-50%);
+  background:var(--purple);color:#fff;font-family:var(--font-mono);font-size:10px;
+  padding:3px 12px;border-radius:20px;font-weight:700;white-space:nowrap}
+.bill-plan-name{font-family:var(--font-head);font-size:16px;font-weight:800;margin-bottom:6px}
+.bill-plan-price{font-family:var(--font-head);font-size:36px;font-weight:800;
+  letter-spacing:-1px;margin-bottom:14px}
+.bill-plan-price span{font-size:14px;color:var(--ink3);font-weight:400}
+.bill-plan-features{list-style:none;font-size:12px;color:var(--ink2);
+  line-height:2;margin-bottom:18px}
+.bill-cta{width:100%;padding:10px;border-radius:var(--r);font-family:var(--font-head);
+  font-size:13px;font-weight:700;cursor:pointer;border:1.5px solid var(--border2);
+  background:transparent;color:var(--ink);transition:all var(--transition)}
+.bill-cta:hover{border-color:var(--purple);color:var(--purple)}
+.bill-cta.lime{background:var(--purple);color:#fff;border-color:var(--purple)}
+.bill-cta.lime:hover{background:var(--purple2)}
+.bill-cta:disabled{opacity:.5;cursor:not-allowed}
+
+/* ── EDITOR ────────────────────────────────────────────────────────────────── */
+.ed-load-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);
+  padding:40px;text-align:center;max-width:560px;margin:0 auto}
+.ed-url-input{flex:1;font-family:var(--font-mono);font-size:12px;padding:10px 14px;
+  border:1.5px solid var(--border);border-radius:var(--r);background:var(--bg3);
+  color:var(--ink);outline:none;transition:border-color .2s}
+.ed-url-input:focus{border-color:var(--purple)}
+.ed-load-btn{padding:10px 20px;background:var(--purple);color:#fff;border:none;
+  border-radius:var(--r);font-family:var(--font-head);font-size:13px;font-weight:700;
+  cursor:pointer;white-space:nowrap;transition:all var(--transition)}
+.ed-load-btn:hover{background:var(--purple2)}
+.ed-topbar{display:flex;align-items:center;justify-content:space-between;
+  padding:10px 14px;background:var(--bg3);border:1px solid var(--border);
+  border-radius:var(--r);margin-bottom:14px;gap:10px;flex-wrap:wrap}
+.ed-columns{display:grid;grid-template-columns:1fr 360px;gap:16px}
+@media(max-width:1000px){.ed-columns{grid-template-columns:1fr}}
+
+/* Preview */
+.ed-preview-box{position:relative;background:#000;border-radius:var(--r2);overflow:hidden;
+  aspect-ratio:9/16;max-height:400px;border:1px solid var(--border2)}
+.ed-preview-box.fmt-169{aspect-ratio:16/9;max-height:280px}
+.ed-fmt-badge{position:absolute;top:8px;right:8px;padding:3px 10px;background:rgba(0,0,0,.7);
+  color:#fff;font-family:var(--font-mono);font-size:10px;border-radius:20px;
+  border:1px solid rgba(255,255,255,.2);z-index:10}
+
+/* Video element: fill box always */
+#ed-video{width:100%;height:100%;object-fit:contain;background:#000;display:block}
+
+/* Controls */
+.ed-controls{display:flex;align-items:center;gap:6px;padding:10px 0;flex-wrap:wrap}
+.ed-ctrl-btn{padding:6px 11px;background:var(--bg3);border:1px solid var(--border2);
+  border-radius:var(--r);color:var(--ink);font-size:13px;cursor:pointer;
+  transition:all var(--transition);font-family:var(--font-mono)}
+.ed-ctrl-btn:hover{border-color:var(--purple);color:var(--purple)}
+.ed-play-btn{background:var(--purple);color:#fff;border-color:var(--purple);
+  padding:6px 14px;font-size:16px}
+.ed-play-btn:hover{background:var(--purple2)}
+.ed-time-display{font-family:var(--font-mono);font-size:12px;color:var(--ink2);
+  padding:0 6px;flex-shrink:0}
+.ed-dur-pill{padding:3px 9px;border-radius:12px;border:1px solid var(--border2);
+  background:transparent;font-size:10px;font-family:var(--font-mono);
+  color:var(--ink3);cursor:pointer;transition:all var(--transition)}
+.ed-dur-pill.on{background:var(--purple);color:#fff;border-color:var(--purple)}
+
+/* Timeline */
+.ed-tl-wrap{margin-top:8px}
+.ed-tl-label{font-size:10px;font-family:var(--font-mono);color:var(--ink3);letter-spacing:.05em;text-transform:uppercase}
+.ed-timeline{position:relative;height:54px;background:var(--bg3);border-radius:var(--r);
+  cursor:crosshair;border:1px solid var(--border);overflow:visible;margin:6px 0 0;
+  user-select:none}
+.ed-waveform{position:absolute;inset:0;display:flex;align-items:center;
+  gap:2px;padding:6px 0;pointer-events:none}
+.ed-wv-bar{flex:1;border-radius:2px;background:var(--border2);transition:background .1s}
+.ed-wv-bar.sel{background:rgba(139,92,246,.5)}
+.ed-shadow{position:absolute;top:0;bottom:0;background:rgba(0,0,0,.55);z-index:1;pointer-events:none}
+.ed-range-fill{position:absolute;top:0;bottom:0;background:rgba(139,92,246,.12);z-index:1;pointer-events:none;border:1px solid rgba(139,92,246,.3)}
+.ed-playhead{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--purple);
+  z-index:5;pointer-events:none;border-radius:1px;transition:left .08s linear}
+.ed-playhead::before{content:'';position:absolute;top:-2px;left:50%;transform:translateX(-50%);
+  width:8px;height:8px;background:var(--purple);border-radius:50%}
+.ed-handle{position:absolute;top:-8px;bottom:-8px;width:14px;z-index:6;cursor:ew-resize;
+  display:flex;align-items:center;justify-content:center;transform:translateX(-50%)}
+.ed-handle-grip{width:6px;height:30px;background:var(--purple);border-radius:3px;
+  box-shadow:0 0 12px var(--glow)}
+.ed-ruler{display:flex;position:relative;height:18px;margin-top:3px}
+.ed-ruler span{position:absolute;font-size:9px;font-family:var(--font-mono);
+  color:var(--ink3);transform:translateX(-50%)}
+.ed-time-row{display:flex;gap:10px;margin-top:10px;align-items:center;flex-wrap:wrap}
+.ed-time-chip{display:flex;align-items:center;gap:6px;background:var(--bg3);
+  border:1px solid var(--border);border-radius:var(--r);padding:5px 10px}
+.ed-time-chip-label{font-size:9px;font-family:var(--font-mono);color:var(--ink3);
+  text-transform:uppercase;letter-spacing:.08em;white-space:nowrap;flex-shrink:0}
+.ed-time-chip-input{width:70px;border:none;background:transparent;color:var(--ink);
+  font-family:var(--font-mono);font-size:13px;outline:none;padding:0;text-align:center}
+
+/* Right panel */
+.ed-right{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);
+  overflow:hidden;display:flex;flex-direction:column;height:fit-content;max-height:90vh;overflow-y:auto}
+.ed-rtabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0}
+.ed-rtab{flex:1;padding:10px 4px;font-size:10px;font-family:var(--font-head);font-weight:700;
+  text-align:center;cursor:pointer;border:none;background:transparent;
+  color:var(--ink3);transition:all var(--transition);border-bottom:2px solid transparent}
+.ed-rtab.on{color:var(--purple);border-bottom-color:var(--purple);background:var(--glow2)}
+.ed-rtab:hover{color:var(--ink)}
+.ed-rpanel{display:none;flex-direction:column;gap:12px;padding:14px}
+.ed-section-lbl{font-size:9px;font-family:var(--font-mono);color:var(--ink3);
+  text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px}
+.ed-field-label{font-size:10px;font-family:var(--font-mono);color:var(--ink3);
+  text-transform:uppercase;letter-spacing:.07em;margin-bottom:5px}
+.ed-cap-btn{padding:6px 10px;border-radius:var(--r);border:1px solid var(--border2);
+  background:transparent;color:var(--ink2);font-size:11px;font-family:var(--font-head);
+  font-weight:700;cursor:pointer;transition:all var(--transition)}
+.ed-cap-btn.on{background:var(--purple);color:#fff;border-color:var(--purple)}
+.ed-pill{padding:4px 10px;border-radius:12px;border:1px solid var(--border2);
+  background:transparent;color:var(--ink3);font-size:10px;font-family:var(--font-mono);
+  cursor:pointer;transition:all var(--transition)}
+.ed-pill.on{background:var(--purple);color:#fff;border-color:var(--purple)}
+.ed-pos-btn{padding:4px 8px;border-radius:var(--r);border:1px solid var(--border2);
+  background:var(--bg3);color:var(--ink3);font-size:10px;font-family:var(--font-mono);
+  cursor:pointer;transition:all var(--transition)}
+.ed-pos-btn.on{background:var(--purple);color:#fff;border-color:var(--purple)}
+.ed-tmpl{padding:5px 10px;border-radius:var(--r);border:1px solid var(--border);
+  background:var(--bg3);font-size:11px;font-family:var(--font-head);font-weight:700;
+  cursor:pointer;transition:all var(--transition);color:var(--ink2)}
+.ed-tmpl.on{border-color:var(--purple);color:var(--purple)}
+.ed-fmt-btn{padding:7px 14px;border-radius:var(--r);border:1px solid var(--border2);
+  background:transparent;color:var(--ink2);font-family:var(--font-head);font-size:12px;
+  font-weight:700;cursor:pointer;transition:all var(--transition)}
+.ed-fmt-btn.on{background:var(--purple);color:#fff;border-color:var(--purple)}
+
+/* Export btn */
+#ed-export-btn{width:100%;padding:12px;background:var(--purple);color:#fff;border:none;
+  border-radius:var(--r);font-family:var(--font-head);font-size:14px;font-weight:700;
+  cursor:pointer;transition:all var(--transition);box-shadow:0 0 24px var(--glow)}
+#ed-export-btn:hover{background:var(--purple2);transform:translateY(-1px)}
+#ed-export-btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+
+/* Stat cards in analytics */
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);
+  padding:20px;text-align:center}
+.stat-num{font-family:var(--font-head);font-size:36px;font-weight:800;
+  letter-spacing:-1px;color:var(--purple)}
+.stat-label{font-size:11px;font-family:var(--font-mono);color:var(--ink3);
+  text-transform:uppercase;letter-spacing:.07em;margin-top:4px}
+
+/* Video preview loading overlay */
+.vid-overlay{position:absolute;inset:0;background:rgba(0,0,0,.7);display:flex;
+  flex-direction:column;align-items:center;justify-content:center;gap:10px;
+  border-radius:var(--r2);z-index:20}
+.vid-overlay p{font-size:12px;font-family:var(--font-mono);color:rgba(255,255,255,.7)}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav id="main-nav">
+  <a href="#" class="nav-logo" onclick="showLanding();return false">
+    <div class="logo-mark">🎬</div>VidPost AI
+  </a>
+  <div class="nav-links">
+    <a href="#how" class="nav-link">How it works</a>
+    <a href="#pricing" class="nav-link">Pricing</a>
+    <a href="#faq" class="nav-link">FAQ</a>
+    <button class="theme-btn" onclick="toggleTheme()" id="theme-btn">🌙</button>
+    <button class="nav-cta" onclick="showApp()">Start free →</button>
+  </div>
+</nav>
+
+<!-- LANDING -->
+<div id="landing">
+
+  <div class="hero">
+    <div class="hero-badge">
+      <div class="badge-dot"></div>
+      Trusted by 2,000+ creators worldwide
+    </div>
+    <h1>1 long video.<br><span class="accent">10× more content.</span><br><span class="dim">Zero extra work.</span></h1>
+    <p class="hero-sub">VidPost AI finds your best moments, cuts viral clips, writes platform-native captions, and auto-posts to 6 platforms — while you focus on creating.</p>
+    <div class="hero-actions">
+      <a href="#" class="btn-hero primary" onclick="showApp();return false">Start free — no card needed →</a>
+      <a href="#how" class="btn-hero secondary">See how it works</a>
+    </div>
+    <div class="hero-stats">
+      <div class="hero-stat"><div class="hero-stat-num">2,000+</div><div class="hero-stat-label">Creators</div></div>
+      <div class="hero-stat-div"></div>
+      <div class="hero-stat"><div class="hero-stat-num">50K+</div><div class="hero-stat-label">Clips made</div></div>
+      <div class="hero-stat-div"></div>
+      <div class="hero-stat"><div class="hero-stat-num">6</div><div class="hero-stat-label">Platforms</div></div>
+      <div class="hero-stat-div"></div>
+      <div class="hero-stat"><div class="hero-stat-num">$9</div><div class="hero-stat-label">Starts at</div></div>
+    </div>
+    <div class="platform-strip" style="margin-top:28px">
+      <div class="plat-badge"><div class="plat-dot" style="background:#0a66c2"></div>LinkedIn</div>
+      <div class="plat-badge"><div class="plat-dot" style="background:#ff0000"></div>YouTube</div>
+      <div class="plat-badge"><div class="plat-dot" style="background:#e1306c"></div>Instagram</div>
+      <div class="plat-badge"><div class="plat-dot" style="background:#ff0050"></div>TikTok</div>
+      <div class="plat-badge"><div class="plat-dot" style="background:#888"></div>X / Twitter</div>
+      <div class="plat-badge"><div class="plat-dot" style="background:#1877f2"></div>Facebook</div>
+    </div>
+  </div>
+
+  <div class="proof-banner">
+    <div class="proof-inner">
+      <div class="proof-item">⚡ <strong>Starting at $9/mo</strong></div>
+      <div class="proof-sep">·</div>
+      <div class="proof-item">🎬 <strong>B-Roll, captions, filler removal</strong></div>
+      <div class="proof-sep">·</div>
+      <div class="proof-item">🚀 <strong>6 platforms in one click</strong></div>
+      <div class="proof-sep">·</div>
+      <div class="proof-item">✨ <strong>AI writes every caption</strong></div>
+    </div>
+  </div>
+
+  <section id="how">
+    <div class="section-label">How it works</div>
+    <h2 class="section-title">From one video to<br>a week of content.</h2>
+    <p class="section-sub">The entire repurposing workflow — automated in under 60 seconds.</p>
+    <div class="steps-grid">
+      <div class="step-card"><div class="step-num">01</div><div class="step-icon">🔗</div><div class="step-title">Paste URL or upload</div><div class="step-desc">Drop any YouTube URL or upload MP4/MOV up to 500MB. Transcription is fully automatic.</div></div>
+      <div class="step-card"><div class="step-num">02</div><div class="step-icon">🔥</div><div class="step-title">AI finds viral moments</div><div class="step-desc">Our model scores every segment for hook strength, emotion and retention. Picks the top 5 clips with virality scores.</div></div>
+      <div class="step-card"><div class="step-num">03</div><div class="step-icon">✂️</div><div class="step-title">Edit in studio editor</div><div class="step-desc">Trim, add captions, remove fillers, insert B-Roll, apply brand kit — all in-browser. No Premiere needed.</div></div>
+      <div class="step-card"><div class="step-num">04</div><div class="step-icon">🚀</div><div class="step-title">Auto-post everywhere</div><div class="step-desc">One click posts clips + captions to all 6 platforms. Or schedule for peak engagement times.</div></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-label">Features</div>
+    <h2 class="section-title">Everything you need<br>to go viral.</h2>
+    <div class="features-grid">
+      <div class="feature-card"><div class="feat-icon">🤖</div><div class="feat-title">AI Clip Detection</div><div class="feat-desc">Groq-powered LLM finds the highest-retention moments from your transcript, scored 1-10 for virality.</div></div>
+      <div class="feature-card highlight"><div class="feat-icon">✂️</div><div class="feat-title">Studio Editor</div><div class="feat-desc">Timeline trim, middle cuts, filler removal, B-Roll, captions, logo, lower-thirds — one tool.</div></div>
+      <div class="feature-card"><div class="feat-icon">💬</div><div class="feat-title">6 Caption Styles</div><div class="feat-desc">Bold, outline, box, neon, lime, karaoke — burned frame-accurately into your video.</div></div>
+      <div class="feature-card"><div class="feat-icon">🎬</div><div class="feat-title">AI B-Roll</div><div class="feat-desc">Automatically fetches portrait Pexels clips that match your content and weaves them in.</div></div>
+      <div class="feature-card"><div class="feat-icon">🔇</div><div class="feat-title">Filler Removal</div><div class="feat-desc">Whisper AI transcribes then auto-cuts um, uh, like and any word you choose.</div></div>
+      <div class="feature-card"><div class="feat-icon">📅</div><div class="feat-title">Cross-Platform Scheduling</div><div class="feat-desc">Schedule posts to all 6 platforms at once. Calendar view shows your upcoming queue.</div></div>
+    </div>
+  </section>
+
+  <section id="pricing">
+    <div class="section-label">Pricing</div>
+    <h2 class="section-title">Simple pricing.<br>Powerful output.</h2>
+    <p class="section-sub">Start free. Upgrade when you're ready. Cancel anytime.</p>
+    <div class="pricing-grid">
+      <div class="price-card">
+        <div class="price-tier">Free</div>
+        <div class="price-amount">$0</div><div class="price-period">forever</div>
+        <ul class="price-features">
+          <li>5 clips / month</li><li>LinkedIn + YouTube</li>
+          <li>AI text posts</li><li>720p export</li>
+        </ul>
+        <button class="btn-price" onclick="showApp()">Start free →</button>
+      </div>
+      <div class="price-card popular">
+        <div class="price-tier">Creator</div>
+        <div class="price-amount">$29</div><div class="price-period">per month</div>
+        <ul class="price-features">
+          <li>Unlimited clips</li><li>All 6 platforms</li><li>No watermark</li>
+          <li>AI B-Roll + filler removal</li><li>All 6 caption styles</li>
+          <li>Brand kit + scheduling</li><li>AI thumbnails + virality score</li>
+        </ul>
+        <button class="btn-price" onclick="showApp()">Upgrade to Creator →</button>
+      </div>
+      <div class="price-card">
+        <div class="price-tier">Agency</div>
+        <div class="price-amount">$79</div><div class="price-period">per month</div>
+        <ul class="price-features">
+          <li>Everything in Creator</li><li>10 client workspaces</li>
+          <li>White-label dashboard</li><li>Priority support</li><li>API access</li>
+        </ul>
+        <button class="btn-price" onclick="showApp()">Upgrade to Agency →</button>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-label">Social proof</div>
+    <h2 class="section-title">Creators love it.</h2>
+    <div class="testimonials-grid">
+      <div class="testi-card"><div class="testi-stars">★★★★★</div><div class="testi-text">Went from spending 4 hours editing each week to 15 minutes. The AI clip detection is eerily accurate.</div><div class="testi-author"><div class="testi-avatar">MK</div><div><div class="testi-name">Maya K.</div><div class="testi-role">LINKEDIN CREATOR · 47K FOLLOWERS</div></div></div></div>
+      <div class="testi-card"><div class="testi-stars">★★★★★</div><div class="testi-text">The filler removal alone is worth the subscription. My podcast clips went from rough to broadcast-quality automatically.</div><div class="testi-author"><div class="testi-avatar">JR</div><div><div class="testi-name">James R.</div><div class="testi-role">PODCAST HOST · 12K SUBS</div></div></div></div>
+      <div class="testi-card"><div class="testi-stars">★★★★★</div><div class="testi-text">I manage 8 clients. VidPost Agency lets me handle all of them from one dashboard. ROI is insane.</div><div class="testi-author"><div class="testi-avatar">SL</div><div><div class="testi-name">Sarah L.</div><div class="testi-role">SOCIAL MEDIA AGENCY · LONDON</div></div></div></div>
+    </div>
+  </section>
+
+  <section id="faq">
+    <div class="section-label">FAQ</div>
+    <h2 class="section-title">Common questions.</h2>
+    <div class="faq-list">
+      <div class="faq-item"><div class="faq-q" onclick="toggleFaq(this)">Does it work with any YouTube video?<span class="faq-arrow">+</span></div><div class="faq-a">Yes — paste any public YouTube URL. For age-restricted or private videos, use the Upload tab to upload directly from your computer.</div></div>
+      <div class="faq-item"><div class="faq-q" onclick="toggleFaq(this)">How accurate is the AI clip detection?<span class="faq-arrow">+</span></div><div class="faq-a">Our Groq-powered model reads the full transcript and scores segments on hook strength, emotional tone, and pacing. You get 5 ranked clips with virality scores — then you pick and fine-tune in the editor.</div></div>
+      <div class="faq-item"><div class="faq-q" onclick="toggleFaq(this)">Can I upload my own videos instead of YouTube links?<span class="faq-arrow">+</span></div><div class="faq-a">Yes — use the Upload tab to upload any MP4, MOV, or WebM up to 500MB directly from your device.</div></div>
+      <div class="faq-item"><div class="faq-q" onclick="toggleFaq(this)">What platforms does auto-posting support?<span class="faq-arrow">+</span></div><div class="faq-a">LinkedIn, YouTube Shorts, Instagram Reels, TikTok, X (Twitter), and Facebook Pages. Connect once via OAuth and post to all of them in a single click.</div></div>
+      <div class="faq-item"><div class="faq-q" onclick="toggleFaq(this)">Can I cancel anytime?<span class="faq-arrow">+</span></div><div class="faq-a">Yes — one click in Manage Subscription. No questions asked. Your access continues until the end of the billing period.</div></div>
+    </div>
+  </section>
+
+  <div class="cta-section">
+    <h2>Start creating more.<br>Working less.</h2>
+    <p>Free plan. No card required. 5 clips to try everything.</p>
+    <a href="#" class="btn-hero primary" onclick="showApp();return false">Get started free →</a>
+  </div>
+
+  <footer>
+    <div class="footer-top">
+      <div><div class="footer-brand">🎬 VidPost AI</div><div class="footer-tagline">Turn any long video into a week of viral short-form content across all 6 platforms — automatically.</div></div>
+      <div><div class="footer-col-title">Product</div><ul class="footer-links"><li><a href="#" onclick="showApp();return false">Dashboard</a></li><li><a href="#how">How it works</a></li><li><a href="#pricing">Pricing</a></li></ul></div>
+      <div><div class="footer-col-title">Legal</div><ul class="footer-links"><li><a href="#" onclick="showLegal('terms');return false">Terms</a></li><li><a href="#" onclick="showLegal('privacy');return false">Privacy</a></li></ul></div>
+      <div><div class="footer-col-title">Support</div><ul class="footer-links"><li><a href="mailto:hello@vidpostai.com">Contact us</a></li><li><a href="#faq">FAQ</a></li></ul></div>
+    </div>
+    <div class="footer-bottom">
+      <div class="footer-copy">© 2025 VidPost AI. All rights reserved.</div>
+      <div class="footer-legal"><a href="#" onclick="showLegal('terms');return false">Terms</a><a href="#" onclick="showLegal('privacy');return false">Privacy</a></div>
+    </div>
+  </footer>
+</div>
+
+<!-- LEGAL PAGES -->
+<div id="legal-terms" class="legal-page">
+  <a href="#" onclick="showLanding();return false" style="font-size:12px;font-family:var(--font-mono);color:var(--ink3);text-decoration:none">← Back</a>
+  <h1 style="margin-top:16px">Terms of Service</h1><div class="legal-meta">Last updated: January 2025</div>
+  <p>By using VidPost AI you agree to these terms. VidPost AI provides AI-powered video repurposing tools. You are responsible for the content you process and publish. You must own or have rights to all videos you upload. We do not store your videos beyond the processing window (2 hours). You agree not to use the service to violate third-party intellectual property, publish spam, or engage in abusive behaviour. We reserve the right to suspend accounts that violate these terms. The service is provided "as is" without warranty. Our liability is limited to the amount you paid in the last 30 days.</p>
+  <h2>Billing</h2><p>Paid plans are billed monthly via Stripe. You can cancel anytime from the Billing tab. Refunds are available within 3 days of a new subscription.</p>
+</div>
+<div id="legal-privacy" class="legal-page">
+  <a href="#" onclick="showLanding();return false" style="font-size:12px;font-family:var(--font-mono);color:var(--ink3);text-decoration:none">← Back</a>
+  <h1 style="margin-top:16px">Privacy Policy</h1><div class="legal-meta">Last updated: January 2025</div>
+  <p>VidPost AI collects only what's needed to provide the service. We store your email, subscription status, OAuth tokens (encrypted), and post/clip activity logs in Supabase. Uploaded videos are deleted after 2 hours. We never sell your data. We use Groq for transcription and AI; Pexels for B-Roll; and Stripe for payments. Each processes data per their own privacy policies. You can delete your account and all data by emailing hello@vidpostai.com.</p>
+</div>
+
+<!-- APP VIEW -->
+<div id="app-view" style="display:none">
+  <div class="app-section">
+
+    <!-- User bar -->
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:10px">
+      <div>
+        <div style="font-family:var(--font-head);font-size:22px;font-weight:800;letter-spacing:-.5px">VidPost AI <span id="user-plan-badge" style="font-size:11px;font-family:var(--font-mono);padding:3px 10px;border-radius:12px;background:var(--glow2);border:1px solid rgba(139,92,246,.25);color:var(--purple3);vertical-align:middle;font-weight:400">Free</span></div>
+        <div style="font-size:12px;color:var(--ink3);font-family:var(--font-mono);margin-top:2px" id="user-email-lbl">Not signed in</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <div id="usage-pill" style="display:none;font-size:11px;font-family:var(--font-mono);padding:5px 12px;border-radius:20px;background:var(--bg3);border:1px solid var(--border)">0/5 clips</div>
+        <button id="auth-btn" onclick="handleAuthBtn()" class="btn-go" style="padding:8px 18px;font-size:13px">Sign in →</button>
+      </div>
+    </div>
+
+    <div class="app-tabs" id="app-tabs">
+      <button class="app-tab on" onclick="switchTab('clips')">✂ Clips</button>
+      <button class="app-tab" onclick="switchTab('editor')">🎬 Editor</button>
+      <button class="app-tab" onclick="switchTab('posts')">✍ AI Posts</button>
+      <button class="app-tab" onclick="switchTab('schedule')">📅 Schedule</button>
+      <button class="app-tab" onclick="switchTab('analytics')">📊 Analytics</button>
+      <button class="app-tab" onclick="switchTab('billing')">💳 Billing</button>
+      <button class="app-tab" onclick="switchTab('connect')">🔗 Connect</button>
+    </div>
+
+    <!-- CLIPS TAB -->
+    <div id="tab-clips" class="app-panel on">
+      <div class="a-card">
+        <div style="display:flex;gap:8px;margin-bottom:14px">
+          <button id="src-url-btn" onclick="switchSrc('url')" class="ed-pill on" style="font-size:12px">🔗 YouTube URL</button>
+          <button id="src-up-btn"  onclick="switchSrc('upload')" class="ed-pill" style="font-size:12px">📁 Upload file</button>
+        </div>
+        <div id="src-url-panel">
+          <div class="url-row">
+            <input type="text" id="clip-url" placeholder="Paste YouTube URL — youtube.com/watch?v=… or youtu.be/…"/>
+            <button class="btn-go" id="analyse-btn" onclick="analyseVideo()"><span id="analyse-lbl">Analyse →</span></button>
+          </div>
+        </div>
+        <div id="src-up-panel" style="display:none">
+          <label style="display:block;border:2px dashed var(--border2);border-radius:var(--r2);padding:28px;text-align:center;cursor:pointer;transition:all .2s" id="upload-label" onmouseover="this.style.borderColor='var(--purple)'" onmouseout="this.style.borderColor='var(--border2)'">
+            <div style="font-size:28px;margin-bottom:8px">📁</div>
+            <div style="font-family:var(--font-head);font-size:14px;font-weight:700;margin-bottom:4px">Click to upload video</div>
+            <div style="font-size:12px;color:var(--ink2)">MP4, MOV, WebM — up to 500MB</div>
+            <input type="file" id="video-file" accept="video/*" onchange="handleFileUpload()" style="display:none"/>
+          </label>
+          <div id="upload-progress" style="display:none;margin-top:10px">
+            <div style="height:4px;background:var(--border);border-radius:2px;overflow:hidden">
+              <div id="upload-bar" style="height:100%;background:var(--purple);border-radius:2px;width:0%;transition:width .3s"></div>
+            </div>
+            <div id="upload-msg" style="font-size:11px;font-family:var(--font-mono);color:var(--ink2);margin-top:6px">Uploading…</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
+          <span style="font-size:12px;color:var(--ink2);font-family:var(--font-mono);align-self:center">Formats:</span>
+          <button class="pt on" id="fmt-vert" onclick="this.classList.toggle('on')">📱 9:16 Vertical</button>
+          <button class="pt on" id="fmt-horiz" onclick="this.classList.toggle('on')">🖥 16:9 Horizontal</button>
+        </div>
+      </div>
+
+      <div class="status-bar2" id="sb"><div class="spin2"></div><span id="st">Analysing…</span></div>
+      <div class="err2" id="eb"></div>
+      <div class="ok2" id="ob"></div>
+
+      <div id="clips-out" style="display:none">
+        <div style="display:flex;gap:14px;flex-wrap:wrap;padding:10px 14px;background:var(--bg3);border-radius:var(--r);font-size:11px;font-family:var(--font-mono);color:var(--ink2);margin-bottom:12px" id="vm"></div>
+        <div id="cg"></div>
+      </div>
+    </div>
+
+    <!-- EDITOR TAB -->
+    <div id="tab-editor" class="app-panel">
+      <!-- Empty state -->
+      <div id="ed-empty">
+        <div class="ed-load-card">
+          <div style="font-size:48px;margin-bottom:14px">🎬</div>
+          <div style="font-family:var(--font-head);font-size:22px;font-weight:800;margin-bottom:8px;letter-spacing:-.5px">All-in-one AI Editor</div>
+          <div style="font-size:13px;color:var(--ink2);margin-bottom:20px;line-height:1.7">Trim, caption, B-Roll, brand kit — everything in one place.</div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin-bottom:22px">
+            <span style="padding:3px 10px;background:var(--glow2);border:1px solid rgba(139,92,246,.25);border-radius:12px;font-size:10px;font-family:var(--font-mono);color:var(--purple3)">✂ Smart trim</span>
+            <span style="padding:3px 10px;background:var(--glow2);border:1px solid rgba(139,92,246,.25);border-radius:12px;font-size:10px;font-family:var(--font-mono);color:var(--purple3)">🗑 Filler removal</span>
+            <span style="padding:3px 10px;background:var(--glow2);border:1px solid rgba(139,92,246,.25);border-radius:12px;font-size:10px;font-family:var(--font-mono);color:var(--purple3)">🎬 AI B-Roll</span>
+            <span style="padding:3px 10px;background:var(--glow2);border:1px solid rgba(139,92,246,.25);border-radius:12px;font-size:10px;font-family:var(--font-mono);color:var(--purple3)">💬 6 caption styles</span>
+          </div>
+          <div style="display:flex;gap:8px;max-width:500px;margin:0 auto 12px">
+            <input type="text" id="ed-url" placeholder="Paste YouTube URL or processed clip URL…" class="ed-url-input"/>
+            <button onclick="editorLoadUrl()" class="ed-load-btn" id="ed-load-btn">Load →</button>
+          </div>
+          <div style="font-size:11px;color:var(--ink3);font-family:var(--font-mono)">— or process a clip in the Clips tab and click "Edit this clip" —</div>
+        </div>
+      </div>
+
+      <!-- Full workspace -->
+      <div id="ed-workspace" style="display:none">
+        <div class="ed-topbar">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:14px">🎬</span>
+            <span id="ed-title-lbl" style="font-family:var(--font-head);font-size:13px;font-weight:700;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+            <div id="ed-vpill" style="display:none;padding:2px 9px;border-radius:20px;background:var(--glow2);border:1px solid rgba(139,92,246,.3);font-size:10px;font-family:var(--font-mono);color:var(--purple3)">🔥 <span id="ed-vscore">—</span>/10</div>
+          </div>
+          <div style="display:flex;gap:6px;align-items:center">
+            <input type="text" id="ed-url-top" placeholder="Load another URL…" style="font-size:11px;padding:5px 9px;border-radius:var(--r);border:1px solid var(--border2);background:var(--bg3);color:var(--ink);font-family:var(--font-mono);width:140px"/>
+            <button onclick="editorLoadUrlTop()" style="padding:5px 12px;background:var(--bg4);border:1px solid var(--border2);border-radius:var(--r);color:var(--ink2);font-size:11px;font-family:var(--font-mono);cursor:pointer">Load</button>
+            <button onclick="resetEditor()" style="padding:5px 10px;background:transparent;border:1px solid var(--border);border-radius:var(--r);color:var(--ink3);font-size:11px;font-family:var(--font-mono);cursor:pointer">✕ Close</button>
+          </div>
+        </div>
+
+        <!-- Video loading overlay -->
+        <div id="vid-loading-overlay" class="vid-overlay" style="display:none;position:absolute;top:0;left:0;width:100%;max-width:100%;z-index:30;height:240px;border-radius:var(--r2)">
+          <div class="spin2" style="width:24px;height:24px;border-width:3px"></div>
+          <p id="vid-loading-msg">Preparing video preview…</p>
+        </div>
+
+        <div class="ed-columns">
+          <!-- LEFT -->
+          <div class="ed-left">
+            <div class="ed-preview-box" id="ed-preview-box">
+              <video id="ed-video" playsinline preload="metadata"
+                     style="width:100%;height:100%;object-fit:contain;background:#000;display:block"
+                     crossorigin="anonymous"></video>
+              <div id="ed-cap-preview" style="position:absolute;left:0;right:0;bottom:12%;text-align:center;padding:0 10px;pointer-events:none;display:none"></div>
+              <div id="ed-fmt-badge" class="ed-fmt-badge">📱 9:16</div>
+            </div>
+
+            <div class="ed-controls">
+              <button onclick="edSkip(-10)" class="ed-ctrl-btn" title="−10s">«</button>
+              <button onclick="edSkip(-2)"  class="ed-ctrl-btn" title="−2s">‹</button>
+              <button onclick="edPlayPause()" id="ed-play-btn" class="ed-ctrl-btn ed-play-btn">▶</button>
+              <button onclick="edSkip(2)"   class="ed-ctrl-btn" title="+2s">›</button>
+              <button onclick="edSkip(10)"  class="ed-ctrl-btn" title="+10s">»</button>
+              <span class="ed-time-display" id="ed-time-cur">0:00</span>
+              <div style="flex:1"></div>
+              <div style="display:flex;align-items:center;gap:3px">
+                <span style="font-size:9px;font-family:var(--font-mono);color:var(--ink3)">DUR</span>
+                <button class="ed-dur-pill on" onclick="setDurPreset(this,30)">30s</button>
+                <button class="ed-dur-pill"   onclick="setDurPreset(this,60)">60s</button>
+                <button class="ed-dur-pill"   onclick="setDurPreset(this,90)">90s</button>
+                <button class="ed-dur-pill"   onclick="setDurPreset(this,0)">Full</button>
+              </div>
+              <span class="ed-time-display" id="ed-time-tot">0:00</span>
+              <button onclick="edMute()" id="ed-mute-btn" class="ed-ctrl-btn">🔊</button>
+            </div>
+
+            <div class="ed-tl-wrap">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+                <span class="ed-tl-label">TRIM — drag handles · Shift+drag to cut middle section</span>
+                <div style="display:flex;gap:6px;align-items:center">
+                  <span id="ed-tl-dur" style="font-size:10px;font-family:var(--font-mono);color:var(--purple3)"></span>
+                  <button onclick="edClearCuts()" id="ed-clear-cuts" style="display:none;padding:2px 8px;font-size:10px;font-family:var(--font-mono);border:1px solid var(--border2);background:transparent;color:var(--ink3);border-radius:var(--r);cursor:pointer">Clear cuts</button>
+                </div>
+              </div>
+              <div id="ed-timeline" class="ed-timeline">
+                <div id="ed-waveform" class="ed-waveform"></div>
+                <div id="ed-filler-layer" style="position:absolute;inset:0;pointer-events:none"></div>
+                <div id="ed-cuts-layer"   style="position:absolute;inset:0;pointer-events:none"></div>
+                <div id="ed-shadow-left"  class="ed-shadow"></div>
+                <div id="ed-shadow-right" class="ed-shadow"></div>
+                <div id="ed-range-fill"   class="ed-range-fill"></div>
+                <div id="ed-playhead"     class="ed-playhead"></div>
+                <div id="ed-handle-start" class="ed-handle ed-handle-l"><div class="ed-handle-grip"></div></div>
+                <div id="ed-handle-end"   class="ed-handle ed-handle-r"><div class="ed-handle-grip"></div></div>
+              </div>
+              <div id="ed-ruler" class="ed-ruler"></div>
+              <div id="ed-cuts-list" style="display:none;margin-top:8px;padding:8px 10px;background:var(--bg3);border-radius:var(--r);border:1px solid var(--border)">
+                <div class="ed-field-label">MIDDLE CUTS — sections to remove</div>
+                <div id="ed-cuts-items" style="display:flex;flex-wrap:wrap;gap:5px;margin-top:5px"></div>
+              </div>
+              <div class="ed-time-row">
+                <div class="ed-time-chip">
+                  <span class="ed-time-chip-label">START</span>
+                  <input type="number" id="ed-start-in" class="ed-time-chip-input" step="0.1" min="0" oninput="edStartInput()"/>
+                </div>
+                <div class="ed-time-chip" style="text-align:center">
+                  <span class="ed-time-chip-label">DURATION</span>
+                  <span id="ed-dur-lbl" style="font-family:var(--font-mono);font-size:13px;color:var(--purple3);min-width:50px;text-align:center">—</span>
+                </div>
+                <div class="ed-time-chip">
+                  <span class="ed-time-chip-label">END</span>
+                  <input type="number" id="ed-end-in" class="ed-time-chip-input" step="0.1" min="0" oninput="edEndInput()"/>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- RIGHT PANEL -->
+          <div class="ed-right">
+            <div class="ed-rtabs">
+              <button class="ed-rtab on" onclick="switchRtab(this,'rt-captions')">💬 Captions</button>
+              <button class="ed-rtab" onclick="switchRtab(this,'rt-enhance')">✨ Enhance</button>
+              <button class="ed-rtab" onclick="switchRtab(this,'rt-brand')">🏷 Brand</button>
+              <button class="ed-rtab" onclick="switchRtab(this,'rt-export')">⬇ Export</button>
+            </div>
+
+            <!-- Captions panel -->
+            <div class="ed-rpanel" id="rt-captions" style="display:flex">
+              <div>
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+                  <span class="ed-section-lbl">CAPTIONS</span>
+                  <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+                    <input type="checkbox" id="ed-captions" checked onchange="updateCapPreview()"/>
+                    <span style="font-size:11px;font-family:var(--font-mono);color:var(--ink2)">Enable</span>
+                  </label>
+                </div>
+                <div class="ed-field-label">Style</div>
+                <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-bottom:10px">
+                  <button class="ed-cap-btn on" data-style="bold" onclick="selectCapStyle(this)">Bold</button>
+                  <button class="ed-cap-btn" data-style="outline" onclick="selectCapStyle(this)">Outline</button>
+                  <button class="ed-cap-btn" data-style="box" onclick="selectCapStyle(this)">Box</button>
+                  <button class="ed-cap-btn" data-style="lime" onclick="selectCapStyle(this)">Accent</button>
+                  <button class="ed-cap-btn" data-style="neon" onclick="selectCapStyle(this)">Neon</button>
+                  <button class="ed-cap-btn" data-style="karaoke" onclick="selectCapStyle(this)">Karaoke</button>
+                </div>
+                <div class="ed-field-label">Size</div>
+                <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px">
+                  <button class="ed-pill" data-size="small" onclick="selectCapSize(this)">Small</button>
+                  <button class="ed-pill on" data-size="medium" onclick="selectCapSize(this)">Medium</button>
+                  <button class="ed-pill" data-size="large" onclick="selectCapSize(this)">Large</button>
+                </div>
+                <div class="ed-field-label">Position</div>
+                <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px">
+                  <button class="ed-pill" data-cpos="top" onclick="selectCapPos(this)">Top</button>
+                  <button class="ed-pill" data-cpos="middle" onclick="selectCapPos(this)">Middle</button>
+                  <button class="ed-pill on" data-cpos="bottom" onclick="selectCapPos(this)">Bottom</button>
+                </div>
+                <div class="ed-field-label">Accent colour</div>
+                <input type="color" id="ed-accent-color" value="#8b5cf6" oninput="updateCapPreview()" style="width:100%;height:34px;border:1px solid var(--border2);border-radius:var(--r);cursor:pointer;padding:2px;background:var(--bg3)"/>
+              </div>
+              <!-- Caption preview box -->
+              <div style="background:#111;border-radius:var(--r);aspect-ratio:9/16;max-height:140px;position:relative;overflow:hidden;flex-shrink:0">
+                <div id="ed-cap-mini" style="position:absolute;left:0;right:0;bottom:16%;text-align:center;padding:0 8px;pointer-events:none;font-size:13px"></div>
+              </div>
+            </div>
+
+            <!-- Enhance panel -->
+            <div class="ed-rpanel" id="rt-enhance">
+              <!-- Filler removal -->
+              <div>
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+                  <span class="ed-section-lbl">FILLER REMOVAL</span>
+                  <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+                    <input type="checkbox" id="ed-filler" onchange="edFillerToggle(this)"/>
+                    <span style="font-size:11px;font-family:var(--font-mono);color:var(--ink2)">Enable</span>
+                  </label>
+                </div>
+                <div id="ed-filler-words" style="display:none">
+                  <div class="ed-field-label">Words to remove</div>
+                  <div id="ed-filler-chips" style="display:flex;flex-wrap:wrap;gap:5px;margin-top:4px"></div>
+                </div>
+              </div>
+              <!-- B-Roll -->
+              <div>
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+                  <span class="ed-section-lbl">AI B-ROLL (Pexels)</span>
+                  <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+                    <input type="checkbox" id="ed-broll" onchange="edBrollToggle(this)"/>
+                    <span style="font-size:11px;font-family:var(--font-mono);color:var(--ink2)">Enable</span>
+                  </label>
+                </div>
+                <div id="ed-broll-opts" style="display:none;flex-direction:column;gap:8px">
+                  <div>
+                    <div class="ed-field-label">Keywords</div>
+                    <input type="text" id="ed-broll-kw" placeholder="e.g. entrepreneur, business, laptop" style="font-size:11px"/>
+                  </div>
+                  <div>
+                    <div class="ed-field-label">Frequency</div>
+                    <div style="display:flex;gap:5px;flex-wrap:wrap">
+                      <button class="ed-pill" data-bfreq="low" onclick="selectBrollFreq(this)">Low</button>
+                      <button class="ed-pill on" data-bfreq="medium" onclick="selectBrollFreq(this)">Medium</button>
+                      <button class="ed-pill" data-bfreq="high" onclick="selectBrollFreq(this)">High</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <!-- Pause removal -->
+              <div>
+                <div style="display:flex;align-items:center;justify-content:space-between">
+                  <div><span class="ed-section-lbl">PAUSE REMOVAL</span><div style="font-size:11px;color:var(--ink3);font-family:var(--font-mono);margin-top:2px">Cuts silences &gt;0.5s</div></div>
+                  <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+                    <input type="checkbox" id="ed-pauses"/>
+                    <span style="font-size:11px;font-family:var(--font-mono);color:var(--ink2)">Enable</span>
+                  </label>
+                </div>
+              </div>
+              <!-- Audio norm -->
+              <div>
+                <div style="display:flex;align-items:center;justify-content:space-between">
+                  <div><span class="ed-section-lbl">AUDIO NORMALISATION</span><div style="font-size:11px;color:var(--ink3);font-family:var(--font-mono);margin-top:2px">Loudnorm -16 LUFS</div></div>
+                  <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+                    <input type="checkbox" id="ed-audio-norm" checked/>
+                    <span style="font-size:11px;font-family:var(--font-mono);color:var(--ink2)">Enable</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <!-- Brand panel -->
+            <div class="ed-rpanel" id="rt-brand">
+              <!-- Logo -->
+              <div>
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+                  <span class="ed-section-lbl">LOGO OVERLAY</span>
+                  <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+                    <input type="checkbox" id="ed-logo-on" onchange="toggleLogoOpts(this)"/>
+                    <span style="font-size:11px;font-family:var(--font-mono);color:var(--ink2)">Enable</span>
+                  </label>
+                </div>
+                <div id="ed-logo-inner" style="display:none;flex-direction:column;gap:8px">
+                  <label style="border:1.5px dashed var(--border2);border-radius:var(--r);padding:10px;text-align:center;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='var(--purple)'" onmouseout="this.style.borderColor='var(--border2)'">
+                    <div id="ed-logo-name" style="font-size:11px;color:var(--ink2);font-family:var(--font-mono)">📁 Click to upload PNG logo</div>
+                    <input type="file" id="ed-logo-file" accept="image/*" style="display:none" onchange="edLogoSelected(this)"/>
+                  </label>
+                  <div class="ed-field-label">Position</div>
+                  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px">
+                    <button class="ed-pos-btn" data-pos="top-left" onclick="selectLogoPos(this)">↖ TL</button>
+                    <div></div>
+                    <button class="ed-pos-btn on" data-pos="top-right" onclick="selectLogoPos(this)">TR ↗</button>
+                    <div></div><div></div><div></div>
+                    <button class="ed-pos-btn" data-pos="bottom-left" onclick="selectLogoPos(this)">↙ BL</button>
+                    <div></div>
+                    <button class="ed-pos-btn" data-pos="bottom-right" onclick="selectLogoPos(this)">BR ↘</button>
+                  </div>
+                </div>
+              </div>
+              <!-- Lower third -->
+              <div>
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+                  <span class="ed-section-lbl">LOWER THIRD</span>
+                  <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+                    <input type="checkbox" id="ed-lower-on"/>
+                    <span style="font-size:11px;font-family:var(--font-mono);color:var(--ink2)">Enable</span>
+                  </label>
+                </div>
+                <input type="text" id="ed-lower-name" placeholder="Name (e.g. John Smith)" style="font-size:11px;margin-bottom:6px"/>
+                <input type="text" id="ed-lower-title" placeholder="Title (e.g. CEO at Acme)" style="font-size:11px"/>
+              </div>
+              <!-- Brand colour -->
+              <div>
+                <div class="ed-section-lbl">BRAND COLOUR</div>
+                <input type="color" id="ed-brand-primary" value="#8b5cf6" oninput="updateCapPreview()" style="width:100%;height:34px;border:1px solid var(--border2);border-radius:var(--r);cursor:pointer;padding:2px;background:var(--bg3);margin-top:6px"/>
+              </div>
+            </div>
+
+            <!-- Export panel -->
+            <div class="ed-rpanel" id="rt-export">
+              <div class="ed-field-label">Format</div>
+              <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap">
+                <button class="ed-fmt-btn on" data-fmt="vertical" onclick="selectFmt(this)">📱 9:16</button>
+                <button class="ed-fmt-btn" data-fmt="horizontal" onclick="selectFmt(this)">🖥 16:9</button>
+                <button class="ed-fmt-btn" data-fmt="both" onclick="selectFmt(this)">⚡ Both</button>
+              </div>
+              <div class="ed-field-label">Quality</div>
+              <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:12px">
+                <button class="ed-pill" data-q="720" onclick="selectQuality(this)">720p</button>
+                <button class="ed-pill on" data-q="1080" onclick="selectQuality(this)">1080p HD</button>
+              </div>
+              <div style="background:var(--bg3);border-radius:var(--r);padding:10px;border:1px solid var(--border);font-size:11px;font-family:var(--font-mono);color:var(--ink2);line-height:1.9;margin-bottom:10px" id="ed-summary">Configure options above then export.</div>
+              <button id="ed-export-btn" onclick="editorExport()">✂ Trim, enhance &amp; export</button>
+              <div id="ed-export-status" style="margin-top:10px"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- POSTS TAB -->
+    <div id="tab-posts" class="app-panel">
+      <div class="a-card">
+        <div class="url-row">
+          <input type="text" id="post-url" placeholder="Paste YouTube URL to generate captions…"/>
+          <button class="btn-go" id="post-btn" onclick="genPosts()"><span id="post-lbl">Generate →</span></button>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+          <span style="font-size:12px;color:var(--ink2);font-family:var(--font-mono);align-self:center">Tone:</span>
+          <button class="pt on" data-tone="professional">Professional</button>
+          <button class="pt" data-tone="casual">Casual</button>
+          <button class="pt" data-tone="educational">Educational</button>
+          <button class="pt" data-tone="viral">Viral/Hook</button>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+          <span style="font-size:12px;color:var(--ink2);font-family:var(--font-mono);align-self:center">Platforms:</span>
+          <button class="pt on" data-plat="linkedin">LinkedIn</button>
+          <button class="pt on" data-plat="twitter">Twitter/X</button>
+          <button class="pt on" data-plat="instagram">Instagram</button>
+          <button class="pt on" data-plat="tiktok">TikTok</button>
+          <button class="pt on" data-plat="youtube_short">YT Shorts</button>
+          <button class="pt on" data-plat="facebook">Facebook</button>
+        </div>
+      </div>
+      <div id="post-status" style="display:none;align-items:center;gap:10px;padding:10px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);font-family:var(--font-mono);font-size:12px;margin-bottom:12px;color:var(--ink2)">
+        <div class="spin2"></div><span id="post-st">Generating…</span>
+      </div>
+      <div class="err2" id="post-eb"></div>
+      <div id="posts-out" style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px"></div>
+    </div>
+
+    <!-- SCHEDULE TAB -->
+    <div id="tab-schedule" class="app-panel">
+      <div class="a-card" style="margin-bottom:14px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+          <div style="font-family:var(--font-head);font-size:14px;font-weight:700">Scheduled posts</div>
+          <button onclick="showScheduleForm()" class="btn-go" style="padding:7px 14px;font-size:12px">+ New scheduled post</button>
+        </div>
+        <!-- Form -->
+        <div id="sched-form" style="display:none;background:var(--bg3);border-radius:var(--r);padding:14px;border:1px solid var(--border);margin-bottom:14px">
+          <div style="font-family:var(--font-head);font-size:13px;font-weight:700;margin-bottom:10px">New scheduled post</div>
+          <textarea id="sched-text" rows="3" placeholder="Caption text…" style="margin-bottom:8px;resize:vertical"></textarea>
+          <input type="text" id="sched-video" placeholder="Video URL (optional)" style="margin-bottom:8px"/>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px" id="sched-plat-btns"></div>
+          <input type="datetime-local" id="sched-dt" style="margin-bottom:10px"/>
+          <div style="display:flex;gap:8px">
+            <button class="btn-go" onclick="submitSchedule()" style="font-size:13px;padding:9px 18px">Schedule →</button>
+            <button onclick="$('sched-form').style.display='none'" style="padding:9px 16px;background:transparent;border:1px solid var(--border2);border-radius:var(--r);color:var(--ink2);font-size:13px;cursor:pointer;font-family:var(--font-head)">Cancel</button>
+          </div>
+        </div>
+        <div id="sched-list"></div>
+      </div>
+      <!-- Calendar -->
+      <div class="a-card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <div style="font-family:var(--font-head);font-size:13px;font-weight:700">Content calendar</div>
+          <div style="display:flex;gap:6px;align-items:center">
+            <button onclick="calPrev()" style="padding:4px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);color:var(--ink2);font-size:12px;cursor:pointer">←</button>
+            <span id="cal-month-lbl" style="font-family:var(--font-mono);font-size:12px;color:var(--ink2);min-width:100px;text-align:center"></span>
+            <button onclick="calNext()" style="padding:4px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);color:var(--ink2);font-size:12px;cursor:pointer">→</button>
+          </div>
+        </div>
+        <div id="cal-grid" class="cal-grid"></div>
+      </div>
+    </div>
+
+    <!-- ANALYTICS TAB -->
+    <div id="tab-analytics" class="app-panel">
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px">
+        <div class="stat-card"><div class="stat-num" id="an-clips">—</div><div class="stat-label">Total clips</div></div>
+        <div class="stat-card"><div class="stat-num" id="an-posts">—</div><div class="stat-label">Posts published</div></div>
+        <div class="stat-card"><div class="stat-num" id="an-posts30">—</div><div class="stat-label">Posts (30 days)</div></div>
+        <div class="stat-card"><div class="stat-num" id="an-sched">—</div><div class="stat-label">Scheduled</div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+        <div class="a-card"><div style="font-family:var(--font-head);font-size:13px;font-weight:700;margin-bottom:12px">Posts by platform</div><div id="an-platforms"></div></div>
+        <div class="a-card"><div style="font-family:var(--font-head);font-size:13px;font-weight:700;margin-bottom:12px">Clip activity (14 days)</div><div id="an-chart" style="height:120px;display:flex;align-items:flex-end;gap:2px"></div></div>
+      </div>
+      <div class="a-card"><div style="font-family:var(--font-head);font-size:13px;font-weight:700;margin-bottom:10px">Recent posts</div><div id="an-recent"></div></div>
+    </div>
+
+    <!-- BILLING TAB -->
+    <div id="tab-billing" class="app-panel">
+      <div id="billing-plan-card" class="a-card" style="margin-bottom:14px;background:linear-gradient(135deg,rgba(139,92,246,.06),rgba(0,200,255,.03));border:1px solid rgba(139,92,246,.2)">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px">
+          <div>
+            <div style="font-size:11px;font-family:var(--font-mono);color:var(--ink3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">Current plan</div>
+            <div style="font-family:var(--font-head);font-size:28px;font-weight:900;color:var(--purple)" id="bill-plan-name">Free</div>
+            <div style="font-size:12px;color:var(--ink2);margin-top:4px" id="bill-plan-sub">5 clips/month · LinkedIn + YouTube</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:11px;font-family:var(--font-mono);color:var(--ink3);margin-bottom:4px">CLIPS THIS MONTH</div>
+            <div style="font-family:var(--font-head);font-size:22px;font-weight:800"><span id="bill-used">0</span><span style="color:var(--ink3);font-size:14px">/<span id="bill-limit">5</span></span></div>
+            <div style="height:4px;background:var(--border);border-radius:2px;margin-top:6px;width:120px"><div id="bill-usage-bar" style="height:100%;background:var(--purple);border-radius:2px;transition:width .5s;width:0%"></div></div>
+            <button id="bill-portal-btn" onclick="openBillingPortal()" style="display:none;margin-top:10px;padding:6px 13px;background:var(--bg4);border:1px solid var(--border2);border-radius:var(--r);color:var(--ink2);font-size:11px;font-family:var(--font-mono);cursor:pointer">Manage subscription →</button>
+          </div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px" id="billing-plans">
+        <div class="bill-plan-card" id="bpc-starter"><div class="bill-plan-name">Starter</div><div class="bill-plan-price">$9<span>/mo</span></div><ul class="bill-plan-features"><li>✓ 15 clips/month</li><li>✓ LinkedIn + YouTube + TikTok</li><li>✓ AI text posts</li><li>✓ 1080p export</li></ul><button class="bill-cta" id="starter-btn" onclick="startCheckout('starter')">Upgrade to Starter →</button></div>
+        <div class="bill-plan-card popular" id="bpc-creator"><div class="bill-plan-badge">Most Popular</div><div class="bill-plan-name">Creator</div><div class="bill-plan-price">$29<span>/mo</span></div><ul class="bill-plan-features"><li>✓ Unlimited clips</li><li>✓ All 6 platforms</li><li>✓ No watermark</li><li>✓ AI B-Roll + filler removal</li><li>✓ All caption styles</li><li>✓ Brand kit + scheduling</li></ul><button class="bill-cta lime" id="creator-btn" onclick="startCheckout('creator')">Upgrade to Creator →</button></div>
+        <div class="bill-plan-card" id="bpc-agency"><div class="bill-plan-name">Agency</div><div class="bill-plan-price">$79<span>/mo</span></div><ul class="bill-plan-features"><li>✓ Everything in Creator</li><li>✓ 10 client workspaces</li><li>✓ White-label</li><li>✓ Priority support</li><li>✓ API access</li></ul><button class="bill-cta" id="agency-btn" onclick="startCheckout('agency')">Upgrade to Agency →</button></div>
+      </div>
+      <div class="a-card"><div style="font-family:var(--font-head);font-size:13px;font-weight:700;margin-bottom:10px">Billing FAQ</div><div style="display:flex;flex-direction:column;gap:8px;font-size:12px;color:var(--ink2);line-height:1.7"><div><strong style="color:var(--ink)">Can I cancel anytime?</strong> Yes — one click in Manage Subscription. Access continues until end of billing period.</div><div><strong style="color:var(--ink)">Refunds?</strong> Full refund within 3 days of any new subscription. Email hello@vidpostai.com.</div></div></div>
+    </div>
+
+    <!-- CONNECT TAB -->
+    <div id="tab-connect" class="app-panel">
+      <div id="connect-gate-app" style="display:none">
+        <div class="a-card" style="text-align:center;padding:36px">
+          <div style="font-size:32px;margin-bottom:12px">🔐</div>
+          <div style="font-family:var(--font-head);font-size:18px;font-weight:800;margin-bottom:8px">Sign in to connect accounts</div>
+          <div style="font-size:13px;color:var(--ink2);margin-bottom:20px">Connect once and auto-post to all platforms forever.</div>
+          <button class="btn-go" onclick="openAuth()">Sign in to continue →</button>
+        </div>
+      </div>
+      <div id="connect-main" style="display:none">
+        <div class="connect-grid" id="cg-platforms"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- AUTH MODAL -->
+<div id="auth-modal" onclick="handleAuthBg(event)" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(12px);z-index:999;display:none;align-items:center;justify-content:center">
+  <div style="background:var(--card);border:1px solid var(--border2);border-radius:var(--r3);padding:36px;max-width:380px;width:100%;margin:24px;box-shadow:0 40px 100px rgba(0,0,0,.5)" onclick="event.stopPropagation()">
+    <div style="font-family:var(--font-head);font-size:22px;font-weight:800;margin-bottom:6px">Welcome back.</div>
+    <div style="font-size:13px;color:var(--ink2);margin-bottom:24px">Sign in or create your free account.</div>
+    <div style="font-size:11px;font-family:var(--font-mono);color:var(--ink3);margin-bottom:5px">EMAIL</div>
+    <input type="email" id="ae" placeholder="you@example.com" style="margin-bottom:12px"/>
+    <div style="font-size:11px;font-family:var(--font-mono);color:var(--ink3);margin-bottom:5px">PASSWORD</div>
+    <input type="password" id="ap" placeholder="••••••••" autocomplete="current-password" style="margin-bottom:18px"/>
+    <div style="display:flex;gap:10px">
+      <button class="btn-go" onclick="doSignIn()" style="flex:1;padding:11px">Sign in</button>
+      <button onclick="doSignUp()" style="flex:1;padding:11px;background:transparent;border:1.5px solid var(--border2);border-radius:var(--r);font-family:var(--font-head);font-size:13px;font-weight:700;cursor:pointer;color:var(--ink);transition:all var(--transition)">Create account</button>
+    </div>
+    <div style="font-size:11px;color:var(--ink3);margin-top:12px;text-align:center;font-family:var(--font-mono)" id="am"></div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════ JAVASCRIPT ═══ -->
+<script>
+'use strict';
+// ── Config ────────────────────────────────────────────────────────────────────
+const API          = '/api';
+const SUPABASE_URL = 'https://kwkrmnkqrwxyltxbmaru.supabase.co';
+const SUPABASE_ANON= 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt3a3Jtbmtxcnd4eWx0eGJtYXJ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkwMTc5NjMsImV4cCI6MjA5NDU5Mzk2M30.qEGsRpTmv2jDSznmTiHZB8EHTYohGUQbGRB_7jjGe4I';
+const RAILWAY      = 'https://vidpost-ai-production.up.railway.app';
+
+// ── App State ─────────────────────────────────────────────────────────────────
+let currentUser = null;
+let currentVideoId = '', currentUploadPath = '', currentTitle = '';
+let selectedTone = 'professional';
+let selectedPlats = ['linkedin','twitter','instagram','tiktok','youtube_short','facebook'];
+let connectedPlats = [];
+let isDark = true;
+let userPlan = 'free', userUsage = 0, userLimit = 5;
+
+// ── Editor State ──────────────────────────────────────────────────────────────
+let edVideoUrl = '', edStart = 0, edEnd = 0, edDuration = 0;
+let edCapStyle = 'bold', edCapSize = 'medium', edCapPos = 'bottom';
+let edFmt = 'vertical', edQuality = '1080', edLogoPos = 'top-right';
+let edBrollFreq = 'medium';
+let edFillerWords = ['um','uh','like','you know','basically','literally','actually','right','so'];
+let edActiveFillers = new Set(['um','uh','like','you know','basically','literally']);
+let edCuts = [];
+let _edVideoReady = false;   // FIX: track whether <video> has valid src loaded
+let _streamPollTimer = null; // FIX: for YouTube stream polling
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const fmtTime = s => { const m=Math.floor(s/60); return `${m}:${String(Math.floor(s%60)).padStart(2,'0')}`; };
+
+function showSt(m){$('sb').style.display='flex';$('st').textContent=m;}
+function hideSt(){$('sb').style.display='none';}
+function showErr(m){$('eb').textContent='⚠ '+m;$('eb').style.display='block';setTimeout(()=>$('eb').style.display='none',6000);}
+function hideErr(){$('eb').style.display='none';}
+function showOk(m){$('ob').textContent=m;$('ob').style.display='block';setTimeout(()=>$('ob').style.display='none',4000);}
+
+async function apiFetch(path, body, method='POST') {
+  const headers = {'Content-Type':'application/json'};
+  if(currentUser?.access_token) headers['Authorization'] = `Bearer ${currentUser.access_token}`;
+  const opts = {method, headers};
+  if(method !== 'GET' && method !== 'DELETE') {
+    opts.body = JSON.stringify(body);
+  }
+  const url = path.startsWith('http') ? path : API + path;
+
+  let r;
+  try {
+    r = await fetch(url, opts);
+  } catch(netErr) {
+    // Network failure (Railway down, CORS block, etc.)
+    throw new Error(`Network error — is the backend running? (${netErr.message})`);
+  }
+
+  // Safe JSON parse — never throw SyntaxError on empty/HTML bodies
+  const safeJson = async (resp) => {
+    const text = await resp.text();
+    if(!text || !text.trim()) return {};
+    try { return JSON.parse(text); }
+    catch(_) {
+      // Server returned HTML (502 gateway page, etc.) — extract useful info
+      const msg = text.slice(0,120).replace(/<[^>]+>/g,'').trim();
+      return { error: msg || `Server error (status ${resp.status})` };
+    }
+  };
+
+  if(!r.ok){
+    const d = await safeJson(r);
+    throw new Error(d.error || `Server error ${r.status}`);
+  }
+  return safeJson(r);
+}
+
+// ── Theme ─────────────────────────────────────────────────────────────────────
+function toggleTheme() {
+  isDark = !isDark;
+  document.documentElement.setAttribute('data-theme', isDark?'dark':'light');
+  $('theme-btn').textContent = isDark?'🌙':'☀️';
+  localStorage.setItem('vp_theme', isDark?'dark':'light');
+}
+
+// ── Navigation ────────────────────────────────────────────────────────────────
+function showLanding(){$('landing').style.display='block';$('app-view').style.display='none';document.querySelectorAll('.legal-page').forEach(p=>p.classList.remove('active'));window.scrollTo(0,0);}
+function showApp(){$('landing').style.display='none';$('app-view').style.display='block';document.querySelectorAll('.legal-page').forEach(p=>p.classList.remove('active'));window.scrollTo(0,0);if(!currentUser)setTimeout(()=>{if(!currentUser)openAuth();},600);}
+function showLegal(page){$('landing').style.display='none';$('app-view').style.display='none';document.querySelectorAll('.legal-page').forEach(p=>p.classList.remove('active'));$('legal-'+page)?.classList.add('active');window.scrollTo(0,0);}
+function toggleFaq(el){el.parentElement.classList.toggle('open');}
+
+// ── Tabs ──────────────────────────────────────────────────────────────────────
+function switchTab(t) {
+  const tabs=['clips','editor','posts','schedule','analytics','billing','connect'];
+  document.querySelectorAll('.app-tab').forEach((b,i)=>b.classList.toggle('on',tabs[i]===t));
+  document.querySelectorAll('.app-panel').forEach(p=>p.classList.remove('on'));
+  $('tab-'+t)?.classList.add('on');
+  if(t==='connect')   renderConnect();
+  if(t==='analytics') loadAnalytics();
+  if(t==='billing')   loadBilling();
+  if(t==='schedule')  loadSchedule();
+}
+function switchSrc(s) {
+  $('src-url-panel').style.display = s==='url'?'block':'none';
+  $('src-up-panel').style.display  = s==='upload'?'block':'none';
+  $('src-url-btn').classList.toggle('on',s==='url');
+  $('src-up-btn').classList.toggle('on',s==='upload');
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded',()=>{
+  // Theme
+  const savedTheme = localStorage.getItem('vp_theme')||'dark';
+  isDark = savedTheme==='dark';
+  document.documentElement.setAttribute('data-theme',savedTheme);
+  $('theme-btn').textContent = isDark?'🌙':'☀️';
+
+  // URL params
+  const params = new URLSearchParams(window.location.search);
+  if(params.get('connected')){ showOk('✅ '+params.get('connected')+' connected!'); switchTab('connect'); showApp(); window.history.replaceState({},'','/'); }
+  if(params.get('error')){ showErr('Connection failed: '+params.get('error')); showApp(); window.history.replaceState({},'','/'); }
+  if(params.get('billing')==='success'){ showOk('🎉 Payment successful! Your plan has been upgraded.'); window.history.replaceState({},'','/'); setTimeout(loadBilling,2000); }
+
+  // Restore session
+  const saved = localStorage.getItem('vp_user');
+  if(saved){try{currentUser=JSON.parse(saved);updateAuthUI();loadConnections();}catch(e){}}
+
+  // Tone chips
+  document.querySelectorAll('[data-tone]').forEach(b=>{
+    b.addEventListener('click',()=>{document.querySelectorAll('[data-tone]').forEach(x=>x.classList.remove('on'));b.classList.add('on');selectedTone=b.dataset.tone;});
+  });
+  // Platform chips (posts tab)
+  document.querySelectorAll('[data-plat]').forEach(b=>{
+    b.addEventListener('click',()=>{b.classList.toggle('on');selectedPlats=[...document.querySelectorAll('[data-plat].on')].map(x=>x.dataset.plat);});
+  });
+
+  $('clip-url').addEventListener('keydown',e=>{if(e.key==='Enter')analyseVideo();});
+  $('post-url').addEventListener('keydown',e=>{if(e.key==='Enter')genPosts();});
+});
+
+// ── Auth ──────────────────────────────────────────────────────────────────────
+function openAuth(){ $('auth-modal').style.display='flex'; $('ae').focus(); }
+function closeAuth(){ $('auth-modal').style.display='none'; }
+function handleAuthBg(e){ if(e.target===$('auth-modal'))closeAuth(); }
+function handleAuthBtn(){ if(currentUser) signOut(); else openAuth(); }
+
+async function doSignIn() {
+  const email=$('ae').value.trim(), pass=$('ap').value;
+  if(!email||!pass){$('am').textContent='Enter email and password.';return;}
+  $('am').textContent='Signing in…';
+  try {
+    const r = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`,{
+      method:'POST',headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON},
+      body:JSON.stringify({email,password:pass})});
+    const d = await r.json();
+    if(!r.ok) throw new Error(d.error_description||d.msg||'Sign in failed');
+    currentUser = {id:d.user.id,email:d.user.email,access_token:d.access_token};
+    localStorage.setItem('vp_user',JSON.stringify(currentUser));
+    updateAuthUI(); closeAuth(); loadConnections(); loadBilling();
+    showOk('✅ Signed in as '+currentUser.email);
+  } catch(e){ $('am').textContent='⚠ '+e.message; }
+}
+
+async function doSignUp() {
+  const email=$('ae').value.trim(), pass=$('ap').value;
+  if(!email||!pass){$('am').textContent='Enter email and password (min 6 chars).';return;}
+  $('am').textContent='Creating account…';
+  try {
+    const r = await fetch(`${SUPABASE_URL}/auth/v1/signup`,{
+      method:'POST',headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON},
+      body:JSON.stringify({email,password:pass})});
+    const d = await r.json();
+    if(!r.ok) throw new Error(d.error_description||d.msg||'Sign up failed');
+    if(d.access_token){
+      currentUser = {id:d.user.id,email:d.user.email,access_token:d.access_token};
+      localStorage.setItem('vp_user',JSON.stringify(currentUser));
+      updateAuthUI(); closeAuth(); showOk('✅ Account created! Welcome to VidPost AI.');
+    } else {
+      $('am').textContent='✅ Check your email to confirm your account.';
+    }
+  } catch(e){ $('am').textContent='⚠ '+e.message; }
+}
+
+function signOut(){ currentUser=null; localStorage.removeItem('vp_user'); updateAuthUI(); showOk('Signed out.'); }
+
+function updateAuthUI() {
+  const btn = $('auth-btn');
+  if(currentUser){
+    btn.textContent='Sign out';
+    $('user-email-lbl').textContent=currentUser.email||'';
+    btn.style.background='var(--bg3)';btn.style.border='1px solid var(--border2)';
+    btn.style.color='var(--ink2)';btn.style.boxShadow='none';
+  } else {
+    btn.textContent='Sign in →';
+    btn.style.background='var(--purple)';btn.style.border='none';
+    btn.style.color='#fff';btn.style.boxShadow='0 0 20px var(--glow)';
+    $('user-email-lbl').textContent='Not signed in';
+  }
+}
+
+// ── Connect platforms ─────────────────────────────────────────────────────────
+async function loadConnections() {
+  if(!currentUser) return;
+  try {
+    const d = await apiFetch(`/auth/connections?user_id=${encodeURIComponent(currentUser.id)}`,'','GET');
+    connectedPlats = d.platforms||[];
+    updateUsagePill();
+  } catch(e){}
+}
+
+function updateUsagePill() {
+  const p=$('usage-pill');
+  if(currentUser&&userLimit){
+    p.style.display='inline-block';
+    p.textContent=`${userUsage}/${userLimit>=9999?'∞':userLimit} clips`;
+    p.style.color=userUsage>=userLimit?'#f44336':'var(--ink2)';
+  }
+}
+
+function renderConnect() {
+  const gate=$('connect-gate-app'), main=$('connect-main');
+  if(!currentUser){ gate.style.display='block'; main.style.display='none'; return; }
+  gate.style.display='none'; main.style.display='block';
+  const platforms=[
+    {id:'linkedin',name:'LinkedIn',icon:'💼',scope:'Posts + video'},
+    {id:'youtube', name:'YouTube', icon:'▶️',scope:'Shorts upload'},
+    {id:'instagram',name:'Instagram',icon:'📸',scope:'Reels'},
+    {id:'tiktok',  name:'TikTok',  icon:'🎵',scope:'Video posts'},
+    {id:'twitter', name:'X/Twitter',icon:'𝕏',scope:'Tweets'},
+    {id:'facebook',name:'Facebook', icon:'👥',scope:'Page posts'},
+  ];
+  $('cg-platforms').innerHTML = platforms.map(p=>{
+    const connected = connectedPlats.includes(p.id);
+    return `<div class="conn-card ${connected?'connected':''}">
+      <div class="conn-icon">${p.icon}</div>
+      <div class="conn-name">${p.name}</div>
+      <div class="conn-status">${connected?'✓ Connected':p.scope}</div>
+      <button class="conn-btn" onclick="connectPlatform('${p.id}')">${connected?'Reconnect':'Connect →'}</button>
+    </div>`;
+  }).join('');
+}
+
+function connectPlatform(p) {
+  if(!currentUser){openAuth();return;}
+  const authMap={linkedin:'linkedin',youtube:'google',instagram:'instagram',tiktok:'tiktok',twitter:'twitter',facebook:'instagram',snapchat:'snapchat'};
+  window.location.href=`${RAILWAY}/auth/${authMap[p]||p}?user_id=${encodeURIComponent(currentUser.id)}`;
+}
+
+// ── Video analysis ────────────────────────────────────────────────────────────
+async function analyseVideo() {
+  const url=$('clip-url').value.trim();
+  if(!url){showErr('Paste a YouTube URL first');return;}
+  const btn=$('analyse-btn'); btn.disabled=true; $('analyse-lbl').textContent='Analysing…';
+  showSt('Analysing video…'); hideErr();
+  $('clips-out').style.display='none';
+  try {
+    const d = await apiFetch('/analyse',{url});
+    currentVideoId=d.videoId; currentTitle=d.title; currentUploadPath='';
+    $('clips-out').style.display='block';
+    $('vm').innerHTML=`<span>📹 ${esc(d.title)}</span><span>⏱ ${fmtTime(d.duration)}</span><span>✂ ${d.clips?.length||0} clips found</span>`;
+    renderClips(d.clips||[], d.videoId, d.duration, null);
+    hideSt();
+  } catch(e){ hideSt(); showErr(e.message); }
+  btn.disabled=false; $('analyse-lbl').textContent='Analyse →';
+}
+
+async function handleFileUpload() {
+  const file=$('video-file').files[0];
+  if(!file){return;}
+  $('upload-label').querySelector('div').textContent='📁 '+file.name;
+  $('upload-progress').style.display='block';
+  $('upload-bar').style.width='5%'; $('upload-msg').textContent='Uploading…';
+
+  const fd=new FormData(); fd.append('video',file);
+  try {
+    const xhr=new XMLHttpRequest();
+    xhr.open('POST',API+'/analyse-upload',true);
+    if(currentUser?.access_token) xhr.setRequestHeader('Authorization','Bearer '+currentUser.access_token);
+    xhr.upload.onprogress=e=>{if(e.lengthComputable){const pct=Math.round(e.loaded/e.total*80);$('upload-bar').style.width=pct+'%';}};
+    const result = await new Promise((res,rej)=>{
+      xhr.onload=()=>{if(xhr.status<300)res(JSON.parse(xhr.responseText));else rej(new Error('Upload failed: '+xhr.status));};
+      xhr.onerror=()=>rej(new Error('Network error'));
+      xhr.send(fd);
+    });
+    $('upload-bar').style.width='100%'; $('upload-msg').textContent='Upload complete!';
+    currentUploadPath=result.uploadPath; currentVideoId=''; currentTitle=result.title;
+    $('clips-out').style.display='block';
+    $('vm').innerHTML=`<span>📁 ${esc(result.title)}</span><span>⏱ ${fmtTime(result.duration)}</span><span>✂ ${result.clips?.length||0} clips found</span>`;
+    renderClips(result.clips||[], '', result.duration, result.uploadPath);
+    showOk('✅ File uploaded and analysed!');
+  } catch(e){ showErr(e.message); }
+  $('upload-progress').style.display='none'; $('upload-bar').style.width='0%';
+}
+
+function renderClips(clips, videoId, duration, uploadPath) {
+  const cg=$('cg'); cg.innerHTML='';
+  if(!clips.length){
+    cg.innerHTML='<div style="color:var(--ink3);font-size:13px;font-family:var(--font-mono);padding:20px">No clips detected. Try a longer video.</div>';
+    return;
+  }
+
+  // Store clip data on the container so inline onclick strings
+  // never need to escape quotes — fixes NotSupportedError and SyntaxErrors
+  // caused by clip titles containing apostrophes (e.g. "Don't do this")
+  cg._clipData = { clips, videoId, uploadPath };
+
+  clips.forEach((c,i)=>{
+    const score=Math.round(c.virality_score||7);
+    const dur=Math.round(c.end-c.start);
+    const div=document.createElement('div');
+    div.className='clip-card2';
+    div.dataset.clipIndex = i;  // reference by index, not by inline data
+    div.innerHTML=`
+      <div class="clip-head" onclick="toggleClip(this)">
+        <div class="clip-n">${i+1}</div>
+        <div class="clip-info2">
+          <div class="clip-t">${esc(c.title||'Clip '+(i+1))}</div>
+          <div class="clip-m">${fmtTime(c.start)} → ${fmtTime(c.end)} · ${dur}s · ${esc((c.hook||'').slice(0,60))}</div>
+        </div>
+        <div class="clip-score">${Array(10).fill(0).map((_,j)=>`<div class="sdot${j<score?' on':''}"></div>`).join('')}</div>
+        <span style="font-family:var(--font-mono);font-size:10px;color:var(--purple3);margin-left:6px">${score}/10</span>
+      </div>
+      <div class="clip-body2">
+        <div style="font-size:12px;color:var(--ink2);line-height:1.6;margin-bottom:12px">${esc(c.reason||'')}</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">
+          <button class="btn-go" style="padding:8px 16px;font-size:12px"
+            onclick="processClipByIndex(${i})">✂ Generate clip</button>
+          <button style="padding:8px 14px;font-size:12px;background:transparent;border:1px solid var(--border2);border-radius:var(--r);color:var(--ink2);cursor:pointer;font-family:var(--font-head);font-weight:600;transition:all .2s"
+            onclick="editorOpenByIndex(${i})">🎬 Open in editor</button>
+        </div>
+        <div id="clip-status-${i}" style="margin-top:10px"></div>
+      </div>`;
+    cg.appendChild(div);
+  });
+}
+
+// Wrapper: look up clip data by index — no inline string escaping needed
+function processClipByIndex(i) {
+  const d = $('cg')._clipData;
+  if(!d) return;
+  const c = d.clips[i];
+  processClip(d.videoId||'', d.uploadPath||'', c.start, c.end, i);
+}
+function editorOpenByIndex(i) {
+  const d = $('cg')._clipData;
+  if(!d) return;
+  const c = d.clips[i];
+  // Pass videoId if we have one, else uploadPath via currentUploadPath global
+  editorOpenClip('', c.title||'', c.start, c.end, d.videoId||'', d.uploadPath||'');
+}
+
+function toggleClip(head) {
+  const card=head.parentElement;
+  const wasOpen=card.classList.contains('sel');
+  document.querySelectorAll('.clip-card2').forEach(c=>c.classList.remove('sel'));
+  if(!wasOpen) card.classList.add('sel');
+}
+
+async function processClip(videoId, uploadPath, start, end, clipIndex) {
+  if(currentUser) {
+    if(userUsage>=userLimit&&userLimit<9999){
+      showErr(`Clip limit reached (${userLimit}/month). Upgrade your plan.`);
+      switchTab('billing'); return;
+    }
+  }
+
+  // Resolve upload path from global if not passed directly
+  const resolvedUpload = uploadPath || currentUploadPath || '';
+  const resolvedVideo  = videoId  || currentVideoId  || '';
+  if(!resolvedVideo && !resolvedUpload) {
+    showErr('No video source — analyse a video first.');
+    return;
+  }
+
+  const formats=[];
+  if($('fmt-vert')?.classList.contains('on'))  formats.push('vertical');
+  if($('fmt-horiz')?.classList.contains('on')) formats.push('horizontal');
+  if(!formats.length) formats.push('vertical');
+
+  // Show per-clip status
+  const clipStatusEl = clipIndex !== undefined ? $(`clip-status-${clipIndex}`) : null;
+  const setClipStatus = (html) => { if(clipStatusEl) clipStatusEl.innerHTML = html; };
+
+  setClipStatus(`<div style="display:flex;align-items:center;gap:6px;font-family:var(--font-mono);font-size:11px;color:var(--ink2)"><div class="spin2"></div>Starting…</div>`);
+  showSt('Submitting clip job…');
+
+  const body = {
+    videoId:    resolvedVideo,
+    uploadPath: resolvedUpload,
+    start, end, formats,
+    user_id: currentUser?.id || '',
+  };
+
+  try {
+    const d = await apiFetch('/clip', body);
+    if(!d.jobId) throw new Error(d.error || 'No job ID returned from server');
+    pollJob(d.jobId, formats, clipStatusEl);
+  } catch(e) {
+    hideSt();
+    setClipStatus(`<div style="color:#ff6b6b;font-size:11px;font-family:var(--font-mono)">⚠ ${esc(e.message)}</div>`);
+    showErr(e.message);
+  }
+}
+
+async function pollJob(jobId, formats, clipStatusEl) {
+  const setClipStatus = (html) => { if(clipStatusEl) clipStatusEl.innerHTML = html; };
+
+  const iv = setInterval(async () => {
+    try {
+      const r = await fetch(`${API}/job/${jobId}`);
+
+      // Safe parse — never crash on empty/non-JSON response
+      const text = await r.text();
+      let j = {};
+      try { j = JSON.parse(text); } catch(_) {
+        // Railway returned a non-JSON error page (e.g. 502)
+        if(!r.ok) {
+          clearInterval(iv); hideSt();
+          setClipStatus(`<div style="color:#ff6b6b;font-size:11px;font-family:var(--font-mono)">⚠ Server error — please try again</div>`);
+          return;
+        }
+        return; // Transient parse issue — keep polling
+      }
+
+      if(!r.ok || j.status === 'not_found') {
+        clearInterval(iv); hideSt();
+        setClipStatus(`<div style="color:#ff6b6b;font-size:11px;font-family:var(--font-mono)">⚠ Job not found — server may have restarted. Try again.</div>`);
+        return;
+      }
+
+      const pct = j.progress || 0;
+      const msg = j.message || 'Processing…';
+      showSt(`${msg} (${pct}%)`);
+      setClipStatus(`<div style="display:flex;align-items:center;gap:6px;font-family:var(--font-mono);font-size:11px;color:var(--ink2)"><div class="spin2"></div>${esc(msg)} ${pct}%</div>`);
+
+      if(j.status === 'done') {
+        clearInterval(iv); hideSt();
+        const files = j.files || {};
+        const btns = Object.entries(files).map(([fmt, info]) => `
+          <a href="${API}${info.downloadUrl}" download class="dl-btn">
+            ⬇ ${fmt==='vertical'?'📱 9:16':'🖥 16:9'} ${info.sizeMb}MB
+          </a>
+          <button class="dl-btn" style="background:var(--bg3);color:var(--ink);border:1px solid var(--border2)"
+            onclick="editorOpenClip('${info.streamUrl || RAILWAY+info.downloadUrl}','${esc(currentTitle)}',0,0,'','')">
+            🎬 Edit in studio
+          </button>`).join('');
+
+        showOk('✅ Clip ready!');
+        setClipStatus(`
+          <div style="background:rgba(139,92,246,.06);border:1px solid rgba(139,92,246,.25);border-radius:var(--r);padding:12px;margin-top:6px">
+            <div style="font-family:var(--font-mono);font-size:11px;color:var(--purple3);margin-bottom:8px">✅ Clip ready</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">${btns}</div>
+          </div>`);
+        userUsage++; updateUsagePill();
+
+      } else if(j.status === 'error') {
+        clearInterval(iv); hideSt();
+        setClipStatus(`<div style="color:#ff6b6b;font-size:11px;font-family:var(--font-mono)">⚠ ${esc(j.message||'Processing failed')}</div>`);
+        showErr(j.message || 'Processing failed');
+      }
+
+    } catch(e) {
+      // Transient network error — keep polling for 3 more attempts
+      console.warn('pollJob fetch error:', e.message);
+    }
+  }, 2500);
+
+  // Safety: stop polling after 15 minutes regardless
+  setTimeout(() => {
+    clearInterval(iv);
+    hideSt();
+  }, 900000);
+}
+
+// ── EDITOR — core — all bugs fixed ───────────────────────────────────────────
+
+/**
+ * FIX #1: editorMount / editorOpenClip were duplicated and inconsistent.
+ *   Old code had two separate functions that set up event handlers independently,
+ *   causing double-bound ontimeupdate / onloadedmetadata callbacks (memory leak +
+ *   dual playhead updates fighting each other).
+ *
+ * FIX #2: vid.onloadedmetadata was never called for cross-origin stream URLs
+ *   because the browser blocked it without crossorigin="anonymous".
+ *   The <video> tag now has crossorigin="anonymous".
+ *
+ * FIX #3: edDuration was set from the API response (not the actual video),
+ *   causing timeline mismatches when the video was shorter than expected.
+ *   Now we always use vid.duration from the metadata event.
+ *
+ * FIX #4: For YouTube stream URLs, the backend now returns 202 while the
+ *   video downloads. We poll /stream-status/<videoId> and only set vid.src
+ *   once the file is ready. Previously we set src immediately and got a black
+ *   screen because the file didn't exist yet.
+ */
+
+function _bindVideoEvents(vid) {
+  // Remove old handlers by cloning and replacing
+  const fresh = vid.cloneNode(true);
+  vid.parentNode.replaceChild(fresh, vid);
+  const v = $('ed-video');
+
+  v.onloadedmetadata = () => {
+    edDuration = v.duration;
+    edStart = 0;
+    edEnd = Math.min(edDuration, 60);
+    edCuts = [];
+    _edVideoReady = true;
+    buildWaveform(); buildRuler(); updateHandles(); updateTimeInputs();
+    $('ed-time-tot').textContent = fmtTime(edDuration);
+    $('vid-loading-overlay').style.display = 'none';
+    // Auto-fill B-Roll keywords
+    if(currentTitle) {
+      const kwEl=$('ed-broll-kw');
+      if(kwEl&&!kwEl.value) kwEl.value=currentTitle.split(' ').slice(0,4).join(', ').toLowerCase();
+    }
+    initTimelineMiddleCut();
+  };
+
+  v.ontimeupdate = () => {
+    if(!edDuration) return;
+    const pct = (v.currentTime / edDuration) * 100;
+    $('ed-playhead').style.left = pct + '%';
+    $('ed-time-cur').textContent = fmtTime(v.currentTime);
+    // Loop within trim region
+    if(v.currentTime >= edEnd) { v.currentTime = edStart; }
+    // Highlight waveform bars in range
+    document.querySelectorAll('.ed-wv-bar').forEach((b,i) => {
+      const t = (i / 60) * edDuration;
+      b.classList.toggle('sel', t >= edStart && t <= edEnd);
+    });
+  };
+
+  v.onerror = () => {
+    $('vid-loading-overlay').style.display = 'none';
+    showErr('Video failed to load. Try reloading or upload directly.');
+  };
+
+  $('ed-timeline').onclick = function(e) {
+    if(e.target.closest('.ed-handle')) return;
+    const r = this.getBoundingClientRect();
+    $('ed-video').currentTime = Math.max(0,Math.min(1,(e.clientX-r.left)/r.width)) * edDuration;
+  };
+
+  initHandleDrag('ed-handle-start', v2 => {
+    edStart = Math.max(0, Math.min(v2, edEnd - 1));
+    updateHandles(); updateTimeInputs(); $('ed-video').currentTime = edStart;
+  });
+  initHandleDrag('ed-handle-end', v2 => {
+    edEnd = Math.max(edStart + 1, Math.min(v2, edDuration));
+    updateHandles(); updateTimeInputs(); $('ed-video').currentTime = edEnd;
+  });
+  updateCapPreview();
+}
+
+function editorMount(url, title) {
+  edVideoUrl = url;
+  currentTitle = title || currentTitle;
+  $('ed-empty').style.display = 'none';
+  $('ed-workspace').style.display = 'block';
+  $('ed-title-lbl').textContent = (title||'Editor').slice(0,40);
+  $('ed-export-status').innerHTML = '';
+  _edVideoReady = false;
+  $('vid-loading-overlay').style.display = 'flex';
+  $('vid-loading-msg').textContent = 'Loading video…';
+  _bindVideoEvents($('ed-video'));
+  const v = $('ed-video');
+  v.src = url;
+  v.load();
+}
+
+async function editorLoadUrl() {
+  const raw=($('ed-url')||{value:''}).value.trim();
+  if(!raw){showErr('Paste a URL first');return;}
+  const btn=$('ed-load-btn'); btn.disabled=true; btn.textContent='Loading…';
+  await _editorLoad(raw);
+  btn.disabled=false; btn.textContent='Load →';
+}
+async function editorLoadUrlTop() {
+  const raw=($('ed-url-top')||{value:''}).value.trim();
+  if(!raw) return;
+  await _editorLoad(raw);
+}
+
+async function _editorLoad(raw) {
+  const ytMatch = raw.match(/(?:v=|youtu\.be\/|\/shorts\/)([A-Za-z0-9_-]{11})/);
+  if(ytMatch) {
+    const videoId = ytMatch[1];
+    try {
+      const d = await apiFetch('/analyse',{url:raw});
+      currentVideoId = d.videoId; currentTitle = d.title;
+      // FIX: load via stream endpoint, but wait for it to be ready
+      await _editorLoadYouTubeStream(d.videoId, d.title);
+    } catch(e){ showErr('Could not load: '+e.message); }
+  } else {
+    // Direct URL — load immediately
+    editorMount(raw, raw.split('/').pop().split('?')[0]);
+  }
+}
+
+async function _editorLoadYouTubeStream(videoId, title) {
+  editorMount('', title); // show workspace with loading overlay
+  $('vid-loading-msg').textContent = 'Preparing YouTube preview…';
+
+  // Request the stream (backend starts download if not cached)
+  const streamUrl = `${API}/stream/${videoId}`;
+  const r = await fetch(streamUrl,{method:'GET'});
+
+  if(r.ok && r.headers.get('content-type')?.includes('video')) {
+    // Already cached — set src directly
+    edVideoUrl = streamUrl;
+    const v=$('ed-video'); v.src=streamUrl; v.load();
+    return;
+  }
+
+  // 202: downloading in background — poll status
+  if(r.status===202) {
+    $('vid-loading-msg').textContent='Downloading video preview (may take 30-60s)…';
+    if(_streamPollTimer) clearInterval(_streamPollTimer);
+    _streamPollTimer = setInterval(async()=>{
+      try {
+        const s = await fetch(`${API}/stream-status/${videoId}`).then(x=>x.json());
+        if(s.ready){
+          clearInterval(_streamPollTimer); _streamPollTimer=null;
+          edVideoUrl=streamUrl;
+          const v=$('ed-video'); v.src=streamUrl; v.load();
+        } else if(s.status==='error'){
+          clearInterval(_streamPollTimer); _streamPollTimer=null;
+          $('vid-loading-overlay').style.display='none';
+          showErr('Preview download failed. Use Upload tab instead.');
+        } else {
+          $('vid-loading-msg').textContent=s.message||'Downloading preview…';
+        }
+      } catch(e){ clearInterval(_streamPollTimer); _streamPollTimer=null; }
+    },3000);
+    return;
+  }
+  $('vid-loading-overlay').style.display='none';
+  showErr('Could not stream video — please upload directly.');
+}
+
+function editorOpenClip(videoUrl, title, start, end, videoId, uploadPath) {
+  switchTab('editor');
+  // Reset state
+  edStart=parseFloat(start)||0; edEnd=parseFloat(end)||60; edCuts=[];
+  currentTitle=title||currentTitle;
+  if(videoId) currentVideoId=videoId;
+  if(uploadPath) currentUploadPath=uploadPath;
+
+  if(videoUrl) {
+    editorMount(videoUrl, title);
+    // After load, set trim to specified range
+    const orig=_bindVideoEvents; // already bound inside editorMount
+  } else if(videoId) {
+    _editorLoadYouTubeStream(videoId, title);
+  } else {
+    showErr('No video source for editor');
+  }
+}
+
+function resetEditor() {
+  if(_streamPollTimer){clearInterval(_streamPollTimer);_streamPollTimer=null;}
+  $('ed-workspace').style.display='none';
+  $('ed-empty').style.display='block';
+  const v=$('ed-video'); v.pause(); v.src='';
+  edVideoUrl=''; edStart=0; edEnd=0; edDuration=0; edCuts=[];
+  _edVideoReady=false;
+}
+
+// ── Playback ──────────────────────────────────────────────────────────────────
+function edPlayPause(){ const v=$('ed-video'),b=$('ed-play-btn');if(v.paused){v.play();b.textContent='⏸';}else{v.pause();b.textContent='▶';} }
+function edSkip(s){ const v=$('ed-video');v.currentTime=Math.max(edStart,Math.min(edEnd,v.currentTime+s)); }
+function edMute(){ const v=$('ed-video');v.muted=!v.muted;$('ed-mute-btn').textContent=v.muted?'🔇':'🔊'; }
+
+// ── Duration presets ──────────────────────────────────────────────────────────
+function setDurPreset(btn,sec){
+  document.querySelectorAll('.ed-dur-pill').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  edEnd = sec===0 ? edDuration : Math.min(edStart+sec, edDuration);
+  updateHandles(); updateTimeInputs(); $('ed-video').currentTime=edStart;
+}
+
+// ── Timeline ──────────────────────────────────────────────────────────────────
+function buildWaveform(){
+  const w=$('ed-waveform'); w.innerHTML='';
+  for(let i=0;i<60;i++){const d=document.createElement('div');d.className='ed-wv-bar';d.style.height=(15+Math.random()*70)+'%';w.appendChild(d);}
+}
+function buildRuler(){
+  const r=$('ed-ruler'); r.innerHTML='';
+  for(let i=0;i<=8;i++){const t=(i/8)*edDuration,s=document.createElement('span');s.textContent=fmtTime(t);s.style.left=(i/8*100)+'%';r.appendChild(s);}
+}
+function initHandleDrag(hid,cb){
+  const h=$(hid);
+  h.onmousedown=h.ontouchstart=function(e){
+    e.preventDefault();e.stopPropagation();
+    const tl=$('ed-timeline');
+    const mv=ev=>{const cx=ev.touches?ev.touches[0].clientX:ev.clientX;const r=tl.getBoundingClientRect();cb(Math.max(0,Math.min(1,(cx-r.left)/r.width))*edDuration);};
+    const up=()=>{document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);document.removeEventListener('touchmove',mv);document.removeEventListener('touchend',up);};
+    document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);
+    document.addEventListener('touchmove',mv,{passive:false});document.addEventListener('touchend',up);
+  };
+}
+function updateHandles(){
+  if(!edDuration) return;
+  const sp=(edStart/edDuration)*100,ep=(edEnd/edDuration)*100;
+  $('ed-handle-start').style.left=sp+'%';$('ed-handle-end').style.left=ep+'%';
+  $('ed-range-fill').style.cssText=`left:${sp}%;width:${ep-sp}%`;
+  $('ed-shadow-left').style.cssText=`left:0;width:${sp}%`;
+  $('ed-shadow-right').style.cssText=`left:${ep}%;width:${100-ep}%`;
+  $('ed-tl-dur').textContent=(edEnd-edStart).toFixed(1)+'s selected';
+}
+function updateTimeInputs(){
+  $('ed-start-in').value=edStart.toFixed(1);
+  $('ed-end-in').value=edEnd.toFixed(1);
+  $('ed-dur-lbl').textContent=(edEnd-edStart).toFixed(1)+'s';
+}
+function edStartInput(){ edStart=Math.max(0,Math.min(parseFloat($('ed-start-in').value)||0,edEnd-1));updateHandles();updateTimeInputs();$('ed-video').currentTime=edStart; }
+function edEndInput(){ edEnd=Math.max(edStart+1,Math.min(parseFloat($('ed-end-in').value)||edDuration,edDuration));updateHandles();updateTimeInputs();$('ed-video').currentTime=edEnd; }
+
+// ── Middle cuts ───────────────────────────────────────────────────────────────
+function initTimelineMiddleCut() {
+  const tl=$('ed-timeline');
+  // Double-click: quick 3s cut around click point
+  tl.ondblclick=function(e){
+    if(e.target.closest('.ed-handle')) return;
+    const r=this.getBoundingClientRect();
+    const t=Math.max(0,Math.min(1,(e.clientX-r.left)/r.width))*edDuration;
+    const s=Math.max(edStart+0.1,t-1.5), en=Math.min(edEnd-0.1,t+1.5);
+    if(en>s+0.2){edCuts.push({start:s,end:en});renderCuts();}
+  };
+  // Shift+drag: precision cut
+  let drag=false, dragS=0;
+  tl.addEventListener('mousedown',function(e){
+    if(e.target.closest('.ed-handle')||!e.shiftKey) return;
+    e.preventDefault();
+    const r=this.getBoundingClientRect();
+    dragS=Math.max(0,Math.min(1,(e.clientX-r.left)/r.width))*edDuration;
+    drag=true;
+    const move=ev=>{if(!drag)return;const pct=Math.max(0,Math.min(1,(ev.clientX-r.left)/r.width));renderCutsPreview(Math.min(dragS,pct*edDuration),Math.max(dragS,pct*edDuration));};
+    const up=ev=>{if(!drag)return;drag=false;const pct=Math.max(0,Math.min(1,(ev.clientX-r.left)/r.width));const t=pct*edDuration;const s=Math.min(dragS,t),en=Math.max(dragS,t);if(en-s>0.3&&s>=edStart&&en<=edEnd){edCuts.push({start:s,end:en});}renderCuts();document.removeEventListener('mousemove',move);document.removeEventListener('mouseup',up);};
+    document.addEventListener('mousemove',move);document.addEventListener('mouseup',up);
+  });
+}
+function renderCutsPreview(s,en){const l=$('ed-cuts-layer');if(!l||!edDuration)return;l.innerHTML=edCuts.map((c,i)=>cutRect(c.start,c.end,i)).join('')+`<div style="position:absolute;top:0;bottom:0;left:${s/edDuration*100}%;width:${(en-s)/edDuration*100}%;background:rgba(255,80,80,.35);border:1px solid rgba(255,80,80,.8);pointer-events:none"></div>`;}
+function cutRect(s,en,idx){return `<div style="position:absolute;top:0;bottom:0;left:${s/edDuration*100}%;width:${(en-s)/edDuration*100}%;background:rgba(255,60,60,.3);border-left:2px solid #ff4444;border-right:2px solid #ff4444;pointer-events:none" title="${s.toFixed(1)}s–${en.toFixed(1)}s"></div>`;}
+function renderCuts(){
+  const l=$('ed-cuts-layer'),list=$('ed-cuts-list'),items=$('ed-cuts-items'),clr=$('ed-clear-cuts');
+  if(!l||!edDuration)return;
+  l.innerHTML=edCuts.map((c,i)=>cutRect(c.start,c.end,i)).join('');
+  if(edCuts.length){list.style.display='block';clr.style.display='inline-block';items.innerHTML=edCuts.map((c,i)=>`<div style="display:flex;align-items:center;gap:4px;padding:3px 8px;background:rgba(255,60,60,.12);border:1px solid rgba(255,60,60,.3);border-radius:12px;font-size:10px;font-family:var(--font-mono);color:var(--ink2)">✂ ${c.start.toFixed(1)}s–${c.end.toFixed(1)}s<button onclick="edRemoveCut(${i})" style="border:none;background:none;color:#ff4444;cursor:pointer;font-size:12px;padding:0">×</button></div>`).join('');}
+  else{list.style.display='none';clr.style.display='none';items.innerHTML='';}
+}
+function edRemoveCut(idx){edCuts.splice(idx,1);renderCuts();}
+function edClearCuts(){edCuts=[];renderCuts();}
+
+// ── Caption preview ───────────────────────────────────────────────────────────
+function switchRtab(btn,panelId){
+  document.querySelectorAll('.ed-rtab').forEach(b=>b.classList.remove('on'));
+  document.querySelectorAll('.ed-rpanel').forEach(p=>p.style.display='none');
+  btn.classList.add('on');$('#'+panelId)?.setAttribute('style','display:flex;flex-direction:column;gap:12px;padding:14px');
+  const p=$(panelId); if(p) p.style.display='flex';
+  if(panelId==='rt-export') updateExportSummary();
+}
+function selectCapStyle(btn){document.querySelectorAll('.ed-cap-btn[data-style]').forEach(b=>b.classList.remove('on'));btn.classList.add('on');edCapStyle=btn.dataset.style;updateCapPreview();}
+function selectCapSize(btn){document.querySelectorAll('.ed-pill[data-size]').forEach(b=>b.classList.remove('on'));btn.classList.add('on');edCapSize=btn.dataset.size;updateCapPreview();}
+function selectCapPos(btn){document.querySelectorAll('.ed-pill[data-cpos]').forEach(b=>b.classList.remove('on'));btn.classList.add('on');edCapPos=btn.dataset.cpos;updateCapPreview();}
+
+function updateCapPreview(){
+  // Main editor overlay
+  const p=$('ed-cap-preview'); if(!p) return;
+  const on=document.getElementById('ed-captions')?.checked;
+  if(!on){p.style.display='none';if($('ed-cap-mini'))$('ed-cap-mini').innerHTML='';return;}
+  const accent=document.getElementById('ed-accent-color')?.value||'#8b5cf6';
+  const sz={small:'13px',medium:'17px',large:'22px'}[edCapSize]||'17px';
+  const posMap={top:'top:12%;bottom:auto',middle:'top:40%;bottom:auto',bottom:'bottom:12%'};
+  const pos=posMap[edCapPos]||'bottom:12%';
+  const styleMap={
+    bold:`color:#fff;font-weight:900;font-family:var(--font-head);text-shadow:2px 2px 0 #000,-2px -2px 0 #000,2px -2px 0 #000,-2px 2px 0 #000`,
+    outline:`color:#fff;font-weight:700;-webkit-text-stroke:1.5px #000`,
+    box:`color:#fff;background:rgba(0,0,0,.85);padding:3px 10px;border-radius:4px`,
+    lime:`color:${accent};font-weight:900;font-family:var(--font-head);text-shadow:1px 1px 0 #000`,
+    karaoke:`font-family:var(--font-head);font-weight:900`,
+    neon:`color:#fff;font-weight:700;text-shadow:0 0 8px ${accent},0 0 20px ${accent}`
+  };
+  p.style.cssText=`position:absolute;left:0;right:0;${pos};text-align:center;padding:0 12px;pointer-events:none;display:block;font-size:${sz}`;
+  const inner=edCapStyle==='karaoke'?`<span style="color:${accent};font-weight:900">Your </span><span style="color:#fff">captions</span>`:`<span style="${styleMap[edCapStyle]||styleMap.bold}">Your captions here</span>`;
+  p.innerHTML=inner;
+  // Mini preview panel
+  const m=$('ed-cap-mini'); if(m) m.innerHTML=inner;
+}
+
+// ── Filler / B-roll toggles ───────────────────────────────────────────────────
+function edFillerToggle(cb){$('ed-filler-words').style.display=cb.checked?'block':'none';if(cb.checked)renderFillerChips();}
+function renderFillerChips(){
+  const c=$('ed-filler-chips'); if(!c) return; c.innerHTML='';
+  edFillerWords.forEach(w=>{const b=document.createElement('button');b.textContent=w;const on=edActiveFillers.has(w);b.className='ed-pill'+(on?' on':'');b.onclick=()=>{if(edActiveFillers.has(w))edActiveFillers.delete(w);else edActiveFillers.add(w);renderFillerChips();};c.appendChild(b);});
+}
+function edBrollToggle(cb){$('ed-broll-opts').style.display=cb.checked?'flex':'none';}
+function selectBrollFreq(btn){document.querySelectorAll('.ed-pill[data-bfreq]').forEach(b=>b.classList.remove('on'));btn.classList.add('on');edBrollFreq=btn.dataset.bfreq;}
+
+// ── Brand / format ────────────────────────────────────────────────────────────
+function toggleLogoOpts(cb){$('ed-logo-inner').style.display=cb.checked?'flex':'none';$('ed-logo-inner').style.flexDirection='column';}
+function edLogoSelected(inp){$('ed-logo-name').textContent=inp.files[0]?'✅ '+inp.files[0].name:'📁 Click to upload PNG logo';}
+function selectLogoPos(btn){document.querySelectorAll('.ed-pos-btn[data-pos]').forEach(b=>b.classList.remove('on'));btn.classList.add('on');edLogoPos=btn.dataset.pos;}
+function selectFmt(btn){
+  document.querySelectorAll('.ed-fmt-btn[data-fmt]').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on'); edFmt=btn.dataset.fmt;
+  const box=$('ed-preview-box');
+  box.classList.toggle('fmt-169',edFmt==='horizontal');
+  $('ed-fmt-badge').textContent=edFmt==='vertical'?'📱 9:16':edFmt==='horizontal'?'🖥 16:9':'⚡ Both';
+}
+function selectQuality(btn){document.querySelectorAll('.ed-pill[data-q]').forEach(b=>b.classList.remove('on'));btn.classList.add('on');edQuality=btn.dataset.q;}
+
+// ── Export summary ────────────────────────────────────────────────────────────
+function updateExportSummary(){
+  const on=s=>document.getElementById(s)?.checked;
+  const items=[
+    `Format: ${edFmt==='both'?'9:16 + 16:9':edFmt==='vertical'?'📱 9:16':'🖥 16:9'} · ${edQuality}p`,
+    `Trim: ${edStart.toFixed(1)}s → ${edEnd.toFixed(1)}s (${(edEnd-edStart).toFixed(1)}s)`,
+  ];
+  if(on('ed-captions')) items.push(`Captions: ${edCapStyle} / ${edCapSize} / ${edCapPos}`);
+  if(on('ed-filler'))   items.push(`Filler removal: ${[...edActiveFillers].join(', ')}`);
+  if(on('ed-broll'))    items.push(`B-Roll: Pexels / ${edBrollFreq}`);
+  if(on('ed-logo-on'))  items.push(`Logo: ${edLogoPos}`);
+  if(on('ed-audio-norm')) items.push('Audio normalised: ON');
+  if(edCuts.length)     items.push(`Middle cuts: ${edCuts.length} section(s)`);
+  $('ed-summary').innerHTML=items.map(i=>`✓ ${esc(i)}`).join('<br>');
+}
+
+// ── Export ────────────────────────────────────────────────────────────────────
+async function editorExport(){
+  if(!edVideoUrl&&!currentVideoId){showErr('Load a video first');return;}
+  if(!_edVideoReady&&!edDuration){showErr('Video not ready yet — wait for it to load.');return;}
+  const logoFile=$('ed-logo-file')?.files[0];
+  const btn=$('ed-export-btn'); btn.disabled=true; btn.textContent='⏳ Processing…';
+  const status=$('ed-export-status');
+  status.innerHTML=`<div style="background:var(--bg3);border-radius:var(--r2);padding:14px;border:1px solid var(--border)">
+    <div style="height:4px;background:var(--border);border-radius:2px;overflow:hidden;margin-bottom:10px"><div id="ed-pbar" style="height:100%;background:var(--purple);border-radius:2px;transition:width .5s;width:4%"></div></div>
+    <div id="ed-pmsg" style="font-size:11px;font-family:var(--font-mono);color:var(--ink2)">Sending to server…</div>
+  </div>`;
+  try {
+    const base={
+      video_url:edVideoUrl,start:edStart,end:edEnd,
+      captions:!!document.getElementById('ed-captions')?.checked,
+      caption_style:edCapStyle,caption_size:edCapSize,
+      formats:edFmt,quality:edQuality,
+      logo_position:edLogoPos,
+      remove_fillers:!!document.getElementById('ed-filler')?.checked,
+      filler_words:[...edActiveFillers],
+      middle_cuts:edCuts,
+      remove_pauses:!!document.getElementById('ed-pauses')?.checked,
+      audio_norm:!!document.getElementById('ed-audio-norm')?.checked,
+      broll:!!document.getElementById('ed-broll')?.checked,
+      broll_kw:$('ed-broll-kw')?.value||'',
+      brand_primary:document.getElementById('ed-brand-primary')?.value||'#8b5cf6',
+      accent_color:document.getElementById('ed-accent-color')?.value||'#8b5cf6',
+      lower_third:!!document.getElementById('ed-lower-on')?.checked,
+      lower_name:$('ed-lower-name')?.value||'',
+      lower_title:$('ed-lower-title')?.value||'',
+      videoId:currentVideoId||undefined,
+      user_id:currentUser?.id||'',
+    };
+    let body;
+    if(logoFile){
+      const fd=new FormData();
+      Object.entries(base).forEach(([k,v])=>{if(v!==undefined&&v!==null)fd.append(k,typeof v==='object'&&!Array.isArray(v)?JSON.stringify(v):v);});
+      // JSON-encode arrays properly
+      fd.set('filler_words',JSON.stringify([...edActiveFillers]));
+      fd.set('middle_cuts',JSON.stringify(edCuts));
+      fd.append('logo',logoFile);
+      const r=await fetch(`${API}/editor-export`,{method:'POST',body:fd});
+      if(!r.ok) throw new Error(await r.text());
+      body=await r.json();
+    } else {
+      body=await apiFetch('/editor-export',base);
+    }
+    pollEditorJob(body.jobId);
+  } catch(e){
+    btn.disabled=false;btn.textContent='✂ Trim, enhance & export';
+    status.innerHTML=`<div class="err2" style="display:block">⚠ ${esc(e.message)}</div>`;
+  }
+}
+
+function pollEditorJob(jid){
+  const iv=setInterval(async()=>{
+    try {
+      const r=await fetch(`${API}/job/${jid}`);
+      if(!r.ok){clearInterval(iv);$('ed-export-btn').disabled=false;$('ed-export-btn').textContent='✂ Trim, enhance & export';return;}
+      const j=await r.json();
+      const pb=$('ed-pbar'),pm=$('ed-pmsg');
+      if(pb) pb.style.width=(j.progress||0)+'%';
+      if(pm) pm.textContent=j.message||'Processing…';
+      if(j.status==='done'){
+        clearInterval(iv);$('ed-export-btn').disabled=false;$('ed-export-btn').textContent='✂ Trim, enhance & export';
+        const btns=Object.entries(j.files||{}).map(([fmt,info])=>
+          `<a href="${API}${info.downloadUrl}" download class="dl-btn">⬇ ${fmt==='vertical'?'📱 9:16':'🖥 16:9'} ${info.sizeMb}MB</a>`
+        ).join('');
+        $('ed-export-status').innerHTML=`<div style="background:rgba(139,92,246,.05);border:1px solid rgba(139,92,246,.3);border-radius:var(--r2);padding:16px">
+          <div style="font-family:var(--font-mono);font-size:12px;color:var(--purple3);margin-bottom:10px">✅ Export complete!</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">${btns}</div>
+        </div>`;
+      } else if(j.status==='error'){
+        clearInterval(iv);$('ed-export-btn').disabled=false;$('ed-export-btn').textContent='✂ Trim, enhance & export';
+        $('ed-export-status').innerHTML=`<div class="err2" style="display:block">⚠ ${esc(j.message)}</div>`;
+      }
+    } catch(e){clearInterval(iv);}
+  },2500);
+}
+
+// ── AI Posts ──────────────────────────────────────────────────────────────────
+async function genPosts(){
+  const url=$('post-url').value.trim();
+  if(!url){showErr('Paste a YouTube URL first');return;}
+  const btn=$('post-btn'); btn.disabled=true; $('post-lbl').textContent='Generating…';
+  $('post-status').style.display='flex'; $('post-st').textContent='Writing posts…';
+  $('post-eb').style.display='none'; $('posts-out').innerHTML='';
+  try {
+    const d=await apiFetch('/generate-posts',{url,tone:selectedTone,platforms:selectedPlats});
+    const posts=d.posts||{};
+    const platMeta={linkedin:{l:'LinkedIn',c:'#0a66c2'},twitter:{l:'X / Twitter',c:'#000'},instagram:{l:'Instagram',c:'#e1306c'},tiktok:{l:'TikTok',c:'#ff0050'},youtube_short:{l:'YouTube Shorts',c:'#ff0000'},facebook:{l:'Facebook',c:'#1877f2'}};
+    const g=$('posts-out'); g.innerHTML='';
+    Object.entries(posts).forEach(([plat,text])=>{
+      const m=platMeta[plat]||{l:plat,c:'var(--purple)'};
+      const el=document.createElement('div');
+      el.style.cssText='background:var(--card);border:1px solid var(--border);border-radius:var(--r2);overflow:hidden';
+      el.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--bg3);border-bottom:1px solid var(--border)"><div style="display:flex;align-items:center;gap:8px;font-family:var(--font-head);font-size:13px;font-weight:700"><div style="width:8px;height:8px;border-radius:50%;background:${m.c}"></div>${m.l}</div><button onclick="doCopy(this)" data-text="${esc(text)}" style="font-family:var(--font-mono);font-size:10px;padding:3px 10px;border:1px solid var(--border2);border-radius:20px;background:transparent;color:var(--ink2);cursor:pointer">Copy</button></div><div style="padding:16px;font-size:13px;line-height:1.8;white-space:pre-wrap;color:var(--ink2);max-height:240px;overflow-y:auto">${esc(text)}</div>`;
+      g.appendChild(el);
+    });
+  } catch(e){ $('post-eb').textContent='⚠ '+e.message; $('post-eb').style.display='block'; }
+  $('post-status').style.display='none'; btn.disabled=false; $('post-lbl').textContent='Generate →';
+}
+
+async function doCopy(btn){ await navigator.clipboard.writeText(btn.dataset.text); btn.textContent='Copied!'; btn.style.color='var(--purple3)'; setTimeout(()=>{btn.textContent='Copy';btn.style.color='';},2000); }
+
+// ── Billing ───────────────────────────────────────────────────────────────────
+async function loadBilling(){
+  if(!currentUser) return;
+  try {
+    const d=await apiFetch(`/billing/status?user_id=${encodeURIComponent(currentUser.id)}`,'','GET');
+    userPlan=d.plan||'free'; userUsage=d.usage||0; userLimit=d.limit||5;
+    renderBillingUI(d); updateUsagePill();
+    $('user-plan-badge').textContent=userPlan.charAt(0).toUpperCase()+userPlan.slice(1);
+  } catch(e){}
+}
+function renderBillingUI(d){
+  const names={free:'Free Plan',starter:'Starter Plan',creator:'Creator Plan',agency:'Agency Plan'};
+  const subs={free:'5 clips/month · LinkedIn + YouTube',starter:'15 clips/month · 3 platforms',creator:'Unlimited clips · All 6 platforms · No watermark',agency:'10 workspaces · White-label · Priority'};
+  $('bill-plan-name').textContent=names[d.plan]||'Free Plan';
+  $('bill-plan-sub').textContent=subs[d.plan]||'';
+  $('bill-used').textContent=d.usage||0;
+  $('bill-limit').textContent=d.limit>=9999?'∞':d.limit;
+  const pct=d.limit>=9999?Math.min(100,(d.usage/50)*100):Math.min(100,(d.usage/d.limit)*100);
+  $('bill-usage-bar').style.width=pct+'%';
+  $('bill-usage-bar').style.background=pct>80?'#f44336':pct>60?'#ff9800':'var(--purple)';
+  const p=d.plan;
+  const setBtn=(id,txt,dis)=>{const b=$(id);if(b){b.textContent=txt;b.disabled=!!dis;}};
+  setBtn('starter-btn', p==='starter'?'Current plan':'Upgrade to Starter →', p==='starter');
+  setBtn('creator-btn', p==='creator'?'Current plan':'Upgrade to Creator →', p==='creator');
+  setBtn('agency-btn',  p==='agency' ?'Current plan':'Upgrade to Agency →',  p==='agency');
+  $('bill-portal-btn').style.display=p!=='free'?'inline-block':'none';
+}
+async function startCheckout(plan){
+  if(!currentUser){showErr('Sign in first');return;}
+  const id=plan==='creator'?'creator-btn':plan==='agency'?'agency-btn':'starter-btn';
+  const btn=$(id); if(btn){btn.textContent='Loading…';btn.disabled=true;}
+  try {
+    const d=await apiFetch('/billing/checkout',{user_id:currentUser.id,plan});
+    if(d.url) window.location.href=d.url;
+    else showErr(d.error||'Checkout failed');
+  } catch(e){ showErr(e.message); }
+  finally{ if(btn){btn.disabled=false;} }
+}
+async function openBillingPortal(){
+  if(!currentUser) return;
+  try { const d=await apiFetch('/billing/portal',{user_id:currentUser.id}); if(d.url)window.open(d.url,'_blank'); else showErr('Portal unavailable'); }
+  catch(e){showErr('Portal error: '+e.message);}
+}
+
+// ── Analytics ─────────────────────────────────────────────────────────────────
+async function loadAnalytics(){
+  if(!currentUser) return;
+  try {
+    const d=await apiFetch(`/analytics/summary?user_id=${encodeURIComponent(currentUser.id)}`,'','GET');
+    renderAnalytics(d);
+  } catch(e){}
+}
+function renderAnalytics(d){
+  $('an-clips').textContent=d.total_clips||0;$('an-posts').textContent=d.total_posts||0;
+  $('an-posts30').textContent=d.posts_30d||0;$('an-sched').textContent=d.scheduled_pending||0;
+  const bp=d.platform_breakdown||{};const total=Object.values(bp).reduce((a,b)=>a+b,0)||1;
+  const cols={linkedin:'#0a66c2',youtube:'#ff0000',instagram:'#e1306c',tiktok:'#ff0050',twitter:'#000',facebook:'#1877f2'};
+  $('an-platforms').innerHTML=Object.entries(bp).length
+    ?Object.entries(bp).sort((a,b)=>b[1]-a[1]).map(([p,n])=>`<div style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;font-size:11px;font-family:var(--font-mono);color:var(--ink2);margin-bottom:3px"><span style="text-transform:capitalize">${p}</span><span>${n}</span></div><div style="height:5px;background:var(--border);border-radius:2px"><div style="height:100%;width:${(n/total*100).toFixed(0)}%;background:${cols[p]||'var(--purple)'};border-radius:2px;transition:width .6s"></div></div></div>`).join('')
+    :'<div style="color:var(--ink3);font-size:12px;font-family:var(--font-mono)">No posts yet</div>';
+  const daily=d.daily_clips||[];const maxV=Math.max(...daily.map(x=>x.count),1);
+  const days=[];const now=new Date();
+  for(let i=13;i>=0;i--){const d2=new Date(now);d2.setDate(d2.getDate()-i);days.push(d2.toISOString().slice(0,10));}
+  const dm=Object.fromEntries(daily.map(x=>[x.date,x.count]));
+  $('an-chart').innerHTML=days.map(day=>{const v=dm[day]||0;const h=v>0?Math.max(8,(v/maxV*100)):4;return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px" title="${day}: ${v}"><div style="width:100%;height:${h}%;background:${v>0?'var(--purple)':'var(--border)'};border-radius:2px 2px 0 0;min-height:4px"></div><div style="font-size:8px;font-family:var(--font-mono);color:var(--ink3);writing-mode:vertical-lr;transform:rotate(180deg)">${day.slice(5)}</div></div>`;}).join('');
+  const recent=d.recent_posts||[];
+  $('an-recent').innerHTML=recent.length?recent.map(p=>`<div class="sched-item"><span class="sched-plat-badge">${p.platform||'—'}</span><div style="flex:1;font-size:12px;color:var(--ink2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(p.content||'').slice(0,80)}</div><span class="sched-status-posted">✓</span></div>`).join(''):'<div style="color:var(--ink3);font-size:12px;font-family:var(--font-mono);padding:16px;text-align:center">No posts yet</div>';
+}
+
+// ── Scheduling ────────────────────────────────────────────────────────────────
+let schedPosts=[], calDate=new Date(), schedSelPlats=new Set(['linkedin']);
+function showScheduleForm(){
+  $('sched-form').style.display='block';
+  const t=new Date();t.setDate(t.getDate()+1);t.setHours(9,0,0,0);
+  $('sched-dt').value=t.toISOString().slice(0,16);
+  const plats=['linkedin','youtube','instagram','tiktok','twitter','facebook'];
+  $('sched-plat-btns').innerHTML=plats.map(p=>`<button class="ed-pill${schedSelPlats.has(p)?' on':''}" onclick="toggleSchedPlat(this,'${p}')">${p}</button>`).join('');
+}
+function toggleSchedPlat(btn,p){if(schedSelPlats.has(p))schedSelPlats.delete(p);else schedSelPlats.add(p);btn.classList.toggle('on',schedSelPlats.has(p));}
+async function submitSchedule(){
+  if(!currentUser){showErr('Sign in first');return;}
+  const text=$('sched-text').value.trim(),dt=$('sched-dt').value;
+  if(!text||!dt||schedSelPlats.size===0){showErr('Fill in text, platforms and date/time');return;}
+  try {
+    await apiFetch('/schedule/create',{user_id:currentUser.id,platforms:[...schedSelPlats],text,video_url:$('sched-video').value.trim(),scheduled_at:new Date(dt).toISOString()});
+    showOk('✅ Scheduled!'); $('sched-form').style.display='none'; $('sched-text').value=''; $('sched-video').value=''; loadSchedule();
+  } catch(e){showErr('Schedule failed: '+e.message);}
+}
+async function loadSchedule(){
+  if(!currentUser) return;
+  try {
+    const d=await apiFetch(`/schedule/list?user_id=${encodeURIComponent(currentUser.id)}`,'','GET');
+    schedPosts=d.posts||[]; renderScheduleList(); renderCalendar();
+  } catch(e){}
+}
+function renderScheduleList(){
+  const all=[...schedPosts.filter(p=>p.status==='pending').sort((a,b)=>a.scheduled_at>b.scheduled_at?1:-1),...schedPosts.filter(p=>p.status!=='pending').slice(-5).reverse()];
+  $('sched-list').innerHTML=all.length?all.map(p=>{
+    const dt=new Date(p.scheduled_at);
+    const dtStr=dt.toLocaleDateString()+' '+dt.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+    const cls={'pending':'sched-status-pending','posted':'sched-status-posted','failed':'sched-status-failed'}[p.status]||'sched-status-pending';
+    return `<div class="sched-item"><span class="sched-plat-badge">${p.platform}</span><div style="flex:1"><div style="font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(p.text||'').slice(0,60)}</div><div style="font-size:10px;font-family:var(--font-mono);color:var(--ink3);margin-top:2px">${dtStr}</div></div><span class="${cls}">${p.status==='pending'?'⏰':p.status==='posted'?'✓':'✗'}</span>${p.status==='pending'?`<button onclick="deleteScheduled('${p.id}')" style="padding:3px 8px;background:transparent;border:1px solid var(--border);border-radius:var(--r);color:var(--ink3);font-size:10px;cursor:pointer;font-family:var(--font-mono)">✕</button>`:''}</div>`;
+  }).join(''):'<div style="color:var(--ink3);font-size:12px;font-family:var(--font-mono);padding:24px;text-align:center">No scheduled posts yet.</div>';
+}
+async function deleteScheduled(id){
+  if(!currentUser) return;
+  try { await apiFetch(`/schedule/delete/${id}?user_id=${currentUser.id}`,'','DELETE'); schedPosts=schedPosts.filter(p=>p.id!==id); renderScheduleList(); renderCalendar(); } catch(e){showErr('Delete failed');}
+}
+function renderCalendar(){
+  const y=calDate.getFullYear(),m=calDate.getMonth();
+  $('cal-month-lbl').textContent=calDate.toLocaleDateString('en',{month:'long',year:'numeric'});
+  const first=new Date(y,m,1),last=new Date(y,m+1,0),today=new Date();today.setHours(0,0,0,0);
+  const dl=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  let html=dl.map(d=>`<div class="cal-header">${d}</div>`).join('');
+  for(let i=0;i<first.getDay();i++) html+=`<div></div>`;
+  const pm={};schedPosts.forEach(p=>{const d=new Date(p.scheduled_at).toDateString();pm[d]=(pm[d]||0)+1;});
+  for(let d=1;d<=last.getDate();d++){const dt=new Date(y,m,d);const isT=dt.getTime()===today.getTime();const hp=pm[dt.toDateString()]||0;html+=`<div class="cal-day${isT?' today':''}${hp?' has-post':''}" title="${hp?hp+' post(s)':''}""><div class="cal-day-num">${d}</div>${hp?Array(Math.min(hp,3)).fill('<span class="cal-dot"></span>').join(''):''}</div>`;}
+  $('cal-grid').innerHTML=html;
+}
+function calPrev(){calDate=new Date(calDate.getFullYear(),calDate.getMonth()-1,1);renderCalendar();}
+function calNext(){calDate=new Date(calDate.getFullYear(),calDate.getMonth()+1,1);renderCalendar();}
+</script>
+</body>
+</html>
