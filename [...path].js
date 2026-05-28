@@ -1,55 +1,57 @@
 /**
- * /api/[...path].js — Vercel Edge Proxy
+ * /api/[...path].js — Vercel Serverless Proxy (CommonJS)
  *
- * ROOT CAUSE OF "Generate clip" 404/SyntaxError errors:
- * ─────────────────────────────────────────────────────
- * Vercel's `rewrites` in vercel.json work fine for GET requests but
- * STRIP THE REQUEST BODY on POST/PUT requests when the destination
- * is an external URL (Railway). This is a known Vercel limitation:
- * https://vercel.com/docs/project-configuration#rewrites
+ * ROOT CAUSE OF 404: Two compounding issues:
  *
- * The result:
- *   1. POST /api/clip → Railway receives an empty body
- *   2. Flask's request.get_json() returns None
- *   3. Flask returns a 400 or empty 200 with no JSON body
- *   4. Browser tries to parse '' as JSON → SyntaxError: Unexpected end of input
- *   5. pollJob() is never called, so /api/job/<id> returns 404
+ * 1. vercel.json used `routes[]` which overrides Vercel's filesystem routing,
+ *    causing it to never discover this file as an API function.
+ *    Fixed: removed routes[], using rewrites[] for SPA fallback only.
  *
- * FIX: Replace the static rewrite with this Vercel serverless function.
- * It acts as a proper reverse proxy that:
- *   - Forwards ALL HTTP methods (GET, POST, PUT, DELETE, OPTIONS)
- *   - Forwards the full request body
- *   - Forwards all relevant headers (Content-Type, Authorization, Range)
- *   - Returns the response body as a stream (no buffering for video)
- *   - Handles CORS preflight correctly
- *   - Sets proper streaming headers for video range requests
+ * 2. Previous version used ES module syntax (export default / export const config)
+ *    without a package.json declaring "type":"module". Vercel's Node runtime
+ *    defaults to CommonJS — ES module syntax silently fails with NOT_FOUND.
+ *    Fixed: rewritten as CommonJS (module.exports).
+ *
+ * How it works:
+ *   Browser → POST /api/analyse
+ *   Vercel filesystem → finds api/[...path].js → runs this handler
+ *   This handler → forwards full request (body + headers) → Railway
+ *   Railway → processes → returns response
+ *   This handler → streams response back to browser
  */
 
 const RAILWAY = process.env.RAILWAY_URL || 'https://vidpost-ai-production.up.railway.app';
 
-export const config = {
-  runtime: 'nodejs20.x',
-  // Allow large video uploads (500MB) and long FFmpeg processing (10min)
-  maxDuration: 600,
+// Vercel config: allow up to 5-minute execution for FFmpeg jobs
+module.exports.config = {
+  api: {
+    bodyParser: false,        // CRITICAL: we read raw body ourselves
+    responseLimit: false,     // allow large video responses
+    externalResolver: true,   // suppress Vercel's "no response" warning
+  },
+  maxDuration: 300,           // 5 minutes (Vercel Pro: up to 900s)
 };
 
-export default async function handler(req, res) {
-  // Build target URL
-  const pathSegments = req.query.path || [];
-  const pathStr = Array.isArray(pathSegments) ? pathSegments.join('/') : pathSegments;
-  const queryString = (() => {
-    const q = { ...req.query };
-    delete q.path;
-    const s = new URLSearchParams(q).toString();
-    return s ? '?' + s : '';
-  })();
-  const targetUrl = `${RAILWAY}/${pathStr}${queryString}`;
+module.exports.default = async function handler(req, res) {
+  // ── Build target URL ──────────────────────────────────────────────────────
+  const pathSegments = req.query.path;
+  const pathStr = Array.isArray(pathSegments)
+    ? pathSegments.join('/')
+    : (pathSegments || '');
 
-  // ── CORS preflight ────────────────────────────────────────────────────────
+  // Rebuild query string without the 'path' param
+  const qs = new URLSearchParams();
+  for (const [k, v] of Object.entries(req.query || {})) {
+    if (k !== 'path') qs.append(k, v);
+  }
+  const queryPart = qs.toString() ? '?' + qs.toString() : '';
+  const targetUrl = `${RAILWAY}/${pathStr}${queryPart}`;
+
+  // ── CORS ──────────────────────────────────────────────────────────────────
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS,PATCH');
   res.setHeader('Access-Control-Allow-Headers',
-    'Content-Type,Authorization,X-Cron-Secret,Range,Accept-Ranges,X-Requested-With');
+    'Content-Type,Authorization,X-Cron-Secret,Range,Accept-Ranges');
   res.setHeader('Access-Control-Expose-Headers',
     'Content-Range,Accept-Ranges,Content-Length');
 
@@ -58,93 +60,81 @@ export default async function handler(req, res) {
     return;
   }
 
-  // ── Forward headers ───────────────────────────────────────────────────────
-  const forwardHeaders = {};
-  const PASS_THROUGH = [
-    'content-type', 'authorization', 'x-cron-secret',
-    'range', 'accept-ranges', 'accept', 'user-agent',
-    'x-forwarded-for',
-  ];
-  for (const [key, value] of Object.entries(req.headers)) {
-    if (PASS_THROUGH.includes(key.toLowerCase())) {
-      forwardHeaders[key] = value;
-    }
-  }
-  // Always set host to Railway's domain (not Vercel's)
-  forwardHeaders['host'] = new URL(RAILWAY).host;
-
-  // ── Read request body ─────────────────────────────────────────────────────
-  // CRITICAL: We must consume the body stream here, not pass req directly,
-  // because Vercel's runtime may already have partially buffered it.
-  let body = undefined;
+  // ── Read raw request body ─────────────────────────────────────────────────
+  // bodyParser:false means req is a raw stream — must collect manually
+  let bodyBuffer = null;
   if (!['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
-    body = await new Promise((resolve, reject) => {
+    bodyBuffer = await new Promise((resolve, reject) => {
       const chunks = [];
       req.on('data', chunk => chunks.push(chunk));
       req.on('end', () => resolve(Buffer.concat(chunks)));
       req.on('error', reject);
     });
-    if (body.length === 0) body = undefined;
   }
 
-  // ── Proxy request to Railway ──────────────────────────────────────────────
-  let railwayRes;
+  // ── Build forwarded headers ───────────────────────────────────────────────
+  const FORWARD = new Set([
+    'content-type', 'authorization', 'x-cron-secret',
+    'range', 'accept', 'accept-encoding', 'user-agent',
+    'x-forwarded-for',
+  ]);
+  const forwardHeaders = { host: new URL(RAILWAY).host };
+  for (const [k, v] of Object.entries(req.headers || {})) {
+    if (FORWARD.has(k.toLowerCase())) forwardHeaders[k] = v;
+  }
+  if (bodyBuffer && bodyBuffer.length > 0) {
+    forwardHeaders['content-length'] = String(bodyBuffer.length);
+  }
+
+  // ── Proxy to Railway ──────────────────────────────────────────────────────
+  let upstream;
   try {
-    railwayRes = await fetch(targetUrl, {
-      method: req.method,
+    upstream = await fetch(targetUrl, {
+      method:  req.method,
       headers: forwardHeaders,
-      body: body,
-      // Don't follow redirects — let browser handle them
+      body:    bodyBuffer && bodyBuffer.length > 0 ? bodyBuffer : undefined,
       redirect: 'manual',
-      // Timeout: 9 minutes (Vercel max is 10min for pro, 60s for hobby)
-      signal: AbortSignal.timeout(540000),
+      signal:  AbortSignal.timeout(290000), // 4m50s — just under Vercel's limit
     });
   } catch (err) {
-    console.error(`Proxy error for ${req.method} ${targetUrl}:`, err.message);
+    console.error(`[proxy] ${req.method} ${targetUrl} →`, err.message);
     res.status(502).json({
-      error: 'Backend unreachable',
-      detail: err.message,
-      target: targetUrl,
+      error:  'Backend unreachable',
+      detail:  err.message,
+      target:  targetUrl,
     });
     return;
   }
 
   // ── Copy response headers ─────────────────────────────────────────────────
-  const BLOCKED_HEADERS = new Set([
+  const BLOCKED = new Set([
     'transfer-encoding', 'connection', 'keep-alive',
-    'upgrade', 'proxy-authenticate', 'proxy-authorization',
+    'upgrade', 'trailer',
   ]);
-  for (const [key, value] of railwayRes.headers.entries()) {
-    if (!BLOCKED_HEADERS.has(key.toLowerCase())) {
-      try { res.setHeader(key, value); } catch (_) {}
+  for (const [k, v] of upstream.headers.entries()) {
+    if (!BLOCKED.has(k.toLowerCase())) {
+      try { res.setHeader(k, v); } catch (_) {}
     }
   }
-  // Always expose range headers for video streaming
-  res.setHeader('Access-Control-Expose-Headers',
-    'Content-Range,Accept-Ranges,Content-Length');
 
-  res.status(railwayRes.status);
+  res.status(upstream.status);
 
-  // ── Stream response body ──────────────────────────────────────────────────
-  // CRITICAL: Use streaming for video (don't buffer 200MB into RAM).
-  // For JSON responses, buffering is fine and necessary for error handling.
-  const contentType = railwayRes.headers.get('content-type') || '';
-  const isVideo = contentType.includes('video/') ||
-    railwayRes.headers.get('content-range') !== null ||
-    railwayRes.status === 206;
+  // ── Stream body back ──────────────────────────────────────────────────────
+  const ct = upstream.headers.get('content-type') || '';
+  const isVideo = ct.startsWith('video/') || upstream.status === 206;
 
-  if (isVideo && railwayRes.body) {
-    // Stream video directly without buffering
-    const reader = railwayRes.body.getReader();
-    const write = () => reader.read().then(({ done, value }) => {
+  if (isVideo && upstream.body) {
+    // Stream video without buffering into RAM
+    const reader = upstream.body.getReader();
+    const pump = () => reader.read().then(({ done, value }) => {
       if (done) { res.end(); return; }
       res.write(value);
-      write();
+      return pump();
     }).catch(() => res.end());
-    write();
+    await pump();
   } else {
-    // Buffer non-video responses (JSON, HTML, etc.)
-    const responseBody = await railwayRes.arrayBuffer();
-    res.end(Buffer.from(responseBody));
+    // Buffer JSON / HTML responses
+    const buf = await upstream.arrayBuffer();
+    res.end(Buffer.from(buf));
   }
-}
+};
