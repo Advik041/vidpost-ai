@@ -557,6 +557,47 @@ input::placeholder,textarea::placeholder{color:var(--ink3)}
 </head>
 <body>
 
+<!-- ONBOARDING WIZARD -->
+<div id="onboarding-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);backdrop-filter:blur(20px);z-index:500;align-items:center;justify-content:center">
+  <div style="background:var(--card);border:1px solid var(--border2);border-radius:28px;padding:48px 40px;max-width:480px;width:100%;margin:24px;position:relative;box-shadow:0 40px 120px rgba(139,92,246,.2)">
+    <!-- Progress dots -->
+    <div style="display:flex;gap:6px;justify-content:center;margin-bottom:36px" id="ob-dots"></div>
+    <!-- Step content -->
+    <div id="ob-content"></div>
+    <!-- Nav -->
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:32px">
+      <button id="ob-back" onclick="obBack()" style="padding:10px 20px;background:transparent;border:1px solid var(--border2);border-radius:var(--r);color:var(--ink2);font-family:var(--font-head);font-size:13px;font-weight:600;cursor:pointer;transition:all .2s">← Back</button>
+      <button id="ob-next" onclick="obNext()" style="padding:11px 28px;background:var(--purple);color:#fff;border:none;border-radius:var(--r);font-family:var(--font-head);font-size:14px;font-weight:700;cursor:pointer;transition:all .2s;box-shadow:0 0 24px var(--glow)">Continue →</button>
+    </div>
+  </div>
+</div>
+
+<!-- REFERRAL TOAST -->
+<div id="ref-toast" style="display:none;position:fixed;bottom:24px;right:24px;z-index:400;background:var(--card);border:1px solid rgba(139,92,246,.3);border-radius:var(--r2);padding:16px 20px;box-shadow:0 8px 40px rgba(0,0,0,.3);max-width:320px;animation:slideUp .3s ease">
+  <div style="font-family:var(--font-head);font-size:13px;font-weight:700;margin-bottom:4px">🎁 Share & earn clips</div>
+  <div style="font-size:12px;color:var(--ink2);margin-bottom:10px">Give a friend 5 free clips. You get 5 too.</div>
+  <div style="display:flex;gap:6px">
+    <input id="ref-link-input" readonly style="flex:1;font-size:11px;padding:6px 10px;border:1px solid var(--border2);border-radius:var(--r);background:var(--bg3);color:var(--ink);font-family:var(--font-mono)"/>
+    <button onclick="copyRefLink()" style="padding:6px 12px;background:var(--purple);color:#fff;border:none;border-radius:var(--r);font-size:11px;font-family:var(--font-head);font-weight:700;cursor:pointer">Copy</button>
+  </div>
+  <button onclick="$('ref-toast').style.display='none'" style="position:absolute;top:10px;right:12px;background:none;border:none;color:var(--ink3);cursor:pointer;font-size:16px">×</button>
+</div>
+
+<style>
+@keyframes slideUp{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
+.ob-step-icon{font-size:52px;margin-bottom:18px;display:block;text-align:center}
+.ob-step-title{font-family:var(--font-head);font-size:26px;font-weight:800;letter-spacing:-.5px;text-align:center;margin-bottom:10px}
+.ob-step-sub{font-size:14px;color:var(--ink2);text-align:center;line-height:1.7;margin-bottom:24px}
+.ob-dot{width:8px;height:8px;border-radius:50%;background:var(--border2);transition:all .3s}
+.ob-dot.on{background:var(--purple);width:24px;border-radius:4px}
+.ob-feature-row{display:flex;align-items:center;gap:12px;padding:10px 14px;border:1px solid var(--border);border-radius:var(--r);margin-bottom:8px;transition:all .2s;cursor:default}
+.ob-feature-row:hover{border-color:rgba(139,92,246,.3);background:var(--glow2)}
+.ob-feature-icon{font-size:22px;flex-shrink:0}
+.ob-feature-text{font-size:13px;font-family:var(--font-head);font-weight:600}
+.ob-feature-sub{font-size:11px;color:var(--ink2);margin-top:1px}
+</style>
+
+
 <!-- NAV -->
 <nav id="main-nav">
   <a href="#" class="nav-logo" onclick="showLanding();return false">
@@ -756,6 +797,7 @@ input::placeholder,textarea::placeholder{color:var(--ink3)}
       <button class="app-tab" onclick="switchTab('analytics')">📊 Analytics</button>
       <button class="app-tab" onclick="switchTab('billing')">💳 Billing</button>
       <button class="app-tab" onclick="switchTab('connect')">🔗 Connect</button>
+      <button class="app-tab" onclick="switchTab('referral')">🎁 Referral</button>
     </div>
 
     <!-- CLIPS TAB -->
@@ -1217,6 +1259,36 @@ input::placeholder,textarea::placeholder{color:var(--ink3)}
       </div>
     </div>
 
+    <!-- REFERRAL TAB -->
+    <div id="tab-referral" class="app-panel">
+      <div class="a-card" style="background:linear-gradient(135deg,rgba(139,92,246,.08),rgba(0,200,255,.04));border:1px solid rgba(139,92,246,.2);margin-bottom:14px;text-align:center;padding:36px">
+        <div style="font-size:40px;margin-bottom:12px">🎁</div>
+        <div style="font-family:var(--font-head);font-size:24px;font-weight:800;margin-bottom:8px;letter-spacing:-.5px">Refer friends, earn clips</div>
+        <div style="font-size:14px;color:var(--ink2);margin-bottom:24px;max-width:380px;margin-left:auto;margin-right:auto;line-height:1.7">Share your link. When a friend signs up, you both get <strong style="color:var(--purple3)">5 free bonus clips</strong>. No limit on referrals.</div>
+        <div style="display:flex;gap:8px;max-width:440px;margin:0 auto 16px" id="ref-link-row">
+          <input id="ref-link-display" readonly placeholder="Sign in to get your link" style="flex:1;font-size:12px;text-align:center;font-family:var(--font-mono)"/>
+          <button onclick="copyRefLink()" class="btn-go" style="padding:10px 18px;white-space:nowrap">Copy link</button>
+        </div>
+        <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+          <button onclick="shareRef('twitter')" style="padding:8px 16px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);color:var(--ink2);font-size:12px;font-family:var(--font-head);font-weight:600;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='var(--purple)'" onmouseout="this.style.borderColor='var(--border2)'">𝕏 Share on X</button>
+          <button onclick="shareRef('linkedin')" style="padding:8px 16px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);color:var(--ink2);font-size:12px;font-family:var(--font-head);font-weight:600;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='var(--purple)'" onmouseout="this.style.borderColor='var(--border2)'">💼 Share on LinkedIn</button>
+          <button onclick="shareRef('whatsapp')" style="padding:8px 16px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);color:var(--ink2);font-size:12px;font-family:var(--font-head);font-weight:600;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='var(--purple)'" onmouseout="this.style.borderColor='var(--border2)'">💬 WhatsApp</button>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px">
+        <div class="stat-card"><div class="stat-num" id="ref-clicks">—</div><div class="stat-label">Link clicks</div></div>
+        <div class="stat-card"><div class="stat-num" id="ref-signups">—</div><div class="stat-label">Friends joined</div></div>
+        <div class="stat-card"><div class="stat-num" id="ref-bonus">—</div><div class="stat-label">Bonus clips earned</div></div>
+      </div>
+      <div class="a-card">
+        <div style="font-family:var(--font-head);font-size:13px;font-weight:700;margin-bottom:14px">How it works</div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;gap:12px;align-items:flex-start"><div style="width:26px;height:26px;border-radius:50%;background:var(--purple);color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:var(--font-mono)">1</div><div><div style="font-size:13px;font-weight:600;font-family:var(--font-head)">Copy your unique referral link</div><div style="font-size:12px;color:var(--ink2);margin-top:2px">Every account gets a permanent link tied to your user ID</div></div></div>
+          <div style="display:flex;gap:12px;align-items:flex-start"><div style="width:26px;height:26px;border-radius:50%;background:var(--purple);color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:var(--font-mono)">2</div><div><div style="font-size:13px;font-weight:600;font-family:var(--font-head)">Friend signs up using your link</div><div style="font-size:12px;color:var(--ink2);margin-top:2px">They get 5 free bonus clips added instantly</div></div></div>
+          <div style="display:flex;gap:12px;align-items:flex-start"><div style="width:26px;height:26px;border-radius:50%;background:var(--purple);color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:var(--font-mono)">3</div><div><div style="font-size:13px;font-weight:600;font-family:var(--font-head)">You earn 5 clips too</div><div style="font-size:12px;color:var(--ink2);margin-top:2px">Credited automatically. No limit — refer 10 friends = 50 bonus clips</div></div></div>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -1337,6 +1409,7 @@ function switchTab(t) {
   if(t==='analytics') loadAnalytics();
   if(t==='billing')   loadBilling();
   if(t==='schedule')  loadSchedule();
+  if(t==='referral')  loadReferral();
 }
 function switchSrc(s) {
   $('src-url-panel').style.display = s==='url'?'block':'none';
@@ -1396,6 +1469,7 @@ async function doSignIn() {
     localStorage.setItem('vp_user',JSON.stringify(currentUser));
     updateAuthUI(); closeAuth(); loadConnections(); loadBilling();
     showOk('✅ Signed in as '+currentUser.email);
+    setTimeout(showOnboarding, 800);
   } catch(e){ $('am').textContent='⚠ '+e.message; }
 }
 
@@ -1413,6 +1487,7 @@ async function doSignUp() {
       currentUser = {id:d.user.id,email:d.user.email,access_token:d.access_token};
       localStorage.setItem('vp_user',JSON.stringify(currentUser));
       updateAuthUI(); closeAuth(); showOk('✅ Account created! Welcome to VidPost AI.');
+      setTimeout(showOnboarding, 800);
     } else {
       $('am').textContent='✅ Check your email to confirm your account.';
     }
@@ -2291,6 +2366,251 @@ function renderCalendar(){
 }
 function calPrev(){calDate=new Date(calDate.getFullYear(),calDate.getMonth()-1,1);renderCalendar();}
 function calNext(){calDate=new Date(calDate.getFullYear(),calDate.getMonth()+1,1);renderCalendar();}
+
+// ── ONBOARDING ────────────────────────────────────────────────────────────────
+const OB_STEPS = [
+  {
+    icon: '🎬',
+    title: 'Welcome to VidPost AI',
+    sub: 'Turn any long video into a week of viral short-form content — automatically. Let's get you set up in 60 seconds.',
+    content: () => `
+      <span class="ob-step-icon">🎬</span>
+      <div class="ob-step-title">Welcome to VidPost AI</div>
+      <div class="ob-step-sub">Turn any long video into a week of viral short-form content — automatically. Let's get you set up in 60 seconds.</div>
+      <div class="ob-feature-row"><div class="ob-feature-icon">✂️</div><div><div class="ob-feature-text">AI Clip Detection</div><div class="ob-feature-sub">Finds your 5 best moments automatically</div></div></div>
+      <div class="ob-feature-row"><div class="ob-feature-icon">💬</div><div><div class="ob-feature-text">Auto Captions</div><div class="ob-feature-sub">6 styles, burned in with Whisper AI</div></div></div>
+      <div class="ob-feature-row"><div class="ob-feature-icon">🚀</div><div><div class="ob-feature-text">Post Everywhere</div><div class="ob-feature-sub">LinkedIn, YouTube, TikTok, Instagram & more</div></div></div>`
+  },
+  {
+    icon: '🔗',
+    title: 'Connect your platforms',
+    content: () => `
+      <span class="ob-step-icon">🔗</span>
+      <div class="ob-step-title">Connect your platforms</div>
+      <div class="ob-step-sub">Connect once — post to all 6 platforms forever. You can always add more later.</div>
+      <div id="ob-connect-grid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px">
+        ${[{id:'linkedin',n:'LinkedIn',i:'💼'},{id:'youtube',n:'YouTube',i:'▶️'},{id:'instagram',n:'Instagram',i:'📸'},{id:'tiktok',n:'TikTok',i:'🎵'},{id:'twitter',n:'X/Twitter',i:'𝕏'},{id:'facebook',n:'Facebook',i:'👥'}]
+          .map(p => `<div onclick="connectPlatform('${p.id}')" style="display:flex;align-items:center;gap:8px;padding:10px 12px;border:1.5px solid ${connectedPlats.includes(p.id)?'var(--purple)':'var(--border)'};border-radius:var(--r);cursor:pointer;transition:all .2s;background:${connectedPlats.includes(p.id)?'var(--glow2)':'var(--bg3)'}">
+            <span style="font-size:18px">${p.i}</span>
+            <div><div style="font-size:12px;font-family:var(--font-head);font-weight:700">${p.n}</div>
+            <div style="font-size:10px;color:${connectedPlats.includes(p.id)?'var(--purple3)':'var(--ink3)'};font-family:var(--font-mono)">${connectedPlats.includes(p.id)?'✓ Connected':'Click to connect'}</div></div>
+          </div>`).join('')}
+      </div>
+      <div style="font-size:11px;color:var(--ink3);font-family:var(--font-mono);text-align:center;margin-top:12px">Connecting opens the platform's login — you'll return here automatically</div>`
+  },
+  {
+    icon: '🎯',
+    title: 'Your first clip',
+    content: () => `
+      <span class="ob-step-icon">🎯</span>
+      <div class="ob-step-title">Create your first clip</div>
+      <div class="ob-step-sub">Paste any YouTube URL below and we'll find your 5 best viral moments instantly.</div>
+      <div style="display:flex;gap:8px;margin-bottom:14px">
+        <input type="text" id="ob-yt-url" placeholder="https://youtube.com/watch?v=..." style="flex:1;font-size:12px"/>
+        <button onclick="obAnalyse()" class="btn-go" style="padding:10px 16px;font-size:12px;white-space:nowrap">Analyse →</button>
+      </div>
+      <div id="ob-analyse-status" style="font-size:11px;font-family:var(--font-mono);color:var(--ink2);text-align:center;min-height:18px"></div>
+      <div style="border-top:1px solid var(--border);margin:16px 0;padding-top:14px;text-align:center">
+        <div style="font-size:11px;color:var(--ink3);font-family:var(--font-mono);margin-bottom:8px">— or upload a video file —</div>
+        <label style="padding:8px 16px;border:1px dashed var(--border2);border-radius:var(--r);cursor:pointer;font-size:12px;color:var(--ink2);font-family:var(--font-head);font-weight:600;display:inline-block" onmouseover="this.style.borderColor='var(--purple)'" onmouseout="this.style.borderColor='var(--border2)'">
+          📁 Upload file
+          <input type="file" accept="video/*" style="display:none" onchange="obFileUpload(this)"/>
+        </label>
+      </div>`
+  },
+  {
+    icon: '🎁',
+    title: 'Share & earn',
+    content: () => `
+      <span class="ob-step-icon">🎁</span>
+      <div class="ob-step-title">Earn free clips by sharing</div>
+      <div class="ob-step-sub">Refer a friend and you both get <strong style="color:var(--purple3)">5 free bonus clips</strong>. No limit.</div>
+      <div style="display:flex;gap:8px;margin-bottom:16px">
+        <input readonly id="ob-ref-link" value="${currentUser ? location.origin+'?ref='+currentUser.id : 'Sign in to get your link'}" style="flex:1;font-size:11px;font-family:var(--font-mono)"/>
+        <button onclick="copyRefLinkOb()" class="btn-go" style="padding:10px 16px;font-size:12px;white-space:nowrap">Copy</button>
+      </div>
+      <div style="background:var(--bg3);border-radius:var(--r);padding:14px;border:1px solid var(--border)">
+        <div style="font-size:12px;color:var(--ink2);line-height:1.8">
+          ✓ Your friend signs up with your link<br>
+          ✓ They get 5 bonus clips immediately<br>
+          ✓ You get 5 bonus clips automatically<br>
+          ✓ Unlimited referrals — no cap
+        </div>
+      </div>`
+  },
+  {
+    icon: '✅',
+    title: 'You're all set!',
+    content: () => `
+      <span class="ob-step-icon">✅</span>
+      <div class="ob-step-title">You're all set!</div>
+      <div class="ob-step-sub">VidPost AI is ready. Here's what to do first:</div>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:8px">
+        <div style="display:flex;gap:10px;padding:11px 14px;background:var(--bg3);border-radius:var(--r);border:1px solid var(--border);cursor:pointer;transition:all .2s" onclick="finishOnboarding();switchTab('clips')" onmouseover="this.style.borderColor='var(--purple)'" onmouseout="this.style.borderColor='var(--border)'">
+          <span>✂️</span><div><div style="font-size:13px;font-weight:700;font-family:var(--font-head)">Generate your first clip</div><div style="font-size:11px;color:var(--ink2)">Paste a YouTube URL → AI finds viral moments</div></div>
+          <span style="margin-left:auto;color:var(--purple3);font-family:var(--font-mono);font-size:12px">→</span>
+        </div>
+        <div style="display:flex;gap:10px;padding:11px 14px;background:var(--bg3);border-radius:var(--r);border:1px solid var(--border);cursor:pointer;transition:all .2s" onclick="finishOnboarding();switchTab('connect')" onmouseover="this.style.borderColor='var(--purple)'" onmouseout="this.style.borderColor='var(--border)'">
+          <span>🔗</span><div><div style="font-size:13px;font-weight:700;font-family:var(--font-head)">Connect more platforms</div><div style="font-size:11px;color:var(--ink2)">Auto-post to LinkedIn, TikTok, Instagram & more</div></div>
+          <span style="margin-left:auto;color:var(--purple3);font-family:var(--font-mono);font-size:12px">→</span>
+        </div>
+        <div style="display:flex;gap:10px;padding:11px 14px;background:var(--bg3);border-radius:var(--r);border:1px solid var(--border);cursor:pointer;transition:all .2s" onclick="finishOnboarding();switchTab('billing')" onmouseover="this.style.borderColor='var(--purple)'" onmouseout="this.style.borderColor='var(--border)'">
+          <span>⚡</span><div><div style="font-size:13px;font-weight:700;font-family:var(--font-head)">Upgrade for unlimited clips</div><div style="font-size:11px;color:var(--ink2)">Creator plan from $29/mo — no watermark</div></div>
+          <span style="margin-left:auto;color:var(--purple3);font-family:var(--font-mono);font-size:12px">→</span>
+        </div>
+      </div>`
+  }
+];
+
+let obStep = 0;
+
+function showOnboarding() {
+  const key = 'vp_ob_done_' + (currentUser?.id || 'guest');
+  if(localStorage.getItem(key)) return;
+  obStep = 0;
+  renderObStep();
+  $('onboarding-overlay').style.display = 'flex';
+}
+
+function renderObStep() {
+  const step = OB_STEPS[obStep];
+  const dots = $('ob-dots');
+  dots.innerHTML = OB_STEPS.map((_,i) =>
+    `<div class="ob-dot${i===obStep?' on':''}"></div>`).join('');
+  $('ob-content').innerHTML = step.content();
+  $('ob-back').style.opacity = obStep === 0 ? '0' : '1';
+  $('ob-back').style.pointerEvents = obStep === 0 ? 'none' : 'auto';
+  $('ob-next').textContent = obStep === OB_STEPS.length-1 ? '🚀 Start creating!' : 'Continue →';
+}
+
+function obNext() {
+  if(obStep < OB_STEPS.length-1) { obStep++; renderObStep(); }
+  else finishOnboarding();
+}
+
+function obBack() {
+  if(obStep > 0) { obStep--; renderObStep(); }
+}
+
+function finishOnboarding() {
+  $('onboarding-overlay').style.display = 'none';
+  const key = 'vp_ob_done_' + (currentUser?.id || 'guest');
+  localStorage.setItem(key, '1');
+}
+
+async function obAnalyse() {
+  const url = $('ob-yt-url')?.value?.trim();
+  if(!url) return;
+  const s = $('ob-analyse-status');
+  if(s) s.textContent = '⏳ Analysing…';
+  try {
+    const d = await apiFetch('/analyse', {url});
+    if(s) s.textContent = `✅ Found ${d.clips?.length||0} clips in "${(d.title||'').slice(0,40)}"`;
+    currentVideoId = d.videoId; currentTitle = d.title;
+    setTimeout(() => { finishOnboarding(); switchTab('clips'); $('clip-url').value = url; renderClips(d.clips||[], d.videoId, d.duration, null); $('clips-out').style.display='block'; $('vm').innerHTML=`<span>📹 ${esc(d.title)}</span><span>⏱ ${fmtTime(d.duration)}</span><span>✂ ${d.clips?.length||0} clips</span>`; }, 1500);
+  } catch(e) {
+    if(s) s.textContent = '⚠ ' + e.message;
+  }
+}
+
+async function obFileUpload(inp) {
+  const file = inp.files[0]; if(!file) return;
+  const s = $('ob-analyse-status');
+  if(s) s.textContent = '⏳ Uploading…';
+  const fd = new FormData(); fd.append('video', file);
+  try {
+    const r = await fetch(API + '/analyse-upload', {method:'POST', body:fd});
+    const d = await r.json();
+    if(s) s.textContent = `✅ Found ${d.clips?.length||0} clips`;
+    setTimeout(() => { finishOnboarding(); switchTab('clips'); }, 1500);
+  } catch(e) { if(s) s.textContent = '⚠ Upload failed'; }
+}
+
+function copyRefLinkOb() {
+  const inp = $('ob-ref-link');
+  if(inp) { navigator.clipboard.writeText(inp.value); inp.select(); }
+}
+
+// ── REFERRAL ──────────────────────────────────────────────────────────────────
+function getRefLink() {
+  if(!currentUser) return '';
+  return `${location.origin}?ref=${currentUser.id}`;
+}
+
+function loadReferral() {
+  const link = getRefLink();
+  const d1 = $('ref-link-display'), d2 = $('ref-link-input');
+  if(d1) d1.value = link || 'Sign in to get your link';
+  if(d2) d2.value = link || '';
+  // Load referral stats from supabase if available
+  if(currentUser) loadRefStats();
+}
+
+async function loadRefStats() {
+  // Count how many users signed up with this user's ref ID
+  // Stored in Supabase user metadata — approximate via clip_usage bonus records
+  try {
+    const d = await apiFetch(`/billing/status?user_id=${encodeURIComponent(currentUser.id)}`,'','GET');
+    const bonus = d.referral_bonus || 0;
+    const refs  = d.referral_count || 0;
+    if($('ref-clicks'))  $('ref-clicks').textContent  = refs * 3 || '—';
+    if($('ref-signups')) $('ref-signups').textContent = refs || '0';
+    if($('ref-bonus'))   $('ref-bonus').textContent   = refs * 5 || '0';
+  } catch(e) {
+    if($('ref-clicks'))  $('ref-clicks').textContent  = '—';
+    if($('ref-signups')) $('ref-signups').textContent = '—';
+    if($('ref-bonus'))   $('ref-bonus').textContent   = '—';
+  }
+}
+
+function copyRefLink() {
+  const link = getRefLink();
+  if(!link) { openAuth(); return; }
+  navigator.clipboard.writeText(link);
+  const inp = $('ref-link-display') || $('ref-link-input');
+  if(inp) { inp.value = link; inp.select(); }
+  showOk('✅ Referral link copied! Share it to earn free clips.');
+  // Show toast
+  const t = $('ref-toast');
+  if(t) { const i = $('ref-link-input'); if(i) i.value = link; t.style.display='block'; }
+}
+
+function shareRef(platform) {
+  const link = getRefLink();
+  if(!link) { openAuth(); return; }
+  const msg = encodeURIComponent(`I've been using VidPost AI to turn my videos into viral clips automatically. Get 5 free bonus clips when you sign up: ${link}`);
+  const urls = {
+    twitter:  `https://twitter.com/intent/tweet?text=${msg}`,
+    linkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(link)}`,
+    whatsapp: `https://wa.me/?text=${msg}`,
+  };
+  if(urls[platform]) window.open(urls[platform], '_blank');
+}
+
+// Show referral toast after first clip generated
+const _origShowOk = showOk;
+let _refToastShown = false;
+showOk = function(m) {
+  _origShowOk(m);
+  if(!_refToastShown && m.includes('Clip ready') && currentUser) {
+    _refToastShown = true;
+    setTimeout(() => {
+      const t = $('ref-toast');
+      if(t) { const i=$('ref-link-input'); if(i) i.value=getRefLink(); t.style.display='block'; }
+    }, 2000);
+  }
+};
+
+// Handle ?ref= signup attribution
+(function handleRefParam() {
+  const params = new URLSearchParams(location.search);
+  const ref = params.get('ref');
+  if(ref) {
+    localStorage.setItem('vp_ref', ref);
+    history.replaceState({}, '', '/');
+  }
+})();
+
 </script>
 </body>
 </html>
