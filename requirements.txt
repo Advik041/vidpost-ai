@@ -1,25 +1,7 @@
-# VidPost AI — Python Dependencies
-# Pinned for Railway (Python 3.13 / nixpacks)
-# Run: pip install -r requirements.txt
-
-# ── Web framework ──────────────────────────────────────────────────────────────
 flask==3.1.0
 flask-cors==5.0.0
 gunicorn==23.0.0
-
-# ── HTTP ───────────────────────────────────────────────────────────────────────
 requests==2.32.3
-
-# ── Supabase (official Python client) ─────────────────────────────────────────
 supabase==2.11.0
-
-# ── Stripe billing ────────────────────────────────────────────────────────────
 stripe==11.4.1
-
-# ── YouTube download fallback (yt-dlp is installed separately via nixpacks -U) ─
 pytubefix==8.6.0
-
-# ── NOTE: yt-dlp is NOT pinned here intentionally.
-#    nixpacks.toml installs it with -U (latest) AFTER this file,
-#    because YouTube changes its player API weekly and old yt-dlp breaks.
-#    Pinning yt-dlp in requirements.txt causes it to go stale within days.
