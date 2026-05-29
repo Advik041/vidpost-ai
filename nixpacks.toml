@@ -1,17 +1,19 @@
 [phases.setup]
-nixPkgs = ["python313", "ffmpeg"]
+nixPkgs = ["python313"]
 
 [phases.install]
 cmds = [
+  "apt-get update -qq && apt-get install -y ffmpeg -qq",
   "pip install --upgrade pip -q",
   "pip install -r requirements.txt -q",
-  "pip install -U yt-dlp -q"
+  "pip install -U yt-dlp -q",
+  "ffmpeg -version | head -1",
+  "yt-dlp --version"
 ]
 
 [phases.build]
 cmds = [
-  "mkdir -p /tmp/vidpost_clips /tmp/vidpost_uploads",
-  "ffmpeg -version"
+  "mkdir -p /tmp/vidpost_clips /tmp/vidpost_uploads"
 ]
 
 [start]
