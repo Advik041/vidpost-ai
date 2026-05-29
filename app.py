@@ -434,6 +434,169 @@ def _serve_video_with_range(filepath: str) -> Response:
 # HEALTH
 # ════════════════════════════════════════════════════════════════════════════════
 
+
+# ════════════════════════════════════════════════════════════════════════════════
+# EMAIL NOTIFICATIONS (Resend)
+# ════════════════════════════════════════════════════════════════════════════════
+
+RESEND_KEY = os.environ.get("RESEND_API_KEY", "")
+FROM_EMAIL = os.environ.get("FROM_EMAIL", "noreply@vidpostai.com")
+
+def send_email(to: str, subject: str, html: str) -> bool:
+    """Send email via Resend API."""
+    if not RESEND_KEY or not to:
+        print(f"Email skipped (no Resend key or recipient): {subject}")
+        return False
+    try:
+        r = requests.post(
+            "https://api.resend.com/emails",
+            headers={"Authorization": f"Bearer {RESEND_KEY}",
+                     "Content-Type": "application/json"},
+            json={"from": f"VidPost AI <{FROM_EMAIL}>",
+                  "to": [to], "subject": subject, "html": html},
+            timeout=15,
+        )
+        if r.ok:
+            print(f"Email sent to {to}: {subject}")
+            return True
+        print(f"Email failed: {r.status_code} {r.text[:100]}")
+    except Exception as e:
+        print(f"Email error: {e}")
+    return False
+
+def _email_base(content_html: str) -> str:
+    return f"""<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#07070e;font-family:Arial,sans-serif">
+<div style="max-width:520px;margin:0 auto;padding:32px 24px">
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:28px;padding-bottom:20px;border-bottom:1px solid #1c1c30">
+    <div style="width:32px;height:32px;background:#8b5cf6;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px">🎬</div>
+    <div style="font-size:18px;font-weight:700;color:#f0f0ff;font-family:Arial">VidPost AI</div>
+  </div>
+  {content_html}
+  <div style="margin-top:32px;padding-top:20px;border-top:1px solid #1c1c30;font-size:11px;color:#3a3a5c;text-align:center">
+    VidPost AI · <a href="{FRONTEND_URL}" style="color:#8b5cf6;text-decoration:none">Dashboard</a> · 
+    <a href="{FRONTEND_URL}?unsubscribe=1" style="color:#3a3a5c;text-decoration:none">Unsubscribe</a>
+  </div>
+</div>
+</body></html>"""
+
+def email_clip_ready(to: str, title: str, job_id: str, fmt: str = "vertical"):
+    html = _email_base(f"""
+    <div style="font-size:22px;font-weight:700;color:#f0f0ff;margin-bottom:10px">Your clip is ready! 🎉</div>
+    <div style="font-size:14px;color:#9090b8;line-height:1.7;margin-bottom:20px">
+      Your AI-generated clip from <strong style="color:#c4b5fd">"{title}"</strong> has finished processing.
+    </div>
+    <div style="margin-bottom:20px">
+      <div style="background:#111120;border-radius:8px;padding:14px;border:1px solid #1c1c30;text-align:center">
+        <div style="font-size:11px;color:#3a3a5c;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">FORMAT</div>
+        <div style="font-size:16px;font-weight:700;color:#f0f0ff">{'📱 9:16 Vertical' if fmt=='vertical' else '🖥 16:9 Horizontal'}</div>
+      </div>
+    </div>
+    <a href="{FRONTEND_URL}/api/download/{job_id}/{fmt}" 
+       style="display:block;background:#8b5cf6;color:#fff;text-align:center;padding:14px;border-radius:8px;text-decoration:none;font-weight:700;font-size:15px;margin-bottom:14px">
+      ⬇ Download Clip
+    </a>
+    <a href="{FRONTEND_URL}" 
+       style="display:block;background:#111120;color:#9090b8;text-align:center;padding:12px;border-radius:8px;text-decoration:none;font-size:13px;border:1px solid #1c1c30">
+      Open Dashboard →
+    </a>""")
+    return send_email(to, f"Your clip is ready: {title[:50]}", html)
+
+def email_post_published(to: str, platform: str, content_preview: str):
+    html = _email_base(f"""
+    <div style="font-size:22px;font-weight:700;color:#f0f0ff;margin-bottom:10px">Post published! 🚀</div>
+    <div style="font-size:14px;color:#9090b8;line-height:1.7;margin-bottom:20px">
+      Your scheduled post went live on <strong style="color:#c4b5fd">{platform.title()}</strong>.
+    </div>
+    <div style="background:#111120;border-radius:8px;padding:14px;border:1px solid #1c1c30;margin-bottom:20px">
+      <div style="font-size:13px;color:#9090b8;line-height:1.6;font-style:italic">"{content_preview[:120]}..."</div>
+    </div>
+    <a href="{FRONTEND_URL}" style="display:block;background:#8b5cf6;color:#fff;text-align:center;padding:14px;border-radius:8px;text-decoration:none;font-weight:700;font-size:15px">
+      View Analytics →
+    </a>""")
+    return send_email(to, f"Post published on {platform.title()}", html)
+
+def email_post_failed(to: str, platform: str, error: str):
+    html = _email_base(f"""
+    <div style="font-size:22px;font-weight:700;color:#f0f0ff;margin-bottom:10px">Post failed ⚠️</div>
+    <div style="font-size:14px;color:#9090b8;line-height:1.7;margin-bottom:20px">
+      Your scheduled post to <strong style="color:#c4b5fd">{platform.title()}</strong> could not be published.
+    </div>
+    <div style="background:rgba(220,50,50,.1);border-radius:8px;padding:14px;border:1px solid rgba(220,50,50,.2);margin-bottom:20px">
+      <div style="font-size:12px;color:#ff6b6b;font-family:monospace">{error[:200]}</div>
+    </div>
+    <a href="{FRONTEND_URL}" style="display:block;background:#8b5cf6;color:#fff;text-align:center;padding:14px;border-radius:8px;text-decoration:none;font-weight:700;font-size:15px">
+      Reconnect & Retry →
+    </a>""")
+    return send_email(to, f"Post failed on {platform.title()} — action needed", html)
+
+def email_referral_bonus(to: str, referrer_email: str, bonus_clips: int = 5):
+    html = _email_base(f"""
+    <div style="font-size:22px;font-weight:700;color:#f0f0ff;margin-bottom:10px">You earned {bonus_clips} free clips! 🎁</div>
+    <div style="font-size:14px;color:#9090b8;line-height:1.7;margin-bottom:20px">
+      <strong style="color:#c4b5fd">{referrer_email}</strong> just joined VidPost AI using your referral link.
+      You both received <strong style="color:#c4b5fd">{bonus_clips} bonus clips</strong> — automatically added to your account.
+    </div>
+    <a href="{FRONTEND_URL}" style="display:block;background:#8b5cf6;color:#fff;text-align:center;padding:14px;border-radius:8px;text-decoration:none;font-weight:700;font-size:15px">
+      Use Your Bonus Clips →
+    </a>""")
+    return send_email(to, f"You earned {bonus_clips} free clips!", html)
+
+def email_welcome(to: str):
+    html = _email_base(f"""
+    <div style="font-size:22px;font-weight:700;color:#f0f0ff;margin-bottom:10px">Welcome to VidPost AI! 🎬</div>
+    <div style="font-size:14px;color:#9090b8;line-height:1.7;margin-bottom:20px">
+      You have <strong style="color:#c4b5fd">5 free clips</strong> to get started. Here is what to do first:
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px">
+      <div style="background:#111120;border-radius:8px;padding:12px;border:1px solid #1c1c30">
+        <div style="font-size:13px;font-weight:700;color:#f0f0ff;margin-bottom:3px">1. Paste a YouTube URL</div>
+        <div style="font-size:12px;color:#9090b8">AI detects your 5 best viral moments automatically</div>
+      </div>
+      <div style="background:#111120;border-radius:8px;padding:12px;border:1px solid #1c1c30">
+        <div style="font-size:13px;font-weight:700;color:#f0f0ff;margin-bottom:3px">2. Connect your platforms</div>
+        <div style="font-size:12px;color:#9090b8">LinkedIn, YouTube, TikTok, Instagram, X and Facebook</div>
+      </div>
+      <div style="background:#111120;border-radius:8px;padding:12px;border:1px solid #1c1c30">
+        <div style="font-size:13px;font-weight:700;color:#f0f0ff;margin-bottom:3px">3. Generate and post</div>
+        <div style="font-size:12px;color:#9090b8">One click to post to all platforms at once</div>
+      </div>
+    </div>
+    <a href="{FRONTEND_URL}" style="display:block;background:#8b5cf6;color:#fff;text-align:center;padding:14px;border-radius:8px;text-decoration:none;font-weight:700;font-size:15px">
+      Start Creating →
+    </a>""")
+    return send_email(to, "Welcome to VidPost AI — you have 5 free clips waiting", html)
+
+
+@app.route("/notify/preferences", methods=["POST", "OPTIONS"])
+def save_notify_prefs():
+    if request.method == "OPTIONS": return jsonify({}), 200
+    data = request.get_json() or {}
+    user_id = data.get("user_id", "")
+    prefs = data.get("prefs", {})
+    if not user_id or not supa:
+        return jsonify({"ok": True})
+    try:
+        supa.table("subscriptions").upsert({
+            "user_id": user_id,
+            "extra": {"notif_prefs": prefs}
+        }, on_conflict="user_id").execute()
+    except Exception:
+        pass
+    return jsonify({"ok": True})
+
+@app.route("/notify/test", methods=["POST", "OPTIONS"])
+def send_test_email():
+    if request.method == "OPTIONS": return jsonify({}), 200
+    data = request.get_json() or {}
+    to = data.get("email", "")
+    if not to:
+        return jsonify({"error": "No email"}), 400
+    ok = email_welcome(to)
+    return jsonify({"sent": ok})
+
+
 @app.route("/health", methods=["GET"])
 def health():
     # Detect ffmpeg from multiple possible nix store paths
@@ -1471,6 +1634,18 @@ def process_clip_job(job_id, video_id, upload_path, start, end, formats, user_id
             for fmt, p in output_files.items()
         }
         job_update(job_id, "done", 100, "Clip ready!", files=refs)
+        # Send email notification
+        try:
+            if user_id and supa:
+                user_res = supa.auth.admin.get_user_by_id(user_id)
+                user_email = getattr(getattr(user_res, 'user', None), 'email', None)
+                if user_email:
+                    first_fmt = list(output_files.keys())[0]
+                    threading.Thread(target=email_clip_ready,
+                                     args=(user_email, title or "Your video", job_id, first_fmt),
+                                     daemon=True).start()
+        except Exception as _email_err:
+            print(f"Email notification skip: {_email_err}")
         # Auto-cleanup after 2 hours
         threading.Timer(7200, lambda: shutil.rmtree(job_dir, ignore_errors=True)).start()
 
@@ -2399,11 +2574,27 @@ def schedule_run():
                 }).eq("id", post["id"]).execute()
                 save_post(post["user_id"], p, post["text"], str(result), None, "posted")
                 published += 1
+                try:
+                    ur = supa.auth.admin.get_user_by_id(post["user_id"])
+                    ue = getattr(getattr(ur, "user", None), "email", None)
+                    if ue:
+                        threading.Thread(target=email_post_published,
+                                         args=(ue, p, post.get("text","")[:100]),
+                                         daemon=True).start()
+                except Exception: pass
             except Exception as e:
                 supa.table("scheduled_posts").update({
                     "status": "failed", "error_msg": str(e)[:200],
                 }).eq("id", post["id"]).execute()
                 failed += 1
+                try:
+                    ur = supa.auth.admin.get_user_by_id(post["user_id"])
+                    ue = getattr(getattr(ur, "user", None), "email", None)
+                    if ue:
+                        threading.Thread(target=email_post_failed,
+                                         args=(ue, p, str(e)[:200]),
+                                         daemon=True).start()
+                except Exception: pass
         return jsonify({"published": published, "failed": failed, "total": len(due.data or [])})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
