@@ -554,6 +554,14 @@ input::placeholder,textarea::placeholder{color:var(--ink3)}
   border-radius:var(--r2);z-index:20}
 .vid-overlay p{font-size:12px;font-family:var(--font-mono);color:rgba(255,255,255,.7)}
 </style>
+<script>
+// Early stubs - prevent "not defined" errors from inline onclick handlers
+// Real implementations defined later in the main script block
+function showApp(){document.getElementById('landing').style.display='none';document.getElementById('app-view').style.display='block';window.scrollTo(0,0);}
+function showLanding(){document.getElementById('app-view').style.display='none';document.getElementById('landing').style.display='block';document.querySelectorAll('.legal-page').forEach(function(p){p.classList.remove('active');});window.scrollTo(0,0);}
+function showLegal(p){document.getElementById('landing').style.display='none';document.getElementById('app-view').style.display='none';var el=document.getElementById('legal-'+p);if(el)el.classList.add('active');window.scrollTo(0,0);}
+function toggleTheme(){var d=document.documentElement.getAttribute('data-theme')==='dark';document.documentElement.setAttribute('data-theme',d?'light':'dark');document.getElementById('theme-btn').textContent=d?'☀️':'🌙';localStorage.setItem('vp_theme',d?'light':'dark');}
+</script>
 </head>
 <body>
 
@@ -2370,57 +2378,52 @@ function calNext(){calDate=new Date(calDate.getFullYear(),calDate.getMonth()+1,1
 // ── ONBOARDING ────────────────────────────────────────────────────────────────
 const OB_STEPS = [
   {
-    icon: '🎬',
-    title: 'Welcome to VidPost AI',
-    sub: 'Turn any long video into a week of viral short-form content — automatically. Let's get you set up in 60 seconds.',
+    icon: "welcome",
     content: () => `
       <span class="ob-step-icon">🎬</span>
       <div class="ob-step-title">Welcome to VidPost AI</div>
-      <div class="ob-step-sub">Turn any long video into a week of viral short-form content — automatically. Let's get you set up in 60 seconds.</div>
+      <div class="ob-step-sub">Turn any long video into a week of viral clips — automatically. Ready in 60 seconds.</div>
       <div class="ob-feature-row"><div class="ob-feature-icon">✂️</div><div><div class="ob-feature-text">AI Clip Detection</div><div class="ob-feature-sub">Finds your 5 best moments automatically</div></div></div>
       <div class="ob-feature-row"><div class="ob-feature-icon">💬</div><div><div class="ob-feature-text">Auto Captions</div><div class="ob-feature-sub">6 styles, burned in with Whisper AI</div></div></div>
-      <div class="ob-feature-row"><div class="ob-feature-icon">🚀</div><div><div class="ob-feature-text">Post Everywhere</div><div class="ob-feature-sub">LinkedIn, YouTube, TikTok, Instagram & more</div></div></div>`
+      <div class="ob-feature-row"><div class="ob-feature-icon">🚀</div><div><div class="ob-feature-text">Post Everywhere</div><div class="ob-feature-sub">LinkedIn, YouTube, TikTok, Instagram and more</div></div></div>`
   },
   {
-    icon: '🔗',
-    title: 'Connect your platforms',
+    icon: "connect",
     content: () => `
       <span class="ob-step-icon">🔗</span>
       <div class="ob-step-title">Connect your platforms</div>
-      <div class="ob-step-sub">Connect once — post to all 6 platforms forever. You can always add more later.</div>
+      <div class="ob-step-sub">Connect once — post to all 6 platforms forever. Add more anytime.</div>
       <div id="ob-connect-grid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px">
-        ${[{id:'linkedin',n:'LinkedIn',i:'💼'},{id:'youtube',n:'YouTube',i:'▶️'},{id:'instagram',n:'Instagram',i:'📸'},{id:'tiktok',n:'TikTok',i:'🎵'},{id:'twitter',n:'X/Twitter',i:'𝕏'},{id:'facebook',n:'Facebook',i:'👥'}]
+        ${[{id:"linkedin",n:"LinkedIn",i:"💼"},{id:"youtube",n:"YouTube",i:"▶️"},{id:"instagram",n:"Instagram",i:"📸"},{id:"tiktok",n:"TikTok",i:"🎵"},{id:"twitter",n:"X/Twitter",i:"𝕏"},{id:"facebook",n:"Facebook",i:"👥"}]
           .map(p => `<div onclick="connectPlatform('${p.id}')" style="display:flex;align-items:center;gap:8px;padding:10px 12px;border:1.5px solid ${connectedPlats.includes(p.id)?'var(--purple)':'var(--border)'};border-radius:var(--r);cursor:pointer;transition:all .2s;background:${connectedPlats.includes(p.id)?'var(--glow2)':'var(--bg3)'}">
             <span style="font-size:18px">${p.i}</span>
             <div><div style="font-size:12px;font-family:var(--font-head);font-weight:700">${p.n}</div>
-            <div style="font-size:10px;color:${connectedPlats.includes(p.id)?'var(--purple3)':'var(--ink3)'};font-family:var(--font-mono)">${connectedPlats.includes(p.id)?'✓ Connected':'Click to connect'}</div></div>
-          </div>`).join('')}
+            <div style="font-size:10px;color:${connectedPlats.includes(p.id)?'var(--purple3)':'var(--ink3)'};font-family:var(--font-mono)">${connectedPlats.includes(p.id)?"✓ Connected":"Click to connect"}</div></div>
+          </div>`).join("")}
       </div>
-      <div style="font-size:11px;color:var(--ink3);font-family:var(--font-mono);text-align:center;margin-top:12px">Connecting opens the platform's login — you'll return here automatically</div>`
+      <div style="font-size:11px;color:var(--ink3);font-family:var(--font-mono);text-align:center;margin-top:12px">Connecting opens the platform login — you return here automatically</div>`
   },
   {
-    icon: '🎯',
-    title: 'Your first clip',
+    icon: "clip",
     content: () => `
       <span class="ob-step-icon">🎯</span>
       <div class="ob-step-title">Create your first clip</div>
-      <div class="ob-step-sub">Paste any YouTube URL below and we'll find your 5 best viral moments instantly.</div>
+      <div class="ob-step-sub">Paste any YouTube URL — AI finds your 5 best viral moments instantly.</div>
       <div style="display:flex;gap:8px;margin-bottom:14px">
         <input type="text" id="ob-yt-url" placeholder="https://youtube.com/watch?v=..." style="flex:1;font-size:12px"/>
-        <button onclick="obAnalyse()" class="btn-go" style="padding:10px 16px;font-size:12px;white-space:nowrap">Analyse →</button>
+        <button onclick="obAnalyse()" class="btn-go" style="padding:10px 16px;font-size:12px;white-space:nowrap">Analyse</button>
       </div>
       <div id="ob-analyse-status" style="font-size:11px;font-family:var(--font-mono);color:var(--ink2);text-align:center;min-height:18px"></div>
       <div style="border-top:1px solid var(--border);margin:16px 0;padding-top:14px;text-align:center">
         <div style="font-size:11px;color:var(--ink3);font-family:var(--font-mono);margin-bottom:8px">— or upload a video file —</div>
-        <label style="padding:8px 16px;border:1px dashed var(--border2);border-radius:var(--r);cursor:pointer;font-size:12px;color:var(--ink2);font-family:var(--font-head);font-weight:600;display:inline-block" onmouseover="this.style.borderColor='var(--purple)'" onmouseout="this.style.borderColor='var(--border2)'">
+        <label style="padding:8px 16px;border:1px dashed var(--border2);border-radius:var(--r);cursor:pointer;font-size:12px;color:var(--ink2);font-family:var(--font-head);font-weight:600;display:inline-block">
           📁 Upload file
           <input type="file" accept="video/*" style="display:none" onchange="obFileUpload(this)"/>
         </label>
       </div>`
   },
   {
-    icon: '🎁',
-    title: 'Share & earn',
+    icon: "referral",
     content: () => `
       <span class="ob-step-icon">🎁</span>
       <div class="ob-step-title">Earn free clips by sharing</div>
@@ -2431,7 +2434,7 @@ const OB_STEPS = [
       </div>
       <div style="background:var(--bg3);border-radius:var(--r);padding:14px;border:1px solid var(--border)">
         <div style="font-size:12px;color:var(--ink2);line-height:1.8">
-          ✓ Your friend signs up with your link<br>
+          ✓ Friend signs up with your link<br>
           ✓ They get 5 bonus clips immediately<br>
           ✓ You get 5 bonus clips automatically<br>
           ✓ Unlimited referrals — no cap
@@ -2439,19 +2442,18 @@ const OB_STEPS = [
       </div>`
   },
   {
-    icon: '✅',
-    title: 'You're all set!',
+    icon: "done",
     content: () => `
       <span class="ob-step-icon">✅</span>
-      <div class="ob-step-title">You're all set!</div>
-      <div class="ob-step-sub">VidPost AI is ready. Here's what to do first:</div>
+      <div class="ob-step-title">You are all set!</div>
+      <div class="ob-step-sub">Here is what to do first:</div>
       <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:8px">
         <div style="display:flex;gap:10px;padding:11px 14px;background:var(--bg3);border-radius:var(--r);border:1px solid var(--border);cursor:pointer;transition:all .2s" onclick="finishOnboarding();switchTab('clips')" onmouseover="this.style.borderColor='var(--purple)'" onmouseout="this.style.borderColor='var(--border)'">
-          <span>✂️</span><div><div style="font-size:13px;font-weight:700;font-family:var(--font-head)">Generate your first clip</div><div style="font-size:11px;color:var(--ink2)">Paste a YouTube URL → AI finds viral moments</div></div>
+          <span>✂️</span><div><div style="font-size:13px;font-weight:700;font-family:var(--font-head)">Generate your first clip</div><div style="font-size:11px;color:var(--ink2)">Paste a YouTube URL — AI finds viral moments</div></div>
           <span style="margin-left:auto;color:var(--purple3);font-family:var(--font-mono);font-size:12px">→</span>
         </div>
         <div style="display:flex;gap:10px;padding:11px 14px;background:var(--bg3);border-radius:var(--r);border:1px solid var(--border);cursor:pointer;transition:all .2s" onclick="finishOnboarding();switchTab('connect')" onmouseover="this.style.borderColor='var(--purple)'" onmouseout="this.style.borderColor='var(--border)'">
-          <span>🔗</span><div><div style="font-size:13px;font-weight:700;font-family:var(--font-head)">Connect more platforms</div><div style="font-size:11px;color:var(--ink2)">Auto-post to LinkedIn, TikTok, Instagram & more</div></div>
+          <span>🔗</span><div><div style="font-size:13px;font-weight:700;font-family:var(--font-head)">Connect platforms</div><div style="font-size:11px;color:var(--ink2)">Auto-post to LinkedIn, TikTok, Instagram and more</div></div>
           <span style="margin-left:auto;color:var(--purple3);font-family:var(--font-mono);font-size:12px">→</span>
         </div>
         <div style="display:flex;gap:10px;padding:11px 14px;background:var(--bg3);border-radius:var(--r);border:1px solid var(--border);cursor:pointer;transition:all .2s" onclick="finishOnboarding();switchTab('billing')" onmouseover="this.style.borderColor='var(--purple)'" onmouseout="this.style.borderColor='var(--border)'">
@@ -2460,7 +2462,7 @@ const OB_STEPS = [
         </div>
       </div>`
   }
-];
+]
 
 let obStep = 0;
 
