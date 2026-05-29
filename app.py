@@ -177,20 +177,45 @@ def setup_yt_cookies() -> str:
 
 YT_COOKIES = setup_yt_cookies()
 
-def find_ytdlp() -> str:
-    for p in ["/opt/venv/bin/yt-dlp", "/usr/local/bin/yt-dlp",
-              "/root/.nix-profile/bin/yt-dlp", "/usr/bin/yt-dlp"]:
+def find_ffmpeg() -> str:
+    for p in ["/usr/bin/ffmpeg", "/usr/local/bin/ffmpeg", "/opt/homebrew/bin/ffmpeg"]:
         if os.path.exists(p):
-            return p
+            print(f"ffmpeg: {p}"); return p
     try:
-        r = subprocess.run(["which", "yt-dlp"], capture_output=True, text=True)
-        if r.returncode == 0:
-            return r.stdout.strip()
-    except Exception:
-        pass
+        r = subprocess.run(["which","ffmpeg"], capture_output=True, text=True, timeout=5)
+        if r.returncode == 0 and r.stdout.strip(): return r.stdout.strip()
+    except Exception: pass
+    return "ffmpeg"
+
+def find_ffprobe() -> str:
+    for p in ["/usr/bin/ffprobe", "/usr/local/bin/ffprobe"]:
+        if os.path.exists(p): return p
+    try:
+        r = subprocess.run(["which","ffprobe"], capture_output=True, text=True, timeout=5)
+        if r.returncode == 0 and r.stdout.strip(): return r.stdout.strip()
+    except Exception: pass
+    return "ffprobe"
+
+def find_ytdlp() -> str:
+    for p in ["/usr/local/bin/yt-dlp", "/usr/bin/yt-dlp",
+              "/root/.local/bin/yt-dlp", "/home/user/.local/bin/yt-dlp",
+              "/opt/venv/bin/yt-dlp", "/root/.nix-profile/bin/yt-dlp"]:
+        if os.path.exists(p):
+            print(f"yt-dlp: {p}"); return p
+    try:
+        r = subprocess.run(["which","yt-dlp"], capture_output=True, text=True, timeout=5)
+        if r.returncode == 0 and r.stdout.strip(): return r.stdout.strip()
+    except Exception: pass
+    try:
+        subprocess.run(["yt-dlp","--version"], capture_output=True, timeout=5)
+        return "yt-dlp"
+    except Exception: pass
+    print("WARNING: yt-dlp not found")
     return "yt-dlp"
 
-YTDLP = find_ytdlp()
+FFMPEG  = find_ffmpeg()
+FFPROBE = find_ffprobe()
+YTDLP   = find_ytdlp()
 
 def _update_ytdlp():
     """Auto-update yt-dlp on startup — YouTube frequently rotates its API."""
@@ -202,7 +227,7 @@ def _update_ytdlp():
 
 threading.Thread(target=_update_ytdlp, daemon=True).start()
 
-print(f"VidPost AI v2 | ytdlp={YTDLP} | cookies={'yes' if YT_COOKIES else 'no'} | "
+print(f"VidPost AI v2 | ytdlp={YTDLP} | ffmpeg={FFMPEG} | cookies={'yes' if YT_COOKIES else 'no'} | "
       f"proxy={'yes' if PROXY else 'no'} | supabase={'yes' if supa else 'no'}")
 
 
@@ -215,15 +240,26 @@ def _yt_common_args() -> list:
     args = [
         "--no-playlist",
         "--no-check-certificates",
-        "--retries", "3",
-        "--fragment-retries", "3",
+        "--retries", "5",
+        "--fragment-retries", "5",
         "--socket-timeout", "30",
         "--merge-output-format", "mp4",
+        "--no-warnings",
+        # Force IPv4 - Railway IPv6 is often blocked by YouTube
+        "--force-ipv4",
+        # Use PO token if available (fixes bot detection on server IPs)
+        "--extractor-args", "youtube:player_skip=webpage,config",
     ]
     if YT_COOKIES and os.path.exists(YT_COOKIES):
         args += ["--cookies", YT_COOKIES]
+        # With cookies, also try browser-based extraction
+        args += ["--cookies-from-browser", "chrome"] if not YT_COOKIES else []
     if PROXY:
         args += ["--proxy", PROXY]
+    # PO token support (set via env var YT_PO_TOKEN)
+    po_token = os.environ.get("YT_PO_TOKEN", "")
+    if po_token:
+        args += ["--extractor-args", f"youtube:po_token=web+{po_token}"]
     return args
 
 def ytdlp_download(video_id: str, out_path: str, height: int = 1080) -> bool:
@@ -600,7 +636,7 @@ def send_test_email():
 @app.route("/health", methods=["GET"])
 def health():
     # Detect ffmpeg from multiple possible nix store paths
-    ffmpeg_found = bool(shutil.which("ffmpeg"))
+    ffmpeg_found = bool(shutil.which(FFMPEG) or shutil.which("ffmpeg"))
     if not ffmpeg_found:
         for p in ["/usr/bin/ffmpeg", "/usr/local/bin/ffmpeg", "/run/current-system/sw/bin/ffmpeg"]:
             if os.path.exists(p):
@@ -608,7 +644,7 @@ def health():
                 break
         if not ffmpeg_found:
             try:
-                r = subprocess.run(["ffmpeg", "-version"], capture_output=True, timeout=5)
+                r = subprocess.run([FFMPEG, "-version"], capture_output=True, timeout=5)
                 ffmpeg_found = r.returncode == 0
             except Exception:
                 pass
@@ -1134,7 +1170,7 @@ def burn_captions_ffmpeg(inp: str, srt_path: str, out: str,
     # FIX: escape the srt_path properly for FFmpeg subtitles filter on Linux
     safe_srt = srt_path.replace("\\", "/").replace(":", "\\:")
     r = subprocess.run([
-        "ffmpeg", "-y", "-i", inp,
+        FFMPEG, "-y", "-i", inp,
         "-vf", f"subtitles={safe_srt}:force_style='{sub_style}'",
         "-c:v", "libx264", "-preset", "fast", "-crf", "20",
         "-c:a", "copy", out,
@@ -1210,7 +1246,7 @@ def download_pexels_clip(url: str, out_path: str, duration: int = 5) -> bool:
                 f.write(chunk)
         # Trim to duration and re-encode to ensure compatibility
         result = subprocess.run([
-            "ffmpeg", "-y", "-i", raw, "-t", str(duration),
+            FFMPEG, "-y", "-i", raw, "-t", str(duration),
             "-c:v", "libx264", "-preset", "fast", "-crf", "22",
             "-vf", "scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920",
             "-an", out_path,
@@ -1240,7 +1276,7 @@ def insert_broll(main_video: str, broll_clips: list, output_path: str,
         return True
     try:
         probe = subprocess.run(
-            ["ffprobe", "-v", "quiet", "-print_format", "json", "-show_format", "-show_streams", main_video],
+            [FFPROBE, "-v", "quiet", "-print_format", "json", "-show_format", "-show_streams", main_video],
             capture_output=True, text=True
         )
         info = json.loads(probe.stdout)
@@ -1264,7 +1300,7 @@ def insert_broll(main_video: str, broll_clips: list, output_path: str,
             sp = os.path.join(job_dir, f"bseg_{int(pos)}.mp4")
             # FIX: re-encode to common spec (1080x1920, libx264, aac)
             subprocess.run([
-                "ffmpeg", "-y", "-i", main_video,
+                FFMPEG, "-y", "-i", main_video,
                 "-ss", str(pos), "-t", str(seg_end - pos),
                 "-vf", f"scale={w}:{h}:force_original_aspect_ratio=decrease,pad={w}:{h}:(ow-iw)/2:(oh-ih)/2:black",
                 "-c:v", "libx264", "-preset", "fast", "-crf", "20",
@@ -1288,7 +1324,7 @@ def insert_broll(main_video: str, broll_clips: list, output_path: str,
                 f.write(f"file '{p}'\n")
 
         r = subprocess.run([
-            "ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", cf,
+            FFMPEG, "-y", "-f", "concat", "-safe", "0", "-i", cf,
             "-c:v", "libx264", "-preset", "fast", "-crf", "20",
             "-c:a", "aac", "-b:a", "128k",
             "-movflags", "+faststart", output_path,
@@ -1327,7 +1363,7 @@ def remove_fillers_from_video(video_path: str, segments: list,
             return True
 
         probe = subprocess.run(
-            ["ffprobe", "-v", "quiet", "-print_format", "json", "-show_format", video_path],
+            [FFPROBE, "-v", "quiet", "-print_format", "json", "-show_format", video_path],
             capture_output=True, text=True
         )
         total = float(json.loads(probe.stdout).get("format", {}).get("duration", 60))
@@ -1346,7 +1382,7 @@ def remove_fillers_from_video(video_path: str, segments: list,
         for i, (s, e) in enumerate(keep):
             sp = os.path.join(job_dir, f"fk_{i}.mp4")
             subprocess.run([
-                "ffmpeg", "-y", "-ss", str(s), "-i", video_path,
+                FFMPEG, "-y", "-ss", str(s), "-i", video_path,
                 "-t", str(e - s),
                 "-c:v", "libx264", "-preset", "fast", "-crf", "20",
                 "-c:a", "aac", "-b:a", "128k", sp,
@@ -1359,7 +1395,7 @@ def remove_fillers_from_video(video_path: str, segments: list,
                 f.write(f"file '{p}'\n")
 
         r = subprocess.run([
-            "ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", cf,
+            FFMPEG, "-y", "-f", "concat", "-safe", "0", "-i", cf,
             "-c:v", "libx264", "-preset", "fast", "-crf", "20",
             "-c:a", "aac", "-b:a", "128k",
             "-movflags", "+faststart", output_path,
@@ -1451,7 +1487,7 @@ def analyse_upload():
     title = os.path.splitext(file.filename)[0] or "Uploaded Video"
     try:
         probe = subprocess.run(
-            ["ffprobe", "-v", "quiet", "-print_format", "json", "-show_format", upload_path],
+            [FFPROBE, "-v", "quiet", "-print_format", "json", "-show_format", upload_path],
             capture_output=True, text=True, timeout=30,
         )
         if probe.returncode == 0:
@@ -1542,8 +1578,10 @@ def process_clip_job(job_id, video_id, upload_path, start, end, formats, user_id
                 success = ytdlp_download(video_id, raw_video, height=720)
             if not success:
                 raise Exception(
-                    "YouTube download failed — YouTube blocks server IPs. "
-                    "Please use the Upload tab to upload the video directly."
+                    "YouTube download failed — Railway server IP is blocked by YouTube. "
+                    "Solutions: (1) Use the Upload tab to upload the video file directly "
+                    "(2) Add YT_COOKIES_B64 env var with your YouTube cookies "
+                    "(3) Add YT_PO_TOKEN env var from https://github.com/yt-dlp/yt-dlp/wiki/PO-Token-Guide"
                 )
         else:
             raise Exception("No video source provided")
@@ -1558,7 +1596,7 @@ def process_clip_job(job_id, video_id, upload_path, start, end, formats, user_id
         # than output-seeking. Use -copyts to preserve timestamps, then re-encode.
         # The old approach used stream copy which caused A/V desync on keyframe boundaries.
         cut = subprocess.run([
-            "ffmpeg", "-y",
+            FFMPEG, "-y",
             "-ss", str(start), "-i", raw_video,
             "-t", str(end - start),
             "-c:v", "libx264", "-preset", "fast", "-crf", "18",
@@ -1576,7 +1614,7 @@ def process_clip_job(job_id, video_id, upload_path, start, end, formats, user_id
 
         # Probe source resolution
         probe = subprocess.run(
-            ["ffprobe", "-v", "quiet", "-print_format", "json", "-show_streams", cut_video],
+            [FFPROBE, "-v", "quiet", "-print_format", "json", "-show_streams", cut_video],
             capture_output=True, text=True
         )
         src_height = 1080
@@ -1594,7 +1632,7 @@ def process_clip_job(job_id, video_id, upload_path, start, end, formats, user_id
 
         def _encode(inp, out, w, h):
             r = subprocess.run([
-                "ffmpeg", "-y", "-i", inp,
+                FFMPEG, "-y", "-i", inp,
                 "-vf", f"scale={w}:{h}:force_original_aspect_ratio=decrease,"
                        f"pad={w}:{h}:(ow-iw)/2:(oh-ih)/2:black,setsar=1",
                 "-c:v", "libx264", "-preset", "fast", "-crf", crf,
@@ -1665,6 +1703,27 @@ def get_job(job_id):
 # ════════════════════════════════════════════════════════════════════════════════
 # STREAMING ENDPOINTS
 # ════════════════════════════════════════════════════════════════════════════════
+
+
+@app.route("/stream-upload", methods=["GET", "OPTIONS"])
+def stream_upload():
+    """Stream an uploaded file back to the editor for preview.
+    This lets the editor load uploaded videos without re-uploading.
+    """
+    if request.method == "OPTIONS":
+        return jsonify({}), 200
+    path = request.args.get("path", "").strip()
+    # Security: only allow paths inside our uploads dir
+    import pathlib
+    try:
+        real = str(pathlib.Path(path).resolve())
+    except Exception:
+        return jsonify({"error": "Invalid path"}), 400
+    if not real.startswith(UPLOADS_DIR) and not real.startswith(CLIPS_DIR):
+        return jsonify({"error": "Forbidden"}), 403
+    if not os.path.exists(real):
+        return jsonify({"error": "File not found"}), 404
+    return _serve_video_with_range(real)
 
 @app.route("/stream-clip/<job_id>/<fmt>", methods=["GET", "OPTIONS"])
 def stream_clip(job_id, fmt):
@@ -1833,7 +1892,7 @@ def editor_export():
             trimmed = os.path.join(job_dir, "trimmed.mp4")
             # FIX: -ss BEFORE -i = input-seeking (accurate, fast)
             r_trim = subprocess.run([
-                "ffmpeg", "-y",
+                FFMPEG, "-y",
                 "-ss", str(start), "-i", src,
                 "-t", str(end - start),
                 "-c:v", "libx264", "-preset", "fast", "-crf", "18",
@@ -1860,7 +1919,7 @@ def editor_export():
                 job_update(job_id, "running", 35, "Extracting audio for transcription...")
                 audio_path = os.path.join(job_dir, "audio.m4a")
                 subprocess.run([
-                    "ffmpeg", "-y", "-i", current,
+                    FFMPEG, "-y", "-i", current,
                     "-vn", "-c:a", "aac", "-b:a", "128k", audio_path,
                 ], capture_output=True, timeout=120)
                 if os.path.exists(audio_path) and os.path.getsize(audio_path) > 1000:
@@ -1878,7 +1937,7 @@ def editor_export():
                     if captions:
                         audio_path2 = os.path.join(job_dir, "audio2.m4a")
                         subprocess.run([
-                            "ffmpeg", "-y", "-i", current,
+                            FFMPEG, "-y", "-i", current,
                             "-vn", "-c:a", "aac", "-b:a", "128k", audio_path2,
                         ], capture_output=True, timeout=120)
                         if os.path.exists(audio_path2) and os.path.getsize(audio_path2) > 1000:
@@ -1903,7 +1962,7 @@ def editor_export():
                 job_update(job_id, "running", 65, "Normalizing audio...")
                 norm_out = os.path.join(job_dir, "normalized.mp4")
                 r_norm = subprocess.run([
-                    "ffmpeg", "-y", "-i", current,
+                    FFMPEG, "-y", "-i", current,
                     "-af", "loudnorm=I=-16:TP=-1.5:LRA=11",
                     "-c:v", "copy", norm_out,
                 ], capture_output=True, timeout=180)
@@ -1948,7 +2007,7 @@ def editor_export():
                     w, h = "1920", "1080"
                 out_path = os.path.join(job_dir, f"{fmt}.mp4")
                 r_final = subprocess.run([
-                    "ffmpeg", "-y", "-i", current,
+                    FFMPEG, "-y", "-i", current,
                     "-vf", f"scale={w}:{h}:force_original_aspect_ratio=decrease,"
                            f"pad={w}:{h}:(ow-iw)/2:(oh-ih)/2:black,setsar=1",
                     "-c:v", "libx264", "-preset", "fast", "-crf", "18",
@@ -1988,7 +2047,7 @@ def _apply_middle_cuts(src: str, cuts: list, out: str) -> bool:
     """Remove sections of a video defined by [{start, end}] cut list."""
     try:
         probe = subprocess.run(
-            ["ffprobe", "-v", "quiet", "-print_format", "json", "-show_format", src],
+            [FFPROBE, "-v", "quiet", "-print_format", "json", "-show_format", src],
             capture_output=True, text=True
         )
         total = float(json.loads(probe.stdout).get("format", {}).get("duration", 60))
@@ -2013,7 +2072,7 @@ def _apply_middle_cuts(src: str, cuts: list, out: str) -> bool:
         for i, (s, e) in enumerate(keep):
             sp = os.path.join(job_dir, f"mc_{i}.mp4")
             subprocess.run([
-                "ffmpeg", "-y", "-ss", str(s), "-i", src, "-t", str(e - s),
+                FFMPEG, "-y", "-ss", str(s), "-i", src, "-t", str(e - s),
                 "-c:v", "libx264", "-preset", "fast", "-crf", "18",
                 "-c:a", "aac", "-b:a", "192k", sp,
             ], capture_output=True, timeout=120)
@@ -2025,7 +2084,7 @@ def _apply_middle_cuts(src: str, cuts: list, out: str) -> bool:
             for p in segs:
                 f.write(f"file '{p}'\n")
         r = subprocess.run([
-            "ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", cf,
+            FFMPEG, "-y", "-f", "concat", "-safe", "0", "-i", cf,
             "-c:v", "libx264", "-preset", "fast", "-crf", "18",
             "-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart", out,
         ], capture_output=True, timeout=300)
@@ -2047,7 +2106,7 @@ def _add_logo(src: str, logo: str, out: str, position: str = "top-right") -> boo
     pos = pos_map.get(position, "W-w-10:10")
     try:
         r = subprocess.run([
-            "ffmpeg", "-y", "-i", src, "-i", logo,
+            FFMPEG, "-y", "-i", src, "-i", logo,
             "-filter_complex",
             f"[1:v]scale=iw*0.15:-1[logo];[0:v][logo]overlay={pos}",
             "-c:v", "libx264", "-preset", "fast", "-crf", "18",
@@ -2065,7 +2124,7 @@ def _add_lower_third(src: str, out: str, name: str, title_text: str, color: str)
     safe_title = title_text.replace("'", "").replace('"', "")[:40]
     try:
         r = subprocess.run([
-            "ffmpeg", "-y", "-i", src,
+            FFMPEG, "-y", "-i", src,
             "-vf", (
                 f"drawbox=x=0:y=ih-100:w=iw:h=100:color=black@0.7:t=fill,"
                 f"drawtext=text='{safe_name}':fontsize=28:fontcolor=white:"
