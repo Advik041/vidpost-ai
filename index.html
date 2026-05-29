@@ -1788,9 +1788,17 @@ function processClipByIndex(i) {
 function editorOpenByIndex(i) {
   const d = $('cg')._clipData;
   if(!d) return;
-  const c = d.clips[i];
-  // Pass videoId if we have one, else uploadPath via currentUploadPath global
-  editorOpenClip('', c.title||'', c.start, c.end, d.videoId||'', d.uploadPath||'');
+  const clip = d.clips[i];
+  const videoId   = d.videoId   || '';
+  const uploadPath = d.uploadPath || currentUploadPath || '';
+  // For uploaded files: stream them via the backend upload endpoint
+  // For YouTube: use the stream endpoint
+  let videoUrl = '';
+  if(uploadPath) {
+    // Backend streams uploaded files at /stream-upload?path=...
+    videoUrl = API + '/stream-upload?path=' + encodeURIComponent(uploadPath);
+  }
+  editorOpenClip(videoUrl, clip.title||'', clip.start, clip.end, videoId, uploadPath);
 }
 
 function toggleClip(head) {
@@ -2009,8 +2017,10 @@ function editorMount(url, title) {
   $('vid-loading-msg').textContent = 'Loading video…';
   _bindVideoEvents($('ed-video'));
   const v = $('ed-video');
-  v.src = url;
-  v.load();
+  if(url) {
+    v.src = url;
+    v.load();
+  }
 }
 
 async function editorLoadUrl() {
