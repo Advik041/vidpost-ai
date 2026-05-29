@@ -806,6 +806,8 @@ function toggleTheme(){var d=document.documentElement.getAttribute('data-theme')
       <button class="app-tab" onclick="switchTab('billing')">💳 Billing</button>
       <button class="app-tab" onclick="switchTab('connect')">🔗 Connect</button>
       <button class="app-tab" onclick="switchTab('referral')">🎁 Referral</button>
+      <button class="app-tab" onclick="switchTab('library')">📼 Library</button>
+      <button class="app-tab" onclick="switchTab('notifications')">🔔 Alerts</button>
     </div>
 
     <!-- CLIPS TAB -->
@@ -1300,6 +1302,125 @@ function toggleTheme(){var d=document.documentElement.getAttribute('data-theme')
   </div>
 </div>
 
+
+    <!-- LIBRARY TAB -->
+    <div id="tab-library" class="app-panel">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px">
+        <div style="font-family:var(--font-head);font-size:18px;font-weight:800;letter-spacing:-.5px">Clip Library</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input type="text" id="lib-search" placeholder="Search clips..." oninput="filterLibrary()" style="font-size:12px;padding:7px 12px;width:180px"/>
+          <select id="lib-filter" onchange="filterLibrary()" style="font-size:12px;padding:7px 10px;border:1px solid var(--border2);border-radius:var(--r);background:var(--bg3);color:var(--ink);font-family:var(--font-mono)">
+            <option value="all">All formats</option>
+            <option value="vertical">9:16 Vertical</option>
+            <option value="horizontal">16:9 Horizontal</option>
+          </select>
+        </div>
+      </div>
+      <div id="lib-stats" style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap"></div>
+      <div id="lib-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px"></div>
+      <div id="lib-empty" style="display:none;text-align:center;padding:60px;color:var(--ink3);font-family:var(--font-mono);font-size:13px">
+        <div style="font-size:40px;margin-bottom:12px">📼</div>
+        No clips yet. Generate your first clip in the Clips tab.
+      </div>
+    </div>
+
+    <!-- NOTIFICATIONS TAB -->
+    <div id="tab-notifications" class="app-panel">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+
+        <!-- Email preferences card -->
+        <div class="a-card">
+          <div style="font-family:var(--font-head);font-size:14px;font-weight:700;margin-bottom:16px">📧 Email notifications</div>
+          <div style="display:flex;flex-direction:column;gap:10px" id="notif-prefs">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)">
+              <div><div style="font-size:13px;font-weight:600;font-family:var(--font-head)">Clip ready</div><div style="font-size:11px;color:var(--ink2)">When your clip finishes processing</div></div>
+              <label class="notif-toggle"><input type="checkbox" id="notif-clip" checked onchange="saveNotifPrefs()"/><span class="notif-slider"></span></label>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)">
+              <div><div style="font-size:13px;font-weight:600;font-family:var(--font-head)">Post published</div><div style="font-size:11px;color:var(--ink2)">When scheduled posts go live</div></div>
+              <label class="notif-toggle"><input type="checkbox" id="notif-post" checked onchange="saveNotifPrefs()"/><span class="notif-slider"></span></label>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)">
+              <div><div style="font-size:13px;font-weight:600;font-family:var(--font-head)">Post failed</div><div style="font-size:11px;color:var(--ink2)">When a scheduled post fails</div></div>
+              <label class="notif-toggle"><input type="checkbox" id="notif-fail" checked onchange="saveNotifPrefs()"/><span class="notif-slider"></span></label>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)">
+              <div><div style="font-size:13px;font-weight:600;font-family:var(--font-head)">Weekly digest</div><div style="font-size:11px;color:var(--ink2)">Summary every Monday morning</div></div>
+              <label class="notif-toggle"><input type="checkbox" id="notif-weekly" onchange="saveNotifPrefs()"/><span class="notif-slider"></span></label>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)">
+              <div><div style="font-size:13px;font-weight:600;font-family:var(--font-head)">Usage limit warning</div><div style="font-size:11px;color:var(--ink2)">When you reach 80% of your clip limit</div></div>
+              <label class="notif-toggle"><input type="checkbox" id="notif-limit" checked onchange="saveNotifPrefs()"/><span class="notif-slider"></span></label>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0">
+              <div><div style="font-size:13px;font-weight:600;font-family:var(--font-head)">Referral reward</div><div style="font-size:11px;color:var(--ink2)">When a friend joins with your link</div></div>
+              <label class="notif-toggle"><input type="checkbox" id="notif-ref" checked onchange="saveNotifPrefs()"/><span class="notif-slider"></span></label>
+            </div>
+          </div>
+          <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border)">
+            <div style="font-size:11px;color:var(--ink3);font-family:var(--font-mono);margin-bottom:8px">SEND TO</div>
+            <div style="display:flex;gap:8px">
+              <input type="email" id="notif-email" placeholder="your@email.com" style="flex:1;font-size:12px"/>
+              <button onclick="saveNotifEmail()" class="btn-go" style="padding:9px 14px;font-size:12px">Save</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- In-app alerts card -->
+        <div class="a-card">
+          <div style="font-family:var(--font-head);font-size:14px;font-weight:700;margin-bottom:16px">🔔 Recent alerts</div>
+          <div id="notif-feed" style="display:flex;flex-direction:column;gap:6px;max-height:420px;overflow-y:auto"></div>
+          <div id="notif-feed-empty" style="text-align:center;padding:40px;color:var(--ink3);font-family:var(--font-mono);font-size:12px">No alerts yet</div>
+          <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+            <span style="font-size:11px;color:var(--ink3);font-family:var(--font-mono)" id="notif-count">0 alerts</span>
+            <button onclick="clearNotifs()" style="font-size:11px;font-family:var(--font-mono);color:var(--ink3);background:none;border:none;cursor:pointer;padding:0">Clear all</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Email preview card -->
+      <div class="a-card">
+        <div style="font-family:var(--font-head);font-size:14px;font-weight:700;margin-bottom:14px">✉️ Email preview — what you receive</div>
+        <div style="background:#0a0a14;border-radius:var(--r2);padding:24px;border:1px solid var(--border2);max-width:520px;margin:0 auto;font-family:Arial,sans-serif">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid #1c1c30">
+            <div style="width:32px;height:32px;background:#8b5cf6;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px">🎬</div>
+            <div style="font-size:16px;font-weight:700;color:#f0f0ff">VidPost AI</div>
+          </div>
+          <div style="font-size:20px;font-weight:700;color:#f0f0ff;margin-bottom:8px">Your clip is ready! 🎉</div>
+          <div style="font-size:13px;color:#9090b8;line-height:1.7;margin-bottom:20px">Your AI-generated clip from <strong style="color:#c4b5fd">"Video Title Here"</strong> has finished processing and is ready to download and publish.</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:20px">
+            <div style="background:#111120;border-radius:8px;padding:12px;text-align:center;border:1px solid #1c1c30"><div style="font-size:11px;color:#3a3a5c;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">FORMAT</div><div style="font-size:13px;font-weight:700;color:#f0f0ff">📱 9:16 Vertical</div></div>
+            <div style="background:#111120;border-radius:8px;padding:12px;text-align:center;border:1px solid #1c1c30"><div style="font-size:11px;color:#3a3a5c;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">DURATION</div><div style="font-size:13px;font-weight:700;color:#f0f0ff">45 seconds</div></div>
+          </div>
+          <a href="#" style="display:block;background:#8b5cf6;color:#fff;text-align:center;padding:13px;border-radius:8px;text-decoration:none;font-weight:700;font-size:14px;margin-bottom:14px">View &amp; Download Clip →</a>
+          <div style="font-size:11px;color:#3a3a5c;text-align:center">VidPost AI · Manage notifications · Unsubscribe</div>
+        </div>
+      </div>
+    </div>
+
+<style>
+.notif-toggle{position:relative;display:inline-block;width:38px;height:22px;flex-shrink:0}
+.notif-toggle input{opacity:0;width:0;height:0}
+.notif-slider{position:absolute;cursor:pointer;inset:0;background:var(--border2);border-radius:22px;transition:.3s}
+.notif-slider:before{content:"";position:absolute;width:16px;height:16px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.3s}
+.notif-toggle input:checked+.notif-slider{background:var(--purple)}
+.notif-toggle input:checked+.notif-slider:before{transform:translateX(16px)}
+.lib-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);overflow:hidden;transition:all .3s;cursor:pointer}
+.lib-card:hover{border-color:rgba(139,92,246,.4);transform:translateY(-3px);box-shadow:0 12px 40px rgba(139,92,246,.1)}
+.lib-card-thumb{aspect-ratio:9/16;background:var(--bg3);position:relative;overflow:hidden}
+.lib-card-thumb.horiz{aspect-ratio:16/9}
+.lib-card-info{padding:10px 12px}
+.lib-card-title{font-family:var(--font-head);font-size:12px;font-weight:700;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lib-card-meta{font-size:10px;font-family:var(--font-mono);color:var(--ink3)}
+.notif-item{display:flex;gap:10px;padding:10px 12px;background:var(--bg3);border-radius:var(--r);border:1px solid var(--border);transition:all .2s}
+.notif-item:hover{border-color:var(--border2)}
+.notif-item.unread{border-color:rgba(139,92,246,.25);background:var(--glow2)}
+.notif-icon{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+.notif-title{font-family:var(--font-head);font-size:12px;font-weight:700;margin-bottom:2px}
+.notif-msg{font-size:11px;color:var(--ink2);line-height:1.5}
+.notif-time{font-size:10px;font-family:var(--font-mono);color:var(--ink3);margin-top:3px}
+</style>
+
 <!-- AUTH MODAL -->
 <div id="auth-modal" onclick="handleAuthBg(event)" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(12px);z-index:999;display:none;align-items:center;justify-content:center">
   <div style="background:var(--card);border:1px solid var(--border2);border-radius:var(--r3);padding:36px;max-width:380px;width:100%;margin:24px;box-shadow:0 40px 100px rgba(0,0,0,.5)" onclick="event.stopPropagation()">
@@ -1418,6 +1539,8 @@ function switchTab(t) {
   if(t==='billing')   loadBilling();
   if(t==='schedule')  loadSchedule();
   if(t==='referral')  loadReferral();
+  if(t==='library')   loadLibrary();
+  if(t==='notifications') loadNotifications();
 }
 function switchSrc(s) {
   $('src-url-panel').style.display = s==='url'?'block':'none';
@@ -2612,6 +2735,258 @@ showOk = function(m) {
     history.replaceState({}, '', '/');
   }
 })();
+
+
+// ── CLIP LIBRARY ──────────────────────────────────────────────────────────────
+let _libItems = [];
+
+function loadLibrary() {
+  // Load from localStorage (clips saved locally) + supabase clip_usage
+  try {
+    const saved = JSON.parse(localStorage.getItem('vp_library') || '[]');
+    _libItems = saved;
+  } catch(e) { _libItems = []; }
+  renderLibrary(_libItems);
+
+  // Also pull from analytics if signed in
+  if(currentUser) {
+    apiFetch('/analytics/summary?user_id=' + encodeURIComponent(currentUser.id), '', 'GET')
+      .then(d => {
+        const stats = [
+          {num: d.total_clips||0, label:'Total clips'},
+          {num: d.total_posts||0, label:'Posts published'},
+          {num: _libItems.length, label:'Saved locally'},
+        ];
+        const sg = $('lib-stats');
+        if(sg) sg.innerHTML = stats.map(s =>
+          `<div class="stat-card" style="flex:1;min-width:100px"><div class="stat-num" style="font-size:24px">${s.num}</div><div class="stat-label">${s.label}</div></div>`
+        ).join('');
+      }).catch(()=>{});
+  }
+}
+
+function saveToLibrary(item) {
+  // item = {id, title, format, sizeMb, downloadUrl, streamUrl, createdAt}
+  try {
+    const lib = JSON.parse(localStorage.getItem('vp_library') || '[]');
+    lib.unshift({...item, createdAt: item.createdAt || new Date().toISOString()});
+    // Keep last 50 clips
+    localStorage.setItem('vp_library', JSON.stringify(lib.slice(0, 50)));
+    _libItems = lib;
+  } catch(e) {}
+}
+
+function renderLibrary(items) {
+  const grid = $('lib-grid');
+  const empty = $('lib-empty');
+  if(!grid) return;
+  const q = ($('lib-search')?.value || '').toLowerCase();
+  const fmt = $('lib-filter')?.value || 'all';
+  const filtered = items.filter(it =>
+    (!q || (it.title||'').toLowerCase().includes(q)) &&
+    (fmt === 'all' || it.format === fmt)
+  );
+  if(!filtered.length) {
+    grid.innerHTML = '';
+    if(empty) empty.style.display = 'block';
+    return;
+  }
+  if(empty) empty.style.display = 'none';
+  grid.innerHTML = filtered.map((it, i) => `
+    <div class="lib-card" onclick="libPlay(${i})">
+      <div class="lib-card-thumb ${it.format === 'horizontal' ? 'horiz' : ''}"
+           style="background:linear-gradient(135deg,var(--bg3),var(--bg4))">
+        <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px">
+          <div style="font-size:28px">${it.format === 'horizontal' ? '🖥' : '📱'}</div>
+          <div style="font-size:10px;font-family:var(--font-mono);color:var(--ink3)">${it.format === 'horizontal' ? '16:9' : '9:16'}</div>
+        </div>
+        <div style="position:absolute;top:6px;right:6px;background:rgba(0,0,0,.7);padding:2px 7px;border-radius:10px;font-size:9px;font-family:var(--font-mono);color:#fff">${it.sizeMb||'?'}MB</div>
+      </div>
+      <div class="lib-card-info">
+        <div class="lib-card-title">${esc(it.title||'Clip')}</div>
+        <div class="lib-card-meta">${new Date(it.createdAt).toLocaleDateString()}</div>
+        <div style="display:flex;gap:5px;margin-top:7px">
+          <a href="${it.downloadUrl||'#'}" download onclick="event.stopPropagation()"
+             style="flex:1;padding:5px;background:var(--purple);color:#fff;border-radius:var(--r);font-size:10px;font-family:var(--font-head);font-weight:700;text-align:center;text-decoration:none">⬇ Download</a>
+          <button onclick="event.stopPropagation();libEdit(${i})"
+             style="flex:1;padding:5px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);font-size:10px;font-family:var(--font-head);font-weight:700;color:var(--ink2);cursor:pointer">✏ Edit</button>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+function filterLibrary() { renderLibrary(_libItems); }
+
+function libPlay(i) {
+  const it = _libItems[i];
+  if(!it) return;
+  if(it.streamUrl) { editorOpenClip(it.streamUrl, it.title||'Clip', 0, 0, '', ''); switchTab('editor'); }
+}
+
+function libEdit(i) {
+  const it = _libItems[i];
+  if(!it) return;
+  editorOpenClip(it.streamUrl||it.downloadUrl, it.title||'Clip', 0, 0, '', '');
+  switchTab('editor');
+}
+
+// Auto-save clips to library when ready
+const _origPollJob = pollJob;
+pollJob = function(jobId, formats, clipStatusEl) {
+  // Wrap to intercept done event
+  const wrappedStatusEl = {
+    innerHTML: '',
+    get _inner() { return this.innerHTML; },
+    set innerHTML(v) {
+      this.innerHTML = v;
+      if(clipStatusEl) clipStatusEl.innerHTML = v;
+      // Detect done state
+      if(v.includes('Clip ready') || v.includes('Export complete')) {
+        // Parse download links and save to library
+        const matches = [...v.matchAll(/href="([^"]+)"[^>]*download/g)];
+        matches.forEach(m => {
+          const url = m[1];
+          const fmt = url.includes('vertical') ? 'vertical' : 'horizontal';
+          saveToLibrary({
+            id: jobId + '_' + fmt,
+            title: currentTitle || 'Clip',
+            format: fmt,
+            sizeMb: '',
+            downloadUrl: url,
+            streamUrl: API + '/stream-clip/' + jobId + '/' + fmt,
+            createdAt: new Date().toISOString()
+          });
+        });
+      }
+    }
+  };
+  return _origPollJob(jobId, formats, clipStatusEl);
+};
+
+// ── NOTIFICATIONS ─────────────────────────────────────────────────────────────
+let _notifs = [];
+
+function loadNotifications() {
+  try { _notifs = JSON.parse(localStorage.getItem('vp_notifs') || '[]'); } catch(e) { _notifs = []; }
+  // Load saved preferences
+  try {
+    const prefs = JSON.parse(localStorage.getItem('vp_notif_prefs') || '{}');
+    ['clip','post','fail','weekly','limit','ref'].forEach(k => {
+      const el = $('notif-' + k);
+      if(el && prefs[k] !== undefined) el.checked = prefs[k];
+    });
+    const emailEl = $('notif-email');
+    if(emailEl && prefs.email) emailEl.value = prefs.email;
+  } catch(e) {}
+  renderNotifFeed();
+}
+
+function saveNotifPrefs() {
+  const prefs = {};
+  ['clip','post','fail','weekly','limit','ref'].forEach(k => {
+    const el = $('notif-' + k);
+    if(el) prefs[k] = el.checked;
+  });
+  localStorage.setItem('vp_notif_prefs', JSON.stringify(prefs));
+  showOk('Notification preferences saved');
+}
+
+function saveNotifEmail() {
+  const email = $('notif-email')?.value?.trim();
+  if(!email || !email.includes('@')) { showErr('Enter a valid email address'); return; }
+  const prefs = JSON.parse(localStorage.getItem('vp_notif_prefs') || '{}');
+  prefs.email = email;
+  localStorage.setItem('vp_notif_prefs', JSON.stringify(prefs));
+  showOk('Email saved: ' + email);
+}
+
+function pushNotif(type, title, msg) {
+  // type: 'success' | 'error' | 'info' | 'warning'
+  const icons = {success:'✅', error:'⚠️', info:'ℹ️', warning:'🔔'};
+  const colors = {success:'rgba(139,92,246,.15)', error:'rgba(220,50,50,.1)', info:'rgba(0,150,255,.1)', warning:'rgba(255,160,0,.1)'};
+  const notif = {
+    id: Date.now(),
+    type, title, msg,
+    time: new Date().toISOString(),
+    read: false,
+    icon: icons[type] || 'ℹ️',
+    color: colors[type] || colors.info,
+  };
+  _notifs.unshift(notif);
+  if(_notifs.length > 50) _notifs = _notifs.slice(0, 50);
+  try { localStorage.setItem('vp_notifs', JSON.stringify(_notifs)); } catch(e) {}
+  renderNotifFeed();
+  updateNotifBadge();
+}
+
+function renderNotifFeed() {
+  const feed = $('notif-feed');
+  const empty = $('notif-feed-empty');
+  const count = $('notif-count');
+  if(!feed) return;
+  if(!_notifs.length) {
+    feed.innerHTML = '';
+    if(empty) empty.style.display = 'block';
+    if(count) count.textContent = '0 alerts';
+    return;
+  }
+  if(empty) empty.style.display = 'none';
+  if(count) count.textContent = _notifs.length + ' alert' + (_notifs.length !== 1 ? 's' : '');
+  feed.innerHTML = _notifs.map((n, i) => `
+    <div class="notif-item ${n.read ? '' : 'unread'}" onclick="markRead(${i})">
+      <div class="notif-icon" style="background:${n.color}">${n.icon}</div>
+      <div style="flex:1;min-width:0">
+        <div class="notif-title">${esc(n.title)}</div>
+        <div class="notif-msg">${esc(n.msg)}</div>
+        <div class="notif-time">${timeAgo(n.time)}</div>
+      </div>
+      ${!n.read ? '<div style="width:6px;height:6px;border-radius:50%;background:var(--purple);flex-shrink:0;margin-top:4px"></div>' : ''}
+    </div>`).join('');
+}
+
+function markRead(i) {
+  if(_notifs[i]) { _notifs[i].read = true; renderNotifFeed(); updateNotifBadge(); try { localStorage.setItem('vp_notifs', JSON.stringify(_notifs)); } catch(e) {} }
+}
+
+function clearNotifs() {
+  _notifs = [];
+  try { localStorage.removeItem('vp_notifs'); } catch(e) {}
+  renderNotifFeed();
+  updateNotifBadge();
+}
+
+function updateNotifBadge() {
+  const unread = _notifs.filter(n => !n.read).length;
+  const tabs = document.querySelectorAll('.app-tab');
+  tabs.forEach(t => {
+    if(t.textContent.includes('Alerts')) {
+      t.textContent = unread > 0 ? `🔔 Alerts (${unread})` : '🔔 Alerts';
+    }
+  });
+}
+
+function timeAgo(iso) {
+  const diff = (Date.now() - new Date(iso)) / 1000;
+  if(diff < 60) return 'Just now';
+  if(diff < 3600) return Math.floor(diff/60) + 'm ago';
+  if(diff < 86400) return Math.floor(diff/3600) + 'h ago';
+  return Math.floor(diff/86400) + 'd ago';
+}
+
+// Hook notifications into key events
+const _origJobUpdate = showSt;
+// Push notif when clip done
+const _realShowOk2 = showOk;
+showOk = function(m) {
+  _realShowOk2(m);
+  if(m.includes('Clip ready')) pushNotif('success', 'Clip ready!', 'Your clip finished processing and is ready to download.');
+  if(m.includes('Scheduled')) pushNotif('info', 'Post scheduled', 'Your post has been added to the queue.');
+  if(m.includes('connected')) pushNotif('success', 'Platform connected', m);
+  if(m.includes('Payment successful')) pushNotif('success', 'Plan upgraded!', 'Your account has been upgraded. Enjoy unlimited clips!');
+};
+
+// Load notifs on startup
+try { _notifs = JSON.parse(localStorage.getItem('vp_notifs') || '[]'); updateNotifBadge(); } catch(e) {}
 
 </script>
 </body>
