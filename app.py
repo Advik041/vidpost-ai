@@ -633,6 +633,70 @@ def send_test_email():
     return jsonify({"sent": ok})
 
 
+
+@app.route("/yt-stream-url", methods=["POST", "OPTIONS"])
+def yt_stream_url():
+    """
+    Extract direct YouTube stream URL without downloading.
+    Browser then fetches directly from YouTube CDN, bypassing Railway IP block.
+    This is how most production video tools handle YouTube - never proxy the video
+    through the server, just get the signed CDN URL and let browser handle it.
+    """
+    if request.method == "OPTIONS":
+        return jsonify({}), 200
+    data = request.get_json() or {}
+    url = data.get("url", "").strip()
+    if not url:
+        return jsonify({"error": "Missing URL"}), 400
+
+    m = re.search(r'(?:v=|youtu\.be/|/shorts/)([A-Za-z0-9_-]{11})', url)
+    if not m:
+        return jsonify({"error": "Invalid YouTube URL"}), 400
+    video_id = m.group(1)
+
+    # Try to get direct stream URL via yt-dlp --get-url
+    # This is a metadata-only request - works on blocked IPs
+    common = _yt_common_args()
+    fmt = "best[height<=720][ext=mp4]/best[ext=mp4]/best"
+
+    for client in ["android", "android_vr", "ios", "tv_embedded"]:
+        try:
+            cmd = [YTDLP] + common + [
+                "--extractor-args", f"youtube:player_client={client}",
+                "--get-url", "-f", fmt,
+                f"https://www.youtube.com/watch?v={video_id}"
+            ]
+            r = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+            if r.returncode == 0 and r.stdout.strip():
+                stream_url = r.stdout.strip().split("\n")[0]
+                if stream_url.startswith("http"):
+                    # Also get title
+                    title = video_id
+                    try:
+                        info = ytdlp_info(video_id)
+                        title = info.get("title", video_id)
+                    except Exception:
+                        pass
+                    print(f"yt-stream-url OK [{client}]: {stream_url[:80]}")
+                    return jsonify({
+                        "stream_url": stream_url,
+                        "video_id": video_id,
+                        "title": title,
+                        "method": "direct_cdn",
+                        "note": "Use this URL to fetch the video directly in the browser"
+                    })
+        except Exception as e:
+            print(f"yt-stream-url [{client}]: {e}")
+            continue
+
+    # Fallback: return YouTube embed URL for browser to handle
+    return jsonify({
+        "error": "Could not extract stream URL",
+        "video_id": video_id,
+        "fallback": f"https://www.youtube.com/watch?v={video_id}",
+        "suggestion": "Upload the video file directly using the Upload tab"
+    }), 422
+
 @app.route("/health", methods=["GET"])
 def health():
     # Detect ffmpeg from multiple possible nix store paths
