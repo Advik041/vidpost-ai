@@ -1883,15 +1883,36 @@ async function processClip(videoId, uploadPath, start, end, clipIndex) {
       showSt('Downloading video…');
 
       let videoBlob = null;
+
+      // Try 1: Direct browser fetch from CDN (fastest, works ~30% of the time)
       try {
-        // Try direct fetch (works if CDN allows CORS)
-        const cdnResp = await fetch(ytData.stream_url, {mode: 'cors'});
-        if(cdnResp.ok) {
+        setStatus(spin('Step 2/3 — Trying direct download from YouTube CDN…'));
+        const cdnResp = await fetch(ytData.stream_url, {mode:'cors'});
+        if(cdnResp.ok && cdnResp.headers.get('content-type')?.includes('video')) {
           videoBlob = await cdnResp.blob();
+          console.log('Direct CDN fetch OK:', videoBlob.size);
         }
       } catch(corsErr) {
-        // CORS blocked — try no-cors to at least get opaque response
-        console.warn('CORS blocked on CDN, trying proxy download:', corsErr.message);
+        console.warn('Direct CDN CORS blocked — using proxy:', corsErr.message);
+      }
+
+      // Try 2: Server-side proxy download (bypasses browser CORS entirely)
+      if(!videoBlob || videoBlob.size < 10000) {
+        try {
+          setStatus(spin('Step 2/3 — Downloading via server proxy…'));
+          showSt('Downloading video…');
+          const proxyResp = await fetch(API + '/proxy-download', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({url: ytData.stream_url})
+          });
+          if(proxyResp.ok) {
+            videoBlob = await proxyResp.blob();
+            console.log('Proxy download OK:', videoBlob.size);
+          }
+        } catch(proxyErr) {
+          console.warn('Proxy download failed:', proxyErr.message);
+        }
       }
 
       if(videoBlob && videoBlob.size > 10000) {
