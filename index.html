@@ -1522,6 +1522,10 @@ async function apiFetch(path, body, method='POST') {
     }
   };
 
+  // For 422: return data instead of throwing (used by yt-stream-url)
+  if(r.status === 422) {
+    return safeJson(r);
+  }
   if(!r.ok){
     const d = await safeJson(r);
     throw new Error(d.error || `Server error ${r.status}`);
@@ -1868,6 +1872,21 @@ async function processClip(videoId, uploadPath, start, end, clipIndex) {
     const ytUrl = `https://www.youtube.com/watch?v=${resolvedVideo}`;
     const streamData = await apiFetch('/yt-stream-url', {url: ytUrl});
 
+    if(streamData.show_upload_prompt || !streamData.stream_url) {
+      // Invidious/Piped couldn't get URL - show upload prompt immediately
+      hideSt();
+      setClipStatus(`
+        <div style="background:rgba(139,92,246,.06);border:1px solid rgba(139,92,246,.25);border-radius:var(--r2);padding:14px;margin-top:4px">
+          <div style="font-family:var(--font-head);font-size:13px;font-weight:700;margin-bottom:6px;color:var(--ink)">📥 Upload this video directly</div>
+          <div style="font-size:12px;color:var(--ink2);line-height:1.6;margin-bottom:10px">YouTube restricts server downloads. Download the video and upload it here — takes 30 seconds.</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <a href="https://www.youtube.com/watch?v=${resolvedVideo}" target="_blank"
+               style="padding:7px 14px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);font-size:11px;font-family:var(--font-head);font-weight:700;color:var(--ink2);text-decoration:none">▶ Open on YouTube</a>
+            <button onclick="switchSrc('upload')" class="btn-go" style="padding:7px 14px;font-size:11px">📁 Upload tab</button>
+          </div>
+        </div>`);
+      return;
+    }
     if(streamData.stream_url) {
       // CDN URL obtained — fetch video in browser, then upload as blob
       setClipStatus(spin + 'Downloading video in browser (bypasses IP block)…</div>');
@@ -1917,12 +1936,26 @@ async function processClip(videoId, uploadPath, start, end, clipIndex) {
 
   } catch(e) {
     hideSt();
-    const isYtBlock = e.message.includes('blocked') || e.message.includes('bot');
-    const msg = isYtBlock
-      ? `YouTube blocked the server IP. <strong>Fix:</strong> Use the Upload tab — download the video from YouTube and upload it here.`
-      : esc(e.message);
-    setClipStatus(`<div style="color:#ff6b6b;font-size:12px;font-family:var(--font-mono);line-height:1.6;padding:8px;background:rgba(255,50,50,.06);border-radius:var(--r);border:1px solid rgba(255,50,50,.2)">⚠ ${msg}</div>`);
-    showErr(e.message.includes('blocked') ? 'YouTube blocked — use Upload tab instead' : e.message);
+    // Show friendly upload prompt for any YouTube extraction failure
+    setClipStatus(`
+      <div style="background:rgba(139,92,246,.06);border:1px solid rgba(139,92,246,.25);border-radius:var(--r2);padding:14px;margin-top:4px">
+        <div style="font-family:var(--font-head);font-size:13px;font-weight:700;margin-bottom:6px;color:var(--ink)">
+          📥 Upload this video directly
+        </div>
+        <div style="font-size:12px;color:var(--ink2);line-height:1.6;margin-bottom:10px">
+          YouTube restricts server downloads. Download this video and upload it — takes 30 seconds.
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <a href="https://www.youtube.com/watch?v=${resolvedVideo}" target="_blank"
+             style="padding:7px 14px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);font-size:11px;font-family:var(--font-head);font-weight:700;color:var(--ink2);text-decoration:none">
+            ▶ Open on YouTube
+          </a>
+          <button onclick="switchSrc('upload');document.querySelector('.app-tab').click();switchSrc('upload')"
+             class="btn-go" style="padding:7px 14px;font-size:11px">
+            📁 Switch to Upload tab
+          </button>
+        </div>
+      </div>`);
   }
 }
 
