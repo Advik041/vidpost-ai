@@ -1828,145 +1828,168 @@ function toggleClip(head) {
 }
 
 async function processClip(videoId, uploadPath, start, end, clipIndex) {
-  if(currentUser) {
-    if(userUsage>=userLimit&&userLimit<9999){
-      showErr(`Clip limit reached (${userLimit}/month). Upgrade your plan.`);
-      switchTab('billing'); return;
-    }
+  if(currentUser && userUsage >= userLimit && userLimit < 9999) {
+    showErr(`Clip limit reached (${userLimit}/month). Upgrade your plan.`);
+    switchTab('billing'); return;
   }
 
   const resolvedUpload = uploadPath || currentUploadPath || '';
   const resolvedVideo  = videoId   || currentVideoId    || '';
   if(!resolvedVideo && !resolvedUpload) { showErr('No video source.'); return; }
 
-  const formats=[];
+  const formats = [];
   if($('fmt-vert')?.classList.contains('on'))  formats.push('vertical');
   if($('fmt-horiz')?.classList.contains('on')) formats.push('horizontal');
   if(!formats.length) formats.push('vertical');
 
   const clipStatusEl = clipIndex !== undefined ? $(`clip-status-${clipIndex}`) : null;
-  const setClipStatus = html => { if(clipStatusEl) clipStatusEl.innerHTML = html; };
-  const spin = `<div style="display:flex;align-items:center;gap:6px;font-family:var(--font-mono);font-size:11px;color:var(--ink2)"><div class="spin2"></div>`;
+  const setStatus = (html) => { if(clipStatusEl) clipStatusEl.innerHTML = html; };
 
-  // If we already have an upload path, go straight to clip
+  const spin = (msg) => `<div style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);font-family:var(--font-mono);font-size:11px;color:var(--ink2)"><div class="spin2"></div>${msg}</div>`;
+
+  // ── Case 1: Already have uploaded file → process directly ─────────────────
   if(resolvedUpload) {
-    setClipStatus(spin + 'Generating clip from uploaded file…</div>');
-    showSt('Processing uploaded video…');
+    setStatus(spin('Processing uploaded file…'));
+    showSt('Processing…');
     try {
       const d = await apiFetch('/clip', {videoId:'', uploadPath:resolvedUpload, start, end, formats, user_id:currentUser?.id||''});
       if(!d.jobId) throw new Error(d.error || 'No job ID');
       pollJob(d.jobId, formats, clipStatusEl);
     } catch(e) {
       hideSt();
-      setClipStatus(`<div style="color:#ff6b6b;font-size:11px;font-family:var(--font-mono)">⚠ ${esc(e.message)}</div>`);
+      setStatus(`<div style="color:#ff6b6b;font-size:11px;font-family:var(--font-mono);padding:8px">⚠ ${esc(e.message)}</div>`);
       showErr(e.message);
     }
     return;
   }
 
-  // YouTube video: try to get direct CDN URL first
-  setClipStatus(spin + 'Getting YouTube stream URL…</div>');
+  // ── Case 2: YouTube URL → auto fetch CDN URL → auto download → auto upload ─
+  setStatus(spin('Step 1/3 — Getting YouTube stream URL…'));
   showSt('Extracting YouTube video…');
 
   try {
+    // Get direct CDN stream URL from backend (uses Invidious/Piped/cobalt)
     const ytUrl = `https://www.youtube.com/watch?v=${resolvedVideo}`;
-    // Use raw fetch so 422 doesn't appear as unhandled in apiFetch
-    const _ytResp = await fetch(API + '/yt-stream-url', {
+    const ytResp = await fetch(API + '/yt-stream-url', {
       method: 'POST',
-      headers: {'Content-Type':'application/json'},
+      headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({url: ytUrl})
     });
-    const streamData = await _ytResp.json().catch(() => ({show_upload_prompt: true}));
+    const ytData = await ytResp.json().catch(() => ({show_upload_prompt: true}));
 
-    if(streamData.show_upload_prompt || !streamData.stream_url) {
-      // Invidious/Piped couldn't get URL - show upload prompt immediately
-      hideSt();
-      setClipStatus(`
-        <div style="background:rgba(139,92,246,.06);border:1px solid rgba(139,92,246,.25);border-radius:var(--r2);padding:16px;margin-top:4px">
-          <div style="font-family:var(--font-head);font-size:14px;font-weight:800;margin-bottom:8px;color:var(--ink)">📥 How to clip this YouTube video</div>
-          <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px">
-            <div style="display:flex;gap:8px;align-items:flex-start;font-size:12px;color:var(--ink2)">
-              <span style="background:var(--purple);color:#fff;border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;flex-shrink:0;margin-top:1px">1</span>
-              <span>Open the video on YouTube and download it (right-click → Save video or use a downloader like <strong>yt1s.com</strong>)</span>
-            </div>
-            <div style="display:flex;gap:8px;align-items:flex-start;font-size:12px;color:var(--ink2)">
-              <span style="background:var(--purple);color:#fff;border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;flex-shrink:0;margin-top:1px">2</span>
-              <span>Click <strong>Upload file</strong> tab above and upload the MP4</span>
-            </div>
-            <div style="display:flex;gap:8px;align-items:flex-start;font-size:12px;color:var(--ink2)">
-              <span style="background:var(--purple);color:#fff;border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;flex-shrink:0;margin-top:1px">3</span>
-              <span>AI clips are generated instantly from your upload</span>
-            </div>
-          </div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap">
-            <a href="https://www.youtube.com/watch?v=${resolvedVideo}" target="_blank"
-               style="padding:8px 16px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);font-size:12px;font-family:var(--font-head);font-weight:700;color:var(--ink2);text-decoration:none">▶ Open on YouTube</a>
-            <a href="https://yt1s.com/youtube-to-mp4?q=${resolvedVideo}" target="_blank"
-               style="padding:8px 16px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);font-size:12px;font-family:var(--font-head);font-weight:700;color:var(--ink2);text-decoration:none">⬇ Download MP4</a>
-            <button onclick="switchSrc('upload')" class="btn-go" style="padding:8px 16px;font-size:12px">📁 Upload file →</button>
-          </div>
-        </div>`);
-      return;
-    }
-    if(streamData.stream_url) {
-      // CDN URL obtained — fetch video in browser, then upload as blob
-      setClipStatus(spin + 'Downloading video in browser (bypasses IP block)…</div>');
-      showSt('Downloading from YouTube CDN…');
+    if(ytData.stream_url) {
+      // ── Auto-download from CDN in browser ──────────────────────────────────
+      setStatus(spin('Step 2/3 — Downloading video from YouTube…'));
+      showSt('Downloading video…');
 
-      let uploadedPath = '';
+      let videoBlob = null;
       try {
-        // Fetch the video stream directly in browser
-        const resp = await fetch(streamData.stream_url);
-        if(!resp.ok) throw new Error('CDN fetch failed: ' + resp.status);
-        const blob = await resp.blob();
-        const file = new File([blob], 'yt_video.mp4', {type:'video/mp4'});
+        // Try direct fetch (works if CDN allows CORS)
+        const cdnResp = await fetch(ytData.stream_url, {mode: 'cors'});
+        if(cdnResp.ok) {
+          videoBlob = await cdnResp.blob();
+        }
+      } catch(corsErr) {
+        // CORS blocked — try no-cors to at least get opaque response
+        console.warn('CORS blocked on CDN, trying proxy download:', corsErr.message);
+      }
 
-        setClipStatus(spin + 'Uploading to server for processing…</div>');
-        showSt('Uploading video…');
+      if(videoBlob && videoBlob.size > 10000) {
+        // ── Auto-upload to backend ──────────────────────────────────────────
+        setStatus(spin(`Step 3/3 — Uploading (${(videoBlob.size/1024/1024).toFixed(1)}MB)…`));
+        showSt('Uploading to server…');
 
         const fd = new FormData();
-        fd.append('video', file);
-        const uploadResp = await fetch(API + '/analyse-upload', {method:'POST', body:fd});
-        const uploadData = await uploadResp.json();
-        if(uploadData.uploadPath) {
-          uploadedPath = uploadData.uploadPath;
-        } else {
-          throw new Error(uploadData.error || 'Upload failed');
-        }
-      } catch(fetchErr) {
-        // CDN URL may have CORS restriction — fall back to server download
-        console.warn('Browser CDN fetch failed:', fetchErr.message, '— falling back to server download');
-        uploadedPath = '';
-      }
+        fd.append('video', new File([videoBlob], 'youtube_video.mp4', {type: 'video/mp4'}));
 
-      if(uploadedPath) {
-        setClipStatus(spin + 'Generating clip…</div>');
-        const d = await apiFetch('/clip', {videoId:'', uploadPath:uploadedPath, start, end, formats, user_id:currentUser?.id||''});
-        if(!d.jobId) throw new Error(d.error || 'No job ID');
-        pollJob(d.jobId, formats, clipStatusEl);
-        return;
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', API + '/analyse-upload', true);
+
+        await new Promise((resolve, reject) => {
+          xhr.upload.onprogress = (e) => {
+            if(e.lengthComputable) {
+              const pct = Math.round(e.loaded / e.total * 100);
+              setStatus(spin(`Step 3/3 — Uploading ${pct}%…`));
+            }
+          };
+          xhr.onload = () => {
+            if(xhr.status < 300) resolve(JSON.parse(xhr.responseText));
+            else reject(new Error('Upload failed: ' + xhr.status));
+          };
+          xhr.onerror = () => reject(new Error('Upload network error'));
+          xhr.send(fd);
+        }).then(async (uploadData) => {
+          if(!uploadData.uploadPath) throw new Error(uploadData.error || 'Upload failed');
+          setStatus(spin('Generating clip…'));
+          showSt('Generating clip…');
+          const d = await apiFetch('/clip', {
+            videoId: '', uploadPath: uploadData.uploadPath,
+            start, end, formats, user_id: currentUser?.id || ''
+          });
+          if(!d.jobId) throw new Error(d.error || 'No job ID');
+          pollJob(d.jobId, formats, clipStatusEl);
+        }).catch(err => { throw err; });
+
+        return; // success path done
+      }
+      // videoBlob failed (CORS) — fall through to manual prompt
+    }
+
+    // ── CDN URL exists but browser can't fetch (CORS) ─────────────────────
+    // Try server-side download as last resort
+    if(ytData.stream_url) {
+      setStatus(spin('Trying server-side download…'));
+      try {
+        const d = await apiFetch('/clip', {
+          videoId: resolvedVideo, uploadPath: '',
+          start, end, formats, user_id: currentUser?.id || ''
+        });
+        if(d.jobId) { pollJob(d.jobId, formats, clipStatusEl); return; }
+      } catch(srvErr) {
+        console.warn('Server download also failed:', srvErr.message);
       }
     }
 
-    // Final fallback: try server-side download (may fail on Railway)
-    setClipStatus(spin + 'Trying server-side download…</div>');
-    showSt('Downloading on server…');
-    const d = await apiFetch('/clip', {videoId:resolvedVideo, uploadPath:'', start, end, formats, user_id:currentUser?.id||''});
-    if(!d.jobId) throw new Error(d.error || 'No job ID');
-    pollJob(d.jobId, formats, clipStatusEl);
+    // ── All auto methods failed — show manual download prompt ─────────────
+    hideSt();
+    setStatus(`
+      <div style="background:rgba(139,92,246,.06);border:1px solid rgba(139,92,246,.25);border-radius:var(--r2);padding:16px;margin-top:4px">
+        <div style="font-family:var(--font-head);font-size:14px;font-weight:800;margin-bottom:10px">📥 Auto-download blocked by YouTube</div>
+        <div style="font-size:12px;color:var(--ink2);line-height:1.7;margin-bottom:12px">
+          YouTube blocks cross-origin browser downloads. Download the video manually and upload it — takes 30 seconds.
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px">
+          <div style="display:flex;gap:8px;align-items:center;font-size:12px;color:var(--ink2)">
+            <span style="background:var(--purple);color:#fff;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;flex-shrink:0">1</span>
+            Download the video from
+            <a href="https://ssyoutube.com/watch?v=${resolvedVideo}" target="_blank"
+               style="color:var(--purple3);font-weight:700;text-decoration:none">ssyoutube.com</a>
+            or
+            <a href="https://en.savefrom.net/#url=https://youtube.com/watch?v=${resolvedVideo}" target="_blank"
+               style="color:var(--purple3);font-weight:700;text-decoration:none">savefrom.net</a>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;font-size:12px;color:var(--ink2)">
+            <span style="background:var(--purple);color:#fff;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;flex-shrink:0">2</span>
+            Upload the MP4 using the Upload tab above
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <a href="https://ssyoutube.com/watch?v=${resolvedVideo}" target="_blank"
+             style="padding:8px 14px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);font-size:12px;font-family:var(--font-head);font-weight:700;color:var(--ink2);text-decoration:none">⬇ Download MP4</a>
+          <button onclick="switchSrc('upload')" class="btn-go" style="padding:8px 16px;font-size:12px">📁 Upload file →</button>
+        </div>
+      </div>`);
 
   } catch(e) {
     hideSt();
-    // Show friendly upload prompt for any YouTube extraction failure
-    setClipStatus(`
-      <div style="background:rgba(139,92,246,.06);border:1px solid rgba(139,92,246,.25);border-radius:var(--r2);padding:16px;margin-top:4px">
-        <div style="font-family:var(--font-head);font-size:14px;font-weight:800;margin-bottom:8px">📥 Download &amp; upload this video</div>
+    console.error('processClip error:', e);
+    setStatus(`
+      <div style="background:rgba(139,92,246,.06);border:1px solid rgba(139,92,246,.25);border-radius:var(--r2);padding:14px;margin-top:4px">
+        <div style="font-family:var(--font-head);font-size:13px;font-weight:700;margin-bottom:8px">📥 Download &amp; upload this video</div>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <a href="https://www.youtube.com/watch?v=${resolvedVideo}" target="_blank"
-             style="padding:8px 14px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);font-size:12px;font-family:var(--font-head);font-weight:700;color:var(--ink2);text-decoration:none">▶ YouTube</a>
-          <a href="https://yt1s.com/youtube-to-mp4?q=${resolvedVideo}" target="_blank"
+          <a href="https://ssyoutube.com/watch?v=${resolvedVideo}" target="_blank"
              style="padding:8px 14px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);font-size:12px;font-family:var(--font-head);font-weight:700;color:var(--ink2);text-decoration:none">⬇ Download MP4</a>
-          <button onclick="switchSrc('upload')" class="btn-go" style="padding:8px 14px;font-size:12px">📁 Upload →</button>
+          <button onclick="switchSrc('upload')" class="btn-go" style="padding:8px 16px;font-size:12px">📁 Upload →</button>
         </div>
       </div>`);
   }
