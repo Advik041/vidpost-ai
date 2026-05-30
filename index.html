@@ -1843,177 +1843,249 @@ async function processClip(videoId, uploadPath, start, end, clipIndex) {
   if(!formats.length) formats.push('vertical');
 
   const clipStatusEl = clipIndex !== undefined ? $(`clip-status-${clipIndex}`) : null;
-  const setStatus = (html) => { if(clipStatusEl) clipStatusEl.innerHTML = html; };
+  const setStatus = html => { if(clipStatusEl) clipStatusEl.innerHTML = html; };
+  const spin = msg => `<div style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);font-family:var(--font-mono);font-size:11px;color:var(--ink2);margin-top:6px"><div class="spin2"></div>${msg}</div>`;
 
-  const spin = (msg) => `<div style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);font-family:var(--font-mono);font-size:11px;color:var(--ink2)"><div class="spin2"></div>${msg}</div>`;
-
-  // ── Case 1: Already have uploaded file → process directly ─────────────────
+  // ── Uploaded file: process directly ──────────────────────────────────────
   if(resolvedUpload) {
     setStatus(spin('Processing uploaded file…'));
     showSt('Processing…');
     try {
-      const d = await apiFetch('/clip', {videoId:'', uploadPath:resolvedUpload, start, end, formats, user_id:currentUser?.id||''});
-      if(!d.jobId) throw new Error(d.error || 'No job ID');
+      const d = await apiFetch('/clip', {
+        videoId:'', uploadPath:resolvedUpload,
+        start, end, formats, user_id: currentUser?.id||''
+      });
+      if(!d.jobId) throw new Error(d.error||'No job ID');
       pollJob(d.jobId, formats, clipStatusEl);
     } catch(e) {
       hideSt();
-      setStatus(`<div style="color:#ff6b6b;font-size:11px;font-family:var(--font-mono);padding:8px">⚠ ${esc(e.message)}</div>`);
+      setStatus(`<div style="color:#ff6b6b;font-size:11px;padding:8px;font-family:var(--font-mono)">⚠ ${esc(e.message)}</div>`);
       showErr(e.message);
     }
     return;
   }
 
-  // ── Case 2: YouTube URL → auto fetch CDN URL → auto download → auto upload ─
-  setStatus(spin('Step 1/3 — Getting YouTube stream URL…'));
-  showSt('Extracting YouTube video…');
+  // ── YouTube: browser-side download (residential IP = not blocked) ─────────
+  const ytUrl = `https://www.youtube.com/watch?v=${resolvedVideo}`;
 
-  try {
-    // Get direct CDN stream URL from backend (uses Invidious/Piped/cobalt)
-    const ytUrl = `https://www.youtube.com/watch?v=${resolvedVideo}`;
-    const ytResp = await fetch(API + '/yt-stream-url', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({url: ytUrl})
-    });
-    const ytData = await ytResp.json().catch(() => ({show_upload_prompt: true}));
+  // Step 1: Try cobalt.tools directly from browser (residential IP works)
+  setStatus(spin('Getting download URL from cobalt.tools…'));
+  showSt('Fetching YouTube video…');
 
-    if(ytData.stream_url) {
-      // ── Auto-download from CDN in browser ──────────────────────────────────
-      setStatus(spin('Step 2/3 — Downloading video from YouTube…'));
-      showSt('Downloading video…');
+  let streamUrl = null;
+  let method = '';
 
-      let videoBlob = null;
-
-      // Try 1: Direct browser fetch from CDN (fastest, works ~30% of the time)
-      try {
-        setStatus(spin('Step 2/3 — Trying direct download from YouTube CDN…'));
-        const cdnResp = await fetch(ytData.stream_url, {mode:'cors'});
-        if(cdnResp.ok && cdnResp.headers.get('content-type')?.includes('video')) {
-          videoBlob = await cdnResp.blob();
-          console.log('Direct CDN fetch OK:', videoBlob.size);
-        }
-      } catch(corsErr) {
-        console.warn('Direct CDN CORS blocked — using proxy:', corsErr.message);
+  // Cobalt.tools - called from browser JS (user's IP, never blocked)
+  const cobaltHosts = [
+    'https://api.cobalt.tools',
+    'https://cobalt.tools/api/json',
+  ];
+  for(const host of cobaltHosts) {
+    try {
+      const apiUrl = host.endsWith('json') ? host : host + '/';
+      const cr = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify({
+          url: ytUrl,
+          videoQuality: '720',
+          filenameStyle: 'basic',
+          vCodec: 'h264',
+        })
+      });
+      if(cr.ok) {
+        const cd = await cr.json();
+        if(cd.url) { streamUrl = cd.url; method = 'cobalt'; break; }
+        if(cd.status === 'stream' && cd.url) { streamUrl = cd.url; method = 'cobalt-stream'; break; }
       }
+    } catch(e) { console.warn('cobalt attempt:', e.message); }
+  }
 
-      // Try 2: Server-side proxy download (bypasses browser CORS entirely)
-      if(!videoBlob || videoBlob.size < 10000) {
-        try {
-          setStatus(spin('Step 2/3 — Downloading via server proxy…'));
-          showSt('Downloading video…');
-          const proxyResp = await fetch(API + '/proxy-download', {
-            method: 'POST',
-            headers: {'Content-Type':'application/json'},
-            body: JSON.stringify({url: ytData.stream_url})
-          });
-          if(proxyResp.ok) {
-            videoBlob = await proxyResp.blob();
-            console.log('Proxy download OK:', videoBlob.size);
+  // YTStream RapidAPI - called from browser (browser IP not blocked by RapidAPI)
+  if(!streamUrl) {
+    const RAPIDAPI_KEY = 'baed285076msh1d8942d32e8f72fp1c2d50jsn16c752545bef';
+    try {
+      setStatus(spin('Trying RapidAPI YTStream…'));
+      const rr = await fetch(
+        `https://ytstream-download-youtube-videos.p.rapidapi.com/dl?id=${resolvedVideo}`,
+        {
+          method: 'GET',
+          headers: {
+            'X-RapidAPI-Key':  RAPIDAPI_KEY,
+            'X-RapidAPI-Host': 'ytstream-download-youtube-videos.p.rapidapi.com',
           }
-        } catch(proxyErr) {
-          console.warn('Proxy download failed:', proxyErr.message);
         }
+      );
+      if(rr.ok) {
+        const rd = await rr.json();
+        console.log('YTStream response:', JSON.stringify(rd).slice(0,300));
+        // Extract URL from response - handle multiple response formats
+        const urls = rd.formats || rd.url || rd.link || rd.links || rd.qualities || {};
+        if(typeof urls === 'string' && urls.startsWith('http')) {
+          streamUrl = urls; method = 'ytstream';
+        } else if(typeof urls === 'object') {
+          // Try common quality keys
+          for(const q of ['720','480','360','hd','sd','mp4','best']) {
+            const entry = urls[q] || urls[q+'p'];
+            if(!entry) continue;
+            const u = typeof entry === 'string' ? entry
+                     : entry.url || entry.link || entry.downloadUrl;
+            if(u && u.startsWith('http')) { streamUrl = u; method = `ytstream-${q}`; break; }
+          }
+          // Fallback: first string value that looks like URL
+          if(!streamUrl) {
+            const flatten = JSON.stringify(urls);
+          if(!streamUrl) {
+            const mp4idx = flatten.indexOf('.mp4');
+            if(mp4idx > 0) {
+              const start = flatten.lastIndexOf('http', mp4idx);
+              if(start >= 0) { streamUrl = flatten.slice(start, mp4idx+4); method = 'ytstream-extracted'; }
+            }
+          }
+            if(urlMatch) { streamUrl = urlMatch[0]; method = 'ytstream-extracted'; }
+          }
+        }
+      } else {
+        const err = await rr.text();
+        console.warn('YTStream error:', rr.status, err.slice(0,100));
       }
+    } catch(e) { console.warn('YTStream:', e.message); }
+  }
 
-      if(videoBlob && videoBlob.size > 10000) {
-        // ── Auto-upload to backend ──────────────────────────────────────────
-        setStatus(spin(`Step 3/3 — Uploading (${(videoBlob.size/1024/1024).toFixed(1)}MB)…`));
-        showSt('Uploading to server…');
+  // Server-side extraction as next fallback
+  if(!streamUrl) {
+    try {
+      setStatus(spin('Trying server extraction…'));
+      const sr = await fetch(API + '/yt-stream-url', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({url: ytUrl})
+      });
+      const sd = await sr.json().catch(() => ({}));
+      if(sd.stream_url) { streamUrl = sd.stream_url; method = sd.method || 'server'; }
+    } catch(e) { console.warn('server extract:', e.message); }
+  }
 
-        const fd = new FormData();
-        fd.append('video', new File([videoBlob], 'youtube_video.mp4', {type: 'video/mp4'}));
+  // ── Got a stream URL: auto-download then auto-upload ──────────────────────
+  if(streamUrl) {
+    console.log(`Stream URL via ${method}:`, streamUrl.slice(0,80));
+    setStatus(spin(`Downloading video (${method})…`));
+    showSt('Downloading YouTube video…');
 
+    let blob = null;
+
+    // Try direct browser fetch
+    try {
+      const resp = await fetch(streamUrl);
+      if(resp.ok) {
+        blob = await resp.blob();
+        if(blob.size < 50000) blob = null; // reject tiny/error responses
+      }
+    } catch(e) { console.warn('direct fetch:', e.message); }
+
+    // Try via server proxy if direct fetch blocked by CORS
+    if(!blob) {
+      try {
+        setStatus(spin('Downloading via proxy…'));
+        const pr = await fetch(API + '/proxy-download', {
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({url: streamUrl})
+        });
+        if(pr.ok) {
+          blob = await pr.blob();
+          if(blob.size < 50000) blob = null;
+        }
+      } catch(e) { console.warn('proxy:', e.message); }
+    }
+
+    if(blob && blob.size > 50000) {
+      // Auto-upload to server
+      const sizeMb = (blob.size/1024/1024).toFixed(1);
+      setStatus(spin(`Uploading ${sizeMb}MB to server…`));
+      showSt('Uploading…');
+
+      const fd = new FormData();
+      fd.append('video', new File([blob], 'yt.mp4', {type:'video/mp4'}));
+
+      try {
         const xhr = new XMLHttpRequest();
         xhr.open('POST', API + '/analyse-upload', true);
-
-        await new Promise((resolve, reject) => {
-          xhr.upload.onprogress = (e) => {
+        const uploadResult = await new Promise((res, rej) => {
+          xhr.upload.onprogress = e => {
             if(e.lengthComputable) {
-              const pct = Math.round(e.loaded / e.total * 100);
-              setStatus(spin(`Step 3/3 — Uploading ${pct}%…`));
+              const pct = Math.round(e.loaded/e.total*100);
+              setStatus(spin(`Uploading ${pct}%… (${sizeMb}MB)`));
             }
           };
           xhr.onload = () => {
-            if(xhr.status < 300) resolve(JSON.parse(xhr.responseText));
-            else reject(new Error('Upload failed: ' + xhr.status));
+            try { res(JSON.parse(xhr.responseText)); }
+            catch(e) { rej(new Error('Upload parse error')); }
           };
-          xhr.onerror = () => reject(new Error('Upload network error'));
+          xhr.onerror = () => rej(new Error('Upload failed'));
           xhr.send(fd);
-        }).then(async (uploadData) => {
-          if(!uploadData.uploadPath) throw new Error(uploadData.error || 'Upload failed');
-          setStatus(spin('Generating clip…'));
-          showSt('Generating clip…');
-          const d = await apiFetch('/clip', {
-            videoId: '', uploadPath: uploadData.uploadPath,
-            start, end, formats, user_id: currentUser?.id || ''
-          });
-          if(!d.jobId) throw new Error(d.error || 'No job ID');
-          pollJob(d.jobId, formats, clipStatusEl);
-        }).catch(err => { throw err; });
-
-        return; // success path done
-      }
-      // videoBlob failed (CORS) — fall through to manual prompt
-    }
-
-    // ── CDN URL exists but browser can't fetch (CORS) ─────────────────────
-    // Try server-side download as last resort
-    if(ytData.stream_url) {
-      setStatus(spin('Trying server-side download…'));
-      try {
-        const d = await apiFetch('/clip', {
-          videoId: resolvedVideo, uploadPath: '',
-          start, end, formats, user_id: currentUser?.id || ''
         });
-        if(d.jobId) { pollJob(d.jobId, formats, clipStatusEl); return; }
-      } catch(srvErr) {
-        console.warn('Server download also failed:', srvErr.message);
+
+        if(!uploadResult.uploadPath) throw new Error(uploadResult.error||'No upload path');
+
+        setStatus(spin('Generating your clip…'));
+        showSt('Generating clip…');
+        const d = await apiFetch('/clip', {
+          videoId:'', uploadPath: uploadResult.uploadPath,
+          start, end, formats, user_id: currentUser?.id||''
+        });
+        if(!d.jobId) throw new Error(d.error||'No job ID');
+        pollJob(d.jobId, formats, clipStatusEl);
+        return;
+
+      } catch(e) {
+        hideSt();
+        setStatus(`<div style="color:#ff6b6b;font-size:11px;padding:8px;font-family:var(--font-mono)">⚠ Upload failed: ${esc(e.message)}</div>`);
+        showErr(e.message);
+        return;
       }
     }
-
-    // ── All auto methods failed — show manual download prompt ─────────────
-    hideSt();
-    setStatus(`
-      <div style="background:rgba(139,92,246,.06);border:1px solid rgba(139,92,246,.25);border-radius:var(--r2);padding:16px;margin-top:4px">
-        <div style="font-family:var(--font-head);font-size:14px;font-weight:800;margin-bottom:10px">📥 Auto-download blocked by YouTube</div>
-        <div style="font-size:12px;color:var(--ink2);line-height:1.7;margin-bottom:12px">
-          YouTube blocks cross-origin browser downloads. Download the video manually and upload it — takes 30 seconds.
-        </div>
-        <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px">
-          <div style="display:flex;gap:8px;align-items:center;font-size:12px;color:var(--ink2)">
-            <span style="background:var(--purple);color:#fff;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;flex-shrink:0">1</span>
-            Download the video from
-            <a href="https://ssyoutube.com/watch?v=${resolvedVideo}" target="_blank"
-               style="color:var(--purple3);font-weight:700;text-decoration:none">ssyoutube.com</a>
-            or
-            <a href="https://en.savefrom.net/#url=https://youtube.com/watch?v=${resolvedVideo}" target="_blank"
-               style="color:var(--purple3);font-weight:700;text-decoration:none">savefrom.net</a>
-          </div>
-          <div style="display:flex;gap:8px;align-items:center;font-size:12px;color:var(--ink2)">
-            <span style="background:var(--purple);color:#fff;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;flex-shrink:0">2</span>
-            Upload the MP4 using the Upload tab above
-          </div>
-        </div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <a href="https://ssyoutube.com/watch?v=${resolvedVideo}" target="_blank"
-             style="padding:8px 14px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);font-size:12px;font-family:var(--font-head);font-weight:700;color:var(--ink2);text-decoration:none">⬇ Download MP4</a>
-          <button onclick="switchSrc('upload')" class="btn-go" style="padding:8px 16px;font-size:12px">📁 Upload file →</button>
-        </div>
-      </div>`);
-
-  } catch(e) {
-    hideSt();
-    console.error('processClip error:', e);
-    setStatus(`
-      <div style="background:rgba(139,92,246,.06);border:1px solid rgba(139,92,246,.25);border-radius:var(--r2);padding:14px;margin-top:4px">
-        <div style="font-family:var(--font-head);font-size:13px;font-weight:700;margin-bottom:8px">📥 Download &amp; upload this video</div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <a href="https://ssyoutube.com/watch?v=${resolvedVideo}" target="_blank"
-             style="padding:8px 14px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);font-size:12px;font-family:var(--font-head);font-weight:700;color:var(--ink2);text-decoration:none">⬇ Download MP4</a>
-          <button onclick="switchSrc('upload')" class="btn-go" style="padding:8px 16px;font-size:12px">📁 Upload →</button>
-        </div>
-      </div>`);
   }
+
+  // ── All automatic methods failed → manual download prompt ────────────────
+  hideSt();
+  setStatus(`
+    <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r2);padding:16px;margin-top:6px">
+      <div style="font-family:var(--font-head);font-size:14px;font-weight:800;margin-bottom:10px;color:var(--ink)">
+        📥 Manual download needed
+      </div>
+      <div style="font-size:12px;color:var(--ink2);line-height:1.8;margin-bottom:12px">
+        YouTube is blocking all automated downloads right now. Download the video manually — takes 30 seconds.
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px">
+        <div style="font-size:12px;color:var(--ink2);display:flex;gap:8px;align-items:center">
+          <span style="background:var(--purple);color:#fff;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;flex-shrink:0">1</span>
+          Go to <a href="https://ssyoutube.com/en28/youtube-video-downloader" target="_blank" style="color:var(--purple3);font-weight:700">ssyoutube.com</a>
+          · paste the YouTube URL · download MP4
+        </div>
+        <div style="font-size:12px;color:var(--ink2);display:flex;gap:8px;align-items:center">
+          <span style="background:var(--purple);color:#fff;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;flex-shrink:0">2</span>
+          Click <strong>Upload file</strong> tab above and upload the MP4
+        </div>
+        <div style="font-size:12px;color:var(--ink2);display:flex;gap:8px;align-items:center">
+          <span style="background:var(--purple);color:#fff;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;flex-shrink:0">3</span>
+          AI clips it automatically — same result, 30 seconds extra
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <a href="https://ssyoutube.com/en28/youtube-video-downloader" target="_blank"
+           style="padding:9px 16px;background:var(--purple);color:#fff;border-radius:var(--r);font-size:12px;font-family:var(--font-head);font-weight:700;text-decoration:none">
+          ⬇ Download on ssyoutube
+        </a>
+        <button onclick="switchSrc('upload')"
+           style="padding:9px 16px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);font-size:12px;font-family:var(--font-head);font-weight:700;color:var(--ink2);cursor:pointer">
+          📁 Upload file →
+        </button>
+      </div>
+    </div>`);
 }
 
 async function pollJob(jobId, formats, clipStatusEl) {
