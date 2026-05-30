@@ -673,6 +673,53 @@ def yt_stream_url():
 
     def log(tag, msg): print(f"[yt-stream/{vid}] {tag}: {msg}")
 
+    # ── 0. YTStream (RapidAPI) — highest priority, residential IPs ───────────
+    # API: ytstream-download-youtube-videos.p.rapidapi.com
+    # Endpoint: GET /dl?id=<video_id>
+    if RAPIDAPI_KEY:
+        try:
+            r = requests.get(
+                "https://ytstream-download-youtube-videos.p.rapidapi.com/dl",
+                params={"id": vid},
+                headers={
+                    "X-RapidAPI-Key":  RAPIDAPI_KEY,
+                    "X-RapidAPI-Host": "ytstream-download-youtube-videos.p.rapidapi.com",
+                    "Content-Type":    "application/json",
+                },
+                timeout=20,
+            )
+            if r.ok:
+                d = r.json()
+                # Response contains formats dict with quality keys
+                formats_map = d.get("formats") or d.get("links") or {}
+                # Try qualities in order: 720, 480, 360
+                link = None
+                for q_key in ["720","480","360","hd","sd"]:
+                    entry = formats_map.get(q_key) or formats_map.get(q_key+"p")
+                    if isinstance(entry, dict):
+                        link = entry.get("url") or entry.get("link")
+                    elif isinstance(entry, str) and entry.startswith("http"):
+                        link = entry
+                    if link: break
+                # Also check flat url field
+                if not link:
+                    link = d.get("url") or d.get("link") or d.get("downloadUrl")
+                if link:
+                    log("ytstream-rapidapi", f"OK quality={q_key if link else '?'}")
+                    return jsonify({
+                        "stream_url": link,
+                        "video_id":   vid,
+                        "title":      title,
+                        "method":     "ytstream_rapidapi",
+                        "quality":    q_key if link else "unknown",
+                    })
+                else:
+                    log("ytstream-rapidapi", f"No link in response: {list(d.keys())}")
+            else:
+                log("ytstream-rapidapi", f"HTTP {r.status_code}: {r.text[:100]}")
+        except Exception as e:
+            log("ytstream-rapidapi", e)
+
     # ── 1. RapidAPI: youtube-mp4s ─────────────────────────────────────────────
     if RAPIDAPI_KEY:
         try:
