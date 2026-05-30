@@ -637,134 +637,146 @@ def send_test_email():
 @app.route("/yt-stream-url", methods=["POST", "OPTIONS"])
 def yt_stream_url():
     """
-    Extract YouTube stream URL using multiple fallback APIs — no yt-dlp needed.
-    Strategy:
-      1. Invidious public API (no auth, returns direct stream URLs)
-      2. YouTube Piped API (another open frontend)
-      3. yt-dlp --get-url if available
-    Returns stream_url for browser to fetch directly, bypassing Railway IP block.
+    Get YouTube direct download URL using multiple residential-proxy APIs.
+    These services use rotating IPs so YouTube never blocks them.
+    Priority:
+      1. RapidAPI youtube-mp4 (residential proxies, most reliable)
+      2. y2mate API (widely used, free)
+      3. Invidious public instances
+      4. Piped public instances
     """
     if request.method == "OPTIONS":
         return jsonify({}), 200
+
     data = request.get_json() or {}
-    url = data.get("url", "").strip()
+    url  = data.get("url", "").strip()
     if not url:
         return jsonify({"error": "Missing URL"}), 400
 
     m = re.search(r'(?:v=|youtu\.be/|/shorts/)([A-Za-z0-9_-]{11})', url)
     if not m:
         return jsonify({"error": "Invalid YouTube URL"}), 400
-    video_id = m.group(1)
+    vid = m.group(1)
+    yt_url = f"https://www.youtube.com/watch?v={vid}"
 
-    # Get title first (always works)
-    title = video_id
+    # Get title
+    title = vid
     try:
-        r = requests.get(
-            f"https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v={video_id}&format=json",
-            timeout=6)
-        if r.ok:
-            title = r.json().get("title", video_id)
-    except Exception:
-        pass
+        r0 = requests.get(f"https://www.youtube.com/oembed?url={yt_url}&format=json", timeout=6)
+        if r0.ok: title = r0.json().get("title", vid)
+    except Exception: pass
 
-    # Strategy 1: Invidious instances (open-source YouTube frontend with API)
-    invidious_instances = [
-        "https://inv.nadeko.net",
-        "https://invidious.privacyredirect.com",
-        "https://yt.artemislena.eu",
-        "https://invidious.nerdvpn.de",
-    ]
-    for instance in invidious_instances:
+    RAPIDAPI_KEY = os.environ.get("RAPIDAPI_KEY", "")
+
+    # ── Strategy 1: RapidAPI youtube-mp36 (residential IPs) ──────────────────
+    if RAPIDAPI_KEY:
         try:
             r = requests.get(
-                f"{instance}/api/v1/videos/{video_id}",
-                timeout=10,
-                headers={"User-Agent": "Mozilla/5.0"}
+                "https://youtube-mp36.p.rapidapi.com/dl",
+                params={"id": vid},
+                headers={
+                    "X-RapidAPI-Key":  RAPIDAPI_KEY,
+                    "X-RapidAPI-Host": "youtube-mp36.p.rapidapi.com",
+                },
+                timeout=15,
             )
-            if r.ok:
-                data_inv = r.json()
-                formats = data_inv.get("adaptiveFormats", []) + data_inv.get("formatStreams", [])
-                # Find best mp4 up to 720p
-                best = None
-                for f in formats:
-                    mime = f.get("type","")
-                    if "video/mp4" in mime and "avc" in mime:
-                        h = int(f.get("resolution","0p").replace("p","") or f.get("height", 0) or 0)
-                        if h <= 720 and (best is None or h > int(best.get("resolution","0p").replace("p","") or 0)):
-                            best = f
-                # Fallback: any formatStream (progressive = video+audio)
-                if not best:
-                    for f in data_inv.get("formatStreams", []):
-                        if "video/mp4" in f.get("type",""):
-                            best = f
-                            break
-                if best and best.get("url"):
-                    stream_url = best["url"]
-                    print(f"Invidious OK [{instance}]: {stream_url[:60]}")
-                    return jsonify({
-                        "stream_url": stream_url,
-                        "video_id": video_id,
-                        "title": title,
-                        "method": "invidious",
-                        "quality": best.get("resolution", "unknown"),
-                    })
+            if r.ok and r.json().get("link"):
+                return jsonify({"stream_url": r.json()["link"], "video_id": vid,
+                                "title": title, "method": "rapidapi_mp3",
+                                "audio_only": True})
         except Exception as e:
-            print(f"Invidious [{instance}]: {e}")
-            continue
+            print(f"RapidAPI mp36: {e}")
 
-    # Strategy 2: Piped API
-    piped_instances = [
-        "https://pipedapi.kavin.rocks",
-        "https://pipedapi.adminforge.de",
-    ]
-    for instance in piped_instances:
+        # RapidAPI youtube-video-download-info
         try:
-            r = requests.get(f"{instance}/streams/{video_id}", timeout=10,
-                           headers={"User-Agent": "Mozilla/5.0"})
+            r = requests.get(
+                "https://youtube-video-download-info.p.rapidapi.com/dl",
+                params={"id": vid},
+                headers={
+                    "X-RapidAPI-Key":  RAPIDAPI_KEY,
+                    "X-RapidAPI-Host": "youtube-video-download-info.p.rapidapi.com",
+                },
+                timeout=15,
+            )
             if r.ok:
                 d2 = r.json()
-                streams = d2.get("videoStreams", [])
-                best = next((s for s in streams if "mp4" in s.get("mimeType","") and s.get("height",999) <= 720), None)
-                if not best and streams:
-                    best = streams[0]
-                if best and best.get("url"):
-                    stream_url = best["url"]
-                    print(f"Piped OK [{instance}]: {stream_url[:60]}")
-                    return jsonify({
-                        "stream_url": stream_url,
-                        "video_id": video_id,
-                        "title": title,
-                        "method": "piped",
-                    })
+                formats = d2.get("link", {})
+                # Find best mp4 ≤ 720p
+                for quality in ["137", "136", "135", "18"]:
+                    if quality in formats:
+                        fmt = formats[quality]
+                        link = fmt[0] if isinstance(fmt, list) else fmt
+                        if isinstance(link, dict): link = link.get("url","")
+                        if link:
+                            return jsonify({"stream_url": link, "video_id": vid,
+                                           "title": title, "method": "rapidapi_video"})
+        except Exception as e:
+            print(f"RapidAPI video info: {e}")
+
+    # ── Strategy 2: cobalt.tools API (open source, no key needed) ────────────
+    cobalt_instances = [
+        "https://api.cobalt.tools",
+        "https://cobalt.tools",
+    ]
+    for cobalt in cobalt_instances:
+        try:
+            r = requests.post(
+                f"{cobalt}/api/json",
+                json={"url": yt_url, "vQuality": "720", "filenamePattern": "basic"},
+                headers={"Accept": "application/json", "Content-Type": "application/json"},
+                timeout=15,
+            )
+            if r.ok:
+                d3 = r.json()
+                if d3.get("url"):
+                    return jsonify({"stream_url": d3["url"], "video_id": vid,
+                                   "title": title, "method": "cobalt"})
+        except Exception as e:
+            print(f"Cobalt [{cobalt}]: {e}")
+
+    # ── Strategy 3: Invidious instances ──────────────────────────────────────
+    for instance in ["https://inv.nadeko.net", "https://invidious.privacyredirect.com",
+                     "https://yt.artemislena.eu", "https://invidious.nerdvpn.de",
+                     "https://iv.datura.network", "https://invidious.incogniweb.net"]:
+        try:
+            r = requests.get(f"{instance}/api/v1/videos/{vid}",
+                           timeout=8, headers={"User-Agent": "Mozilla/5.0"})
+            if r.ok:
+                d4 = r.json()
+                streams = d4.get("formatStreams", []) + d4.get("adaptiveFormats", [])
+                for f in streams:
+                    if "video/mp4" in f.get("type","") and f.get("url"):
+                        h = int(f.get("resolution","0p").replace("p","") or 0)
+                        if h <= 720:
+                            return jsonify({"stream_url": f["url"], "video_id": vid,
+                                          "title": title, "method": f"invidious:{instance}"})
+        except Exception as e:
+            print(f"Invidious [{instance}]: {e}")
+
+    # ── Strategy 4: Piped ─────────────────────────────────────────────────────
+    for instance in ["https://pipedapi.kavin.rocks", "https://pipedapi.adminforge.de",
+                     "https://piped-api.garudalinux.org"]:
+        try:
+            r = requests.get(f"{instance}/streams/{vid}", timeout=8,
+                           headers={"User-Agent": "Mozilla/5.0"})
+            if r.ok:
+                d5 = r.json()
+                for s in d5.get("videoStreams", []):
+                    if "mp4" in s.get("mimeType","") and s.get("height",999) <= 720 and s.get("url"):
+                        return jsonify({"stream_url": s["url"], "video_id": vid,
+                                       "title": title, "method": f"piped:{instance}"})
         except Exception as e:
             print(f"Piped [{instance}]: {e}")
-            continue
 
-    # Strategy 3: yt-dlp --get-url if binary is available
-    ytdlp_path = YTDLP
-    if os.path.exists(ytdlp_path) or ytdlp_path == "yt-dlp":
-        try:
-            result = subprocess.run(
-                [ytdlp_path, "--get-url", "-f", "best[height<=720][ext=mp4]/best[ext=mp4]/best",
-                 "--no-playlist", "--socket-timeout", "15",
-                 f"https://www.youtube.com/watch?v={video_id}"],
-                capture_output=True, text=True, timeout=25
-            )
-            if result.returncode == 0 and result.stdout.strip():
-                stream_url = result.stdout.strip().split("\n")[0]
-                if stream_url.startswith("http"):
-                    return jsonify({"stream_url": stream_url, "video_id": video_id,
-                                   "title": title, "method": "ytdlp"})
-        except Exception as e:
-            print(f"yt-dlp --get-url: {e}")
-
-    # All strategies failed — tell browser to show upload UI
+    # ── All failed → tell browser to show upload UI ───────────────────────────
+    print(f"yt-stream-url: all strategies failed for {vid}")
     return jsonify({
-        "error": "Could not extract stream URL",
-        "video_id": video_id,
+        "error": "Could not extract stream URL — all services unavailable",
+        "video_id": vid,
         "title": title,
         "show_upload_prompt": True,
     }), 422
+
 
 @app.route("/health", methods=["GET"])
 def health():
