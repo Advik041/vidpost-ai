@@ -637,10 +637,12 @@ def send_test_email():
 @app.route("/yt-stream-url", methods=["POST", "OPTIONS"])
 def yt_stream_url():
     """
-    Extract direct YouTube stream URL without downloading.
-    Browser then fetches directly from YouTube CDN, bypassing Railway IP block.
-    This is how most production video tools handle YouTube - never proxy the video
-    through the server, just get the signed CDN URL and let browser handle it.
+    Extract YouTube stream URL using multiple fallback APIs — no yt-dlp needed.
+    Strategy:
+      1. Invidious public API (no auth, returns direct stream URLs)
+      2. YouTube Piped API (another open frontend)
+      3. yt-dlp --get-url if available
+    Returns stream_url for browser to fetch directly, bypassing Railway IP block.
     """
     if request.method == "OPTIONS":
         return jsonify({}), 200
@@ -654,47 +656,114 @@ def yt_stream_url():
         return jsonify({"error": "Invalid YouTube URL"}), 400
     video_id = m.group(1)
 
-    # Try to get direct stream URL via yt-dlp --get-url
-    # This is a metadata-only request - works on blocked IPs
-    common = _yt_common_args()
-    fmt = "best[height<=720][ext=mp4]/best[ext=mp4]/best"
+    # Get title first (always works)
+    title = video_id
+    try:
+        r = requests.get(
+            f"https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v={video_id}&format=json",
+            timeout=6)
+        if r.ok:
+            title = r.json().get("title", video_id)
+    except Exception:
+        pass
 
-    for client in ["android", "android_vr", "ios", "tv_embedded"]:
+    # Strategy 1: Invidious instances (open-source YouTube frontend with API)
+    invidious_instances = [
+        "https://inv.nadeko.net",
+        "https://invidious.privacyredirect.com",
+        "https://yt.artemislena.eu",
+        "https://invidious.nerdvpn.de",
+    ]
+    for instance in invidious_instances:
         try:
-            cmd = [YTDLP] + common + [
-                "--extractor-args", f"youtube:player_client={client}",
-                "--get-url", "-f", fmt,
-                f"https://www.youtube.com/watch?v={video_id}"
-            ]
-            r = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
-            if r.returncode == 0 and r.stdout.strip():
-                stream_url = r.stdout.strip().split("\n")[0]
-                if stream_url.startswith("http"):
-                    # Also get title
-                    title = video_id
-                    try:
-                        info = ytdlp_info(video_id)
-                        title = info.get("title", video_id)
-                    except Exception:
-                        pass
-                    print(f"yt-stream-url OK [{client}]: {stream_url[:80]}")
+            r = requests.get(
+                f"{instance}/api/v1/videos/{video_id}",
+                timeout=10,
+                headers={"User-Agent": "Mozilla/5.0"}
+            )
+            if r.ok:
+                data_inv = r.json()
+                formats = data_inv.get("adaptiveFormats", []) + data_inv.get("formatStreams", [])
+                # Find best mp4 up to 720p
+                best = None
+                for f in formats:
+                    mime = f.get("type","")
+                    if "video/mp4" in mime and "avc" in mime:
+                        h = int(f.get("resolution","0p").replace("p","") or f.get("height", 0) or 0)
+                        if h <= 720 and (best is None or h > int(best.get("resolution","0p").replace("p","") or 0)):
+                            best = f
+                # Fallback: any formatStream (progressive = video+audio)
+                if not best:
+                    for f in data_inv.get("formatStreams", []):
+                        if "video/mp4" in f.get("type",""):
+                            best = f
+                            break
+                if best and best.get("url"):
+                    stream_url = best["url"]
+                    print(f"Invidious OK [{instance}]: {stream_url[:60]}")
                     return jsonify({
                         "stream_url": stream_url,
                         "video_id": video_id,
                         "title": title,
-                        "method": "direct_cdn",
-                        "note": "Use this URL to fetch the video directly in the browser"
+                        "method": "invidious",
+                        "quality": best.get("resolution", "unknown"),
                     })
         except Exception as e:
-            print(f"yt-stream-url [{client}]: {e}")
+            print(f"Invidious [{instance}]: {e}")
             continue
 
-    # Fallback: return YouTube embed URL for browser to handle
+    # Strategy 2: Piped API
+    piped_instances = [
+        "https://pipedapi.kavin.rocks",
+        "https://pipedapi.adminforge.de",
+    ]
+    for instance in piped_instances:
+        try:
+            r = requests.get(f"{instance}/streams/{video_id}", timeout=10,
+                           headers={"User-Agent": "Mozilla/5.0"})
+            if r.ok:
+                d2 = r.json()
+                streams = d2.get("videoStreams", [])
+                best = next((s for s in streams if "mp4" in s.get("mimeType","") and s.get("height",999) <= 720), None)
+                if not best and streams:
+                    best = streams[0]
+                if best and best.get("url"):
+                    stream_url = best["url"]
+                    print(f"Piped OK [{instance}]: {stream_url[:60]}")
+                    return jsonify({
+                        "stream_url": stream_url,
+                        "video_id": video_id,
+                        "title": title,
+                        "method": "piped",
+                    })
+        except Exception as e:
+            print(f"Piped [{instance}]: {e}")
+            continue
+
+    # Strategy 3: yt-dlp --get-url if binary is available
+    ytdlp_path = YTDLP
+    if os.path.exists(ytdlp_path) or ytdlp_path == "yt-dlp":
+        try:
+            result = subprocess.run(
+                [ytdlp_path, "--get-url", "-f", "best[height<=720][ext=mp4]/best[ext=mp4]/best",
+                 "--no-playlist", "--socket-timeout", "15",
+                 f"https://www.youtube.com/watch?v={video_id}"],
+                capture_output=True, text=True, timeout=25
+            )
+            if result.returncode == 0 and result.stdout.strip():
+                stream_url = result.stdout.strip().split("\n")[0]
+                if stream_url.startswith("http"):
+                    return jsonify({"stream_url": stream_url, "video_id": video_id,
+                                   "title": title, "method": "ytdlp"})
+        except Exception as e:
+            print(f"yt-dlp --get-url: {e}")
+
+    # All strategies failed — tell browser to show upload UI
     return jsonify({
         "error": "Could not extract stream URL",
         "video_id": video_id,
-        "fallback": f"https://www.youtube.com/watch?v={video_id}",
-        "suggestion": "Upload the video file directly using the Upload tab"
+        "title": title,
+        "show_upload_prompt": True,
     }), 422
 
 @app.route("/health", methods=["GET"])
