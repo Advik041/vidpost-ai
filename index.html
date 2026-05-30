@@ -1870,19 +1870,40 @@ async function processClip(videoId, uploadPath, start, end, clipIndex) {
 
   try {
     const ytUrl = `https://www.youtube.com/watch?v=${resolvedVideo}`;
-    const streamData = await apiFetch('/yt-stream-url', {url: ytUrl});
+    // Use raw fetch so 422 doesn't appear as unhandled in apiFetch
+    const _ytResp = await fetch(API + '/yt-stream-url', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({url: ytUrl})
+    });
+    const streamData = await _ytResp.json().catch(() => ({show_upload_prompt: true}));
 
     if(streamData.show_upload_prompt || !streamData.stream_url) {
       // Invidious/Piped couldn't get URL - show upload prompt immediately
       hideSt();
       setClipStatus(`
-        <div style="background:rgba(139,92,246,.06);border:1px solid rgba(139,92,246,.25);border-radius:var(--r2);padding:14px;margin-top:4px">
-          <div style="font-family:var(--font-head);font-size:13px;font-weight:700;margin-bottom:6px;color:var(--ink)">📥 Upload this video directly</div>
-          <div style="font-size:12px;color:var(--ink2);line-height:1.6;margin-bottom:10px">YouTube restricts server downloads. Download the video and upload it here — takes 30 seconds.</div>
+        <div style="background:rgba(139,92,246,.06);border:1px solid rgba(139,92,246,.25);border-radius:var(--r2);padding:16px;margin-top:4px">
+          <div style="font-family:var(--font-head);font-size:14px;font-weight:800;margin-bottom:8px;color:var(--ink)">📥 How to clip this YouTube video</div>
+          <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px">
+            <div style="display:flex;gap:8px;align-items:flex-start;font-size:12px;color:var(--ink2)">
+              <span style="background:var(--purple);color:#fff;border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;flex-shrink:0;margin-top:1px">1</span>
+              <span>Open the video on YouTube and download it (right-click → Save video or use a downloader like <strong>yt1s.com</strong>)</span>
+            </div>
+            <div style="display:flex;gap:8px;align-items:flex-start;font-size:12px;color:var(--ink2)">
+              <span style="background:var(--purple);color:#fff;border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;flex-shrink:0;margin-top:1px">2</span>
+              <span>Click <strong>Upload file</strong> tab above and upload the MP4</span>
+            </div>
+            <div style="display:flex;gap:8px;align-items:flex-start;font-size:12px;color:var(--ink2)">
+              <span style="background:var(--purple);color:#fff;border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;flex-shrink:0;margin-top:1px">3</span>
+              <span>AI clips are generated instantly from your upload</span>
+            </div>
+          </div>
           <div style="display:flex;gap:8px;flex-wrap:wrap">
             <a href="https://www.youtube.com/watch?v=${resolvedVideo}" target="_blank"
-               style="padding:7px 14px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);font-size:11px;font-family:var(--font-head);font-weight:700;color:var(--ink2);text-decoration:none">▶ Open on YouTube</a>
-            <button onclick="switchSrc('upload')" class="btn-go" style="padding:7px 14px;font-size:11px">📁 Upload tab</button>
+               style="padding:8px 16px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);font-size:12px;font-family:var(--font-head);font-weight:700;color:var(--ink2);text-decoration:none">▶ Open on YouTube</a>
+            <a href="https://yt1s.com/youtube-to-mp4?q=${resolvedVideo}" target="_blank"
+               style="padding:8px 16px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);font-size:12px;font-family:var(--font-head);font-weight:700;color:var(--ink2);text-decoration:none">⬇ Download MP4</a>
+            <button onclick="switchSrc('upload')" class="btn-go" style="padding:8px 16px;font-size:12px">📁 Upload file →</button>
           </div>
         </div>`);
       return;
@@ -1938,22 +1959,14 @@ async function processClip(videoId, uploadPath, start, end, clipIndex) {
     hideSt();
     // Show friendly upload prompt for any YouTube extraction failure
     setClipStatus(`
-      <div style="background:rgba(139,92,246,.06);border:1px solid rgba(139,92,246,.25);border-radius:var(--r2);padding:14px;margin-top:4px">
-        <div style="font-family:var(--font-head);font-size:13px;font-weight:700;margin-bottom:6px;color:var(--ink)">
-          📥 Upload this video directly
-        </div>
-        <div style="font-size:12px;color:var(--ink2);line-height:1.6;margin-bottom:10px">
-          YouTube restricts server downloads. Download this video and upload it — takes 30 seconds.
-        </div>
+      <div style="background:rgba(139,92,246,.06);border:1px solid rgba(139,92,246,.25);border-radius:var(--r2);padding:16px;margin-top:4px">
+        <div style="font-family:var(--font-head);font-size:14px;font-weight:800;margin-bottom:8px">📥 Download &amp; upload this video</div>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
           <a href="https://www.youtube.com/watch?v=${resolvedVideo}" target="_blank"
-             style="padding:7px 14px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);font-size:11px;font-family:var(--font-head);font-weight:700;color:var(--ink2);text-decoration:none">
-            ▶ Open on YouTube
-          </a>
-          <button onclick="switchSrc('upload');document.querySelector('.app-tab').click();switchSrc('upload')"
-             class="btn-go" style="padding:7px 14px;font-size:11px">
-            📁 Switch to Upload tab
-          </button>
+             style="padding:8px 14px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);font-size:12px;font-family:var(--font-head);font-weight:700;color:var(--ink2);text-decoration:none">▶ YouTube</a>
+          <a href="https://yt1s.com/youtube-to-mp4?q=${resolvedVideo}" target="_blank"
+             style="padding:8px 14px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);font-size:12px;font-family:var(--font-head);font-weight:700;color:var(--ink2);text-decoration:none">⬇ Download MP4</a>
+          <button onclick="switchSrc('upload')" class="btn-go" style="padding:8px 14px;font-size:12px">📁 Upload →</button>
         </div>
       </div>`);
   }
