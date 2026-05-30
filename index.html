@@ -1441,6 +1441,21 @@ function toggleTheme(){var d=document.documentElement.getAttribute('data-theme')
 <!-- ════════════════════════════════════════════════════════ JAVASCRIPT ═══ -->
 <script>
 'use strict';
+
+// ── Safe video play — prevents uncaught AbortError ───────────────────────────
+function safePlay(videoEl) {
+  if(!videoEl) return;
+  const p = videoEl.play();
+  if(p !== undefined) p.catch(e => {
+    // AbortError is expected when play() is interrupted — not a real error
+    if(e.name !== 'AbortError') console.warn('Video play error:', e);
+  });
+}
+function safePause(videoEl) {
+  if(!videoEl) return;
+  try { videoEl.pause(); } catch(e) {}
+}
+
 // ── Config ────────────────────────────────────────────────────────────────────
 const RAILWAY      = 'https://vidpost-ai-production.up.railway.app';
 const API          = RAILWAY;
@@ -1816,41 +1831,98 @@ async function processClip(videoId, uploadPath, start, end, clipIndex) {
     }
   }
 
-  // Resolve upload path from global if not passed directly
   const resolvedUpload = uploadPath || currentUploadPath || '';
-  const resolvedVideo  = videoId  || currentVideoId  || '';
-  if(!resolvedVideo && !resolvedUpload) {
-    showErr('No video source — analyse a video first.');
-    return;
-  }
+  const resolvedVideo  = videoId   || currentVideoId    || '';
+  if(!resolvedVideo && !resolvedUpload) { showErr('No video source.'); return; }
 
   const formats=[];
   if($('fmt-vert')?.classList.contains('on'))  formats.push('vertical');
   if($('fmt-horiz')?.classList.contains('on')) formats.push('horizontal');
   if(!formats.length) formats.push('vertical');
 
-  // Show per-clip status
   const clipStatusEl = clipIndex !== undefined ? $(`clip-status-${clipIndex}`) : null;
-  const setClipStatus = (html) => { if(clipStatusEl) clipStatusEl.innerHTML = html; };
+  const setClipStatus = html => { if(clipStatusEl) clipStatusEl.innerHTML = html; };
+  const spin = `<div style="display:flex;align-items:center;gap:6px;font-family:var(--font-mono);font-size:11px;color:var(--ink2)"><div class="spin2"></div>`;
 
-  setClipStatus(`<div style="display:flex;align-items:center;gap:6px;font-family:var(--font-mono);font-size:11px;color:var(--ink2)"><div class="spin2"></div>Starting…</div>`);
-  showSt('Submitting clip job…');
+  // If we already have an upload path, go straight to clip
+  if(resolvedUpload) {
+    setClipStatus(spin + 'Generating clip from uploaded file…</div>');
+    showSt('Processing uploaded video…');
+    try {
+      const d = await apiFetch('/clip', {videoId:'', uploadPath:resolvedUpload, start, end, formats, user_id:currentUser?.id||''});
+      if(!d.jobId) throw new Error(d.error || 'No job ID');
+      pollJob(d.jobId, formats, clipStatusEl);
+    } catch(e) {
+      hideSt();
+      setClipStatus(`<div style="color:#ff6b6b;font-size:11px;font-family:var(--font-mono)">⚠ ${esc(e.message)}</div>`);
+      showErr(e.message);
+    }
+    return;
+  }
 
-  const body = {
-    videoId:    resolvedVideo,
-    uploadPath: resolvedUpload,
-    start, end, formats,
-    user_id: currentUser?.id || '',
-  };
+  // YouTube video: try to get direct CDN URL first
+  setClipStatus(spin + 'Getting YouTube stream URL…</div>');
+  showSt('Extracting YouTube video…');
 
   try {
-    const d = await apiFetch('/clip', body);
-    if(!d.jobId) throw new Error(d.error || 'No job ID returned from server');
+    const ytUrl = `https://www.youtube.com/watch?v=${resolvedVideo}`;
+    const streamData = await apiFetch('/yt-stream-url', {url: ytUrl});
+
+    if(streamData.stream_url) {
+      // CDN URL obtained — fetch video in browser, then upload as blob
+      setClipStatus(spin + 'Downloading video in browser (bypasses IP block)…</div>');
+      showSt('Downloading from YouTube CDN…');
+
+      let uploadedPath = '';
+      try {
+        // Fetch the video stream directly in browser
+        const resp = await fetch(streamData.stream_url);
+        if(!resp.ok) throw new Error('CDN fetch failed: ' + resp.status);
+        const blob = await resp.blob();
+        const file = new File([blob], 'yt_video.mp4', {type:'video/mp4'});
+
+        setClipStatus(spin + 'Uploading to server for processing…</div>');
+        showSt('Uploading video…');
+
+        const fd = new FormData();
+        fd.append('video', file);
+        const uploadResp = await fetch(API + '/analyse-upload', {method:'POST', body:fd});
+        const uploadData = await uploadResp.json();
+        if(uploadData.uploadPath) {
+          uploadedPath = uploadData.uploadPath;
+        } else {
+          throw new Error(uploadData.error || 'Upload failed');
+        }
+      } catch(fetchErr) {
+        // CDN URL may have CORS restriction — fall back to server download
+        console.warn('Browser CDN fetch failed:', fetchErr.message, '— falling back to server download');
+        uploadedPath = '';
+      }
+
+      if(uploadedPath) {
+        setClipStatus(spin + 'Generating clip…</div>');
+        const d = await apiFetch('/clip', {videoId:'', uploadPath:uploadedPath, start, end, formats, user_id:currentUser?.id||''});
+        if(!d.jobId) throw new Error(d.error || 'No job ID');
+        pollJob(d.jobId, formats, clipStatusEl);
+        return;
+      }
+    }
+
+    // Final fallback: try server-side download (may fail on Railway)
+    setClipStatus(spin + 'Trying server-side download…</div>');
+    showSt('Downloading on server…');
+    const d = await apiFetch('/clip', {videoId:resolvedVideo, uploadPath:'', start, end, formats, user_id:currentUser?.id||''});
+    if(!d.jobId) throw new Error(d.error || 'No job ID');
     pollJob(d.jobId, formats, clipStatusEl);
+
   } catch(e) {
     hideSt();
-    setClipStatus(`<div style="color:#ff6b6b;font-size:11px;font-family:var(--font-mono)">⚠ ${esc(e.message)}</div>`);
-    showErr(e.message);
+    const isYtBlock = e.message.includes('blocked') || e.message.includes('bot');
+    const msg = isYtBlock
+      ? `YouTube blocked the server IP. <strong>Fix:</strong> Use the Upload tab — download the video from YouTube and upload it here.`
+      : esc(e.message);
+    setClipStatus(`<div style="color:#ff6b6b;font-size:12px;font-family:var(--font-mono);line-height:1.6;padding:8px;background:rgba(255,50,50,.06);border-radius:var(--r);border:1px solid rgba(255,50,50,.2)">⚠ ${msg}</div>`);
+    showErr(e.message.includes('blocked') ? 'YouTube blocked — use Upload tab instead' : e.message);
   }
 }
 
@@ -1991,7 +2063,11 @@ function _bindVideoEvents(vid) {
   $('ed-timeline').onclick = function(e) {
     if(e.target.closest('.ed-handle')) return;
     const r = this.getBoundingClientRect();
-    $('ed-video').currentTime = Math.max(0,Math.min(1,(e.clientX-r.left)/r.width)) * edDuration;
+    const v2=$('ed-video');
+    const wasPlaying=!v2.paused;
+    if(wasPlaying) v2.pause();
+    v2.currentTime = Math.max(0,Math.min(1,(e.clientX-r.left)/r.width)) * edDuration;
+    if(wasPlaying){ const p=safePlay(v2); if(p) p.catch(()=>{}); }
   };
 
   initHandleDrag('ed-handle-start', v2 => {
@@ -2116,13 +2192,25 @@ function resetEditor() {
   if(_streamPollTimer){clearInterval(_streamPollTimer);_streamPollTimer=null;}
   $('ed-workspace').style.display='none';
   $('ed-empty').style.display='block';
-  const v=$('ed-video'); v.pause(); v.src='';
+  const v=$('ed-video');
+  // Pause first, then remove src after a tick to avoid AbortError
+  safePause(v);
+  setTimeout(()=>{ v.removeAttribute('src'); v.load(); },50);
   edVideoUrl=''; edStart=0; edEnd=0; edDuration=0; edCuts=[];
   _edVideoReady=false;
 }
 
 // ── Playback ──────────────────────────────────────────────────────────────────
-function edPlayPause(){ const v=$('ed-video'),b=$('ed-play-btn');if(v.paused){v.play();b.textContent='⏸';}else{v.pause();b.textContent='▶';} }
+function edPlayPause(){
+  const v=$('ed-video'),b=$('ed-play-btn');
+  if(v.paused){
+    const p=safePlay(v);
+    if(p!==undefined) p.then(()=>{b.textContent='⏸';}).catch(()=>{b.textContent='▶';});
+    else b.textContent='⏸';
+  } else {
+    v.pause(); b.textContent='▶';
+  }
+}
 function edSkip(s){ const v=$('ed-video');v.currentTime=Math.max(edStart,Math.min(edEnd,v.currentTime+s)); }
 function edMute(){ const v=$('ed-video');v.muted=!v.muted;$('ed-mute-btn').textContent=v.muted?'🔇':'🔊'; }
 
