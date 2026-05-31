@@ -2000,84 +2000,29 @@ async function processClip(videoId, uploadPath, start, end, clipIndex) {
     } catch(e) { console.warn('server extract:', e.message); }
   }
 
-  // ── Got a stream URL: auto-download then auto-upload ──────────────────────
+  // ── Got a stream URL → send to backend to download + process ────────────────
   if(streamUrl) {
     console.log(`Stream URL via ${method}:`, streamUrl.slice(0,80));
-    setStatus(spin(`Downloading video (${method})…`));
-    showSt('Downloading YouTube video…');
+    setStatus(spin(`Downloading & processing via ${method}…`));
+    showSt('Processing YouTube video…');
 
-    let blob = null;
-
-    // Try direct browser fetch
+    // Send the CDN URL directly to the clip endpoint
+    // Backend downloads with proper headers (Range, User-Agent etc.)
+    // and processes in one step — no browser download needed
     try {
-      const resp = await fetch(streamUrl);
-      if(resp.ok) {
-        blob = await resp.blob();
-        if(blob.size < 50000) blob = null; // reject tiny/error responses
-      }
-    } catch(e) { console.warn('direct fetch:', e.message); }
-
-    // Try via server proxy if direct fetch blocked by CORS
-    if(!blob) {
-      try {
-        setStatus(spin('Downloading via proxy…'));
-        const pr = await fetch(API + '/proxy-download', {
-          method: 'POST',
-          headers: {'Content-Type':'application/json'},
-          body: JSON.stringify({url: streamUrl})
-        });
-        if(pr.ok) {
-          blob = await pr.blob();
-          if(blob.size < 50000) blob = null;
-        }
-      } catch(e) { console.warn('proxy:', e.message); }
-    }
-
-    if(blob && blob.size > 50000) {
-      // Auto-upload to server
-      const sizeMb = (blob.size/1024/1024).toFixed(1);
-      setStatus(spin(`Uploading ${sizeMb}MB to server…`));
-      showSt('Uploading…');
-
-      const fd = new FormData();
-      fd.append('video', new File([blob], 'yt.mp4', {type:'video/mp4'}));
-
-      try {
-        const xhr = new XMLHttpRequest();
-        xhr.open('POST', API + '/analyse-upload', true);
-        const uploadResult = await new Promise((res, rej) => {
-          xhr.upload.onprogress = e => {
-            if(e.lengthComputable) {
-              const pct = Math.round(e.loaded/e.total*100);
-              setStatus(spin(`Uploading ${pct}%… (${sizeMb}MB)`));
-            }
-          };
-          xhr.onload = () => {
-            try { res(JSON.parse(xhr.responseText)); }
-            catch(e) { rej(new Error('Upload parse error')); }
-          };
-          xhr.onerror = () => rej(new Error('Upload failed'));
-          xhr.send(fd);
-        });
-
-        if(!uploadResult.uploadPath) throw new Error(uploadResult.error||'No upload path');
-
-        setStatus(spin('Generating your clip…'));
-        showSt('Generating clip…');
-        const d = await apiFetch('/clip', {
-          videoId:'', uploadPath: uploadResult.uploadPath,
-          start, end, formats, user_id: currentUser?.id||''
-        });
-        if(!d.jobId) throw new Error(d.error||'No job ID');
-        pollJob(d.jobId, formats, clipStatusEl);
-        return;
-
-      } catch(e) {
-        hideSt();
-        setStatus(`<div style="color:#ff6b6b;font-size:11px;padding:8px;font-family:var(--font-mono)">⚠ Upload failed: ${esc(e.message)}</div>`);
-        showErr(e.message);
-        return;
-      }
+      const d = await apiFetch('/clip', {
+        videoId:    '',
+        uploadPath: '',
+        streamUrl:  streamUrl,
+        start, end, formats,
+        user_id: currentUser?.id || '',
+      });
+      if(!d.jobId) throw new Error(d.error || 'No job ID');
+      pollJob(d.jobId, formats, clipStatusEl);
+      return;
+    } catch(e) {
+      console.warn('Direct clip from streamUrl failed:', e.message);
+      // Fall through to manual prompt
     }
   }
 
