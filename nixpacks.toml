@@ -1,14 +1,14 @@
 [phases.setup]
-nixPkgs = ["python313"]
+nixPkgs = ["python313", "ffmpeg", "which"]
 
 [phases.install]
 cmds = [
-  "apt-get update -qq && apt-get install -y ffmpeg -qq",
   "pip install --upgrade pip -q",
   "pip install -r requirements.txt -q",
   "pip install -U yt-dlp -q",
-  "ffmpeg -version | head -1",
-  "yt-dlp --version"
+  "echo 'ffmpeg path:' && which ffmpeg && ffmpeg -version | head -1",
+  "echo 'yt-dlp path:' && which yt-dlp && yt-dlp --version",
+  "echo 'python path:' && which python3"
 ]
 
 [phases.build]
