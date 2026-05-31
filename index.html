@@ -1876,44 +1876,49 @@ async function processClip(videoId, uploadPath, start, end, clipIndex) {
   let method = '';
 
   // Cobalt.tools - called from browser JS (user's IP, never blocked)
-  const cobaltHosts = [
+  // cobalt.tools - multiple instances, correct API format
+  const cobaltInstances = [
     'https://api.cobalt.tools',
-    'https://cobalt.tools/api/json',
+    'https://cobalt.tools',
+    'https://cob.193024.xyz',
   ];
-  for(const host of cobaltHosts) {
+  for(const inst of cobaltInstances) {
     try {
-      const apiUrl = host.endsWith('json') ? host : host + '/';
-      const cr = await fetch(apiUrl, {
+      const cr = await fetch(inst + '/api/json', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/124.0',
         },
         body: JSON.stringify({
           url: ytUrl,
-          videoQuality: '720',
-          filenameStyle: 'basic',
-          vCodec: 'h264',
+          vQuality: '720',
+          filenamePattern: 'basic',
+          isAudioOnly: false,
         })
       });
       if(cr.ok) {
         const cd = await cr.json();
-        if(cd.url) { streamUrl = cd.url; method = 'cobalt'; break; }
-        if(cd.status === 'stream' && cd.url) { streamUrl = cd.url; method = 'cobalt-stream'; break; }
+        console.log('cobalt response:', cd.status, cd.url ? cd.url.slice(0,60) : 'no url');
+        const u = cd.url || (cd.picker && cd.picker[0] && cd.picker[0].url);
+        if(u && u.startsWith('http')) {
+          streamUrl = u; method = 'cobalt';
+          console.log('cobalt OK:', inst);
+          break;
+        }
       }
-    } catch(e) { console.warn('cobalt attempt:', e.message); }
+    } catch(e) { console.warn('cobalt attempt:', inst, e.message); }
   }
 
-  // YTStream RapidAPI - called from browser (browser IP not blocked by RapidAPI)
+  // YTStream RapidAPI - called from browser (residential IP = not blocked)
   if(!streamUrl) {
     const RAPIDAPI_KEY = 'baed285076msh1d8942d32e8f72fp1c2d50jsn16c752545bef';
     try {
-      setStatus(spin('Trying RapidAPI YTStream…'));
+      setStatus(spin('Getting video URL from RapidAPI YTStream…'));
       const rr = await fetch(
         `https://ytstream-download-youtube-videos.p.rapidapi.com/dl?id=${resolvedVideo}`,
-        {
-          method: 'GET',
-          headers: {
+        { headers: {
             'X-RapidAPI-Key':  RAPIDAPI_KEY,
             'X-RapidAPI-Host': 'ytstream-download-youtube-videos.p.rapidapi.com',
           }
@@ -1921,38 +1926,64 @@ async function processClip(videoId, uploadPath, start, end, clipIndex) {
       );
       if(rr.ok) {
         const rd = await rr.json();
-        console.log('YTStream response:', JSON.stringify(rd).slice(0,300));
-        // Extract URL from response - handle multiple response formats
-        const urls = rd.formats || rd.url || rd.link || rd.links || rd.qualities || {};
-        if(typeof urls === 'string' && urls.startsWith('http')) {
-          streamUrl = urls; method = 'ytstream';
-        } else if(typeof urls === 'object') {
-          // Try common quality keys
-          for(const q of ['720','480','360','hd','sd','mp4','best']) {
-            const entry = urls[q] || urls[q+'p'];
-            if(!entry) continue;
-            const u = typeof entry === 'string' ? entry
-                     : entry.url || entry.link || entry.downloadUrl;
-            if(u && u.startsWith('http')) { streamUrl = u; method = `ytstream-${q}`; break; }
-          }
-          // Fallback: first string value that looks like URL
-          if(!streamUrl) {
-            const flatten = JSON.stringify(urls);
-          if(!streamUrl) {
-            const mp4idx = flatten.indexOf('.mp4');
-            if(mp4idx > 0) {
-              const start = flatten.lastIndexOf('http', mp4idx);
-              if(start >= 0) { streamUrl = flatten.slice(start, mp4idx+4); method = 'ytstream-extracted'; }
+        console.log('YTStream response keys:', Object.keys(rd));
+
+        // YTStream response structure:
+        // { status, id, title, formats: { "18": {url,qualityLabel}, "22": {...}, ... } }
+        // OR { status, id, title, url: { "360p": "https://...", "720p": "https://..." } }
+        // OR { status, id, title, "360": "https://...", "720": "https://..." } (flat)
+
+        const extractUrl = (obj) => {
+          if(!obj || typeof obj !== 'object') return null;
+          // Priority: 22=720p progressive, 18=360p progressive (both have audio)
+          // Avoid 137/248 (video-only, no audio)
+          const PROGRESSIVE = ['22','18','59','78']; // itags with audio+video
+          const ALL_QUALITY  = ['720','480','360','22','18','hd','sd','mp4'];
+
+          // Check formats sub-object
+          const fmt = obj.formats || obj.url || obj.links || obj.qualities || obj;
+          if(typeof fmt === 'object') {
+            // Try progressive itags first (have audio)
+            for(const itag of PROGRESSIVE) {
+              const f = fmt[itag];
+              if(!f) continue;
+              const u = typeof f === 'string' ? f : f.url || f.link || f.downloadUrl;
+              if(u && u.startsWith('http')) return u;
+            }
+            // Try quality labels
+            for(const q of ALL_QUALITY) {
+              const f = fmt[q] || fmt[q+'p'];
+              if(!f) continue;
+              const u = typeof f === 'string' ? f : f.url || f.link || f.downloadUrl;
+              if(u && u.startsWith('http')) return u;
+            }
+            // Try any key that has a URL value
+            for(const key of Object.keys(fmt)) {
+              const f = fmt[key];
+              const u = typeof f === 'string' ? f : (f && (f.url || f.link));
+              if(u && typeof u === 'string' && u.startsWith('http') && u.includes('video')) return u;
             }
           }
-            if(urlMatch) { streamUrl = urlMatch[0]; method = 'ytstream-extracted'; }
-          }
+          // Top-level string url
+          if(typeof obj.url === 'string' && obj.url.startsWith('http')) return obj.url;
+          return null;
+        };
+
+        const extracted = extractUrl(rd);
+        if(extracted) {
+          streamUrl = extracted;
+          method = 'ytstream';
+          console.log('YTStream URL found:', streamUrl.slice(0,80));
+        } else {
+          console.warn('YTStream: could not extract URL from response:', JSON.stringify(rd).slice(0,400));
         }
       } else {
-        const err = await rr.text();
-        console.warn('YTStream error:', rr.status, err.slice(0,100));
+        const errText = await rr.text();
+        console.warn('YTStream HTTP error:', rr.status, errText.slice(0,100));
       }
-    } catch(e) { console.warn('YTStream:', e.message); }
+    } catch(e) {
+      console.warn('YTStream fetch error:', e.message);
+    }
   }
 
   // Server-side extraction as next fallback
