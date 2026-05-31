@@ -1,19 +1,18 @@
 [phases.setup]
-nixPkgs = ["python313", "ffmpeg", "which"]
+nixPkgs = ["python313", "ffmpeg"]
 
 [phases.install]
 cmds = [
   "pip install --upgrade pip -q",
   "pip install -r requirements.txt -q",
-  "pip install -U yt-dlp -q",
-  "echo 'ffmpeg path:' && which ffmpeg && ffmpeg -version | head -1",
-  "echo 'yt-dlp path:' && which yt-dlp && yt-dlp --version",
-  "echo 'python path:' && which python3"
+  "pip install -U yt-dlp -q"
 ]
 
 [phases.build]
 cmds = [
-  "mkdir -p /tmp/vidpost_clips /tmp/vidpost_uploads"
+  "mkdir -p /tmp/vidpost_clips /tmp/vidpost_uploads",
+  "which ffmpeg || echo 'WARNING: ffmpeg not in PATH'",
+  "ffmpeg -version 2>&1 | head -2 || echo 'WARNING: ffmpeg not runnable'"
 ]
 
 [start]
