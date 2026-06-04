@@ -1,0 +1,20 @@
+[phases.setup]
+nixPkgs = ["python313", "ffmpeg"]
+
+[phases.install]
+cmds = [
+  "pip install --upgrade pip -q",
+  "pip install -r requirements.txt --break-system-packages -q",
+  "pip install -U yt-dlp --break-system-packages -q",
+  "echo 'Build ffmpeg check:' && (ffmpeg -version 2>&1 | head -1 || echo 'ffmpeg not in build PATH - will install at runtime')",
+  "echo 'Build yt-dlp check:' && (yt-dlp --version 2>/dev/null || echo 'yt-dlp not in build PATH')"
+]
+
+[phases.build]
+cmds = [
+  "mkdir -p /tmp/vidpost_clips /tmp/vidpost_uploads",
+  "chmod +x start.sh"
+]
+
+[start]
+cmd = "bash start.sh"
