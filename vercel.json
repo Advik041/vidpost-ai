@@ -23,7 +23,7 @@
   ],
   "crons": [
     {
-      "path": "/api/schedule/run?secret=REPLACE_WITH_YOUR_CRON_SECRET",
+      "path": "/api/schedule/run?secret=e46f1ad8-dfbc-4e3c-a9df-dbc30e66dd17a8e482f3-e127-4ef3-a50a-9d7b7a3bbb73",
       "schedule": "*/15 * * * *"
     }
   ]
