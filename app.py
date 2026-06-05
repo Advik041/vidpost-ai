@@ -1699,54 +1699,120 @@ def burn_captions_ffmpeg(inp: str, srt_path: str, out: str,
 # PEXELS B-ROLL — FIXED
 # ════════════════════════════════════════════════════════════════════════════════
 
-def fetch_pexels_videos(keywords: str, count: int = 3) -> list:
-    """
-    ROOT CAUSE OF OLD BUG:
-    The old code split keywords by spaces, so "basketball player" became
-    ["basketball", "player"] — searching one word at a time, getting generic
-    results. Also filtered width <= 1080, which excluded portrait videos
-    (portrait has width ~608, height ~1080 at HD).
+def _ai_broll_keywords(title: str, transcript: str, groq_key: str) -> list:
+    """Use Groq to extract the best B-roll search keywords for a video clip."""
+    if not groq_key:
+        return []
+    try:
+        prompt = f"""Extract 5 specific B-roll video search keywords for this content.
+Title: "{title}"
+Context: {transcript[:500]}
 
-    FIX: Search full keyword phrases. Accept both landscape AND portrait.
-    Filter by height instead for portrait-first (9:16) content.
+Rules:
+- Each keyword/phrase should describe a VISUAL scene that would enhance the content
+- Be specific: "businessman shaking hands" not "business"
+- Prefer action/cinematic scenes over abstract concepts
+- Think like a video editor choosing cutaway footage
+
+Return ONLY a JSON array of strings:
+["keyword 1", "keyword 2", "keyword 3", "keyword 4", "keyword 5"]"""
+        raw = _groq_chat([{"role": "user", "content": prompt}], max_tokens=200)
+        if raw:
+            raw = re.sub(r"```(?:json)?|```", "", raw).strip()
+            m = re.search(r"\[.*?\]", raw, re.DOTALL)
+            if m:
+                return [str(k).strip() for k in json.loads(m.group()) if k][:5]
+    except Exception as e:
+        print(f"AI broll keywords error: {e}")
+    return []
+
+
+def fetch_pexels_videos(keywords: str, count: int = 4,
+                         title: str = "", transcript: str = "") -> list:
+    """
+    Fetch contextually relevant B-roll from Pexels.
+    Enhanced: AI keyword extraction, portrait-first, quality ranking,
+    deduplication, fallback to landscape if portrait unavailable.
     """
     if not PEXELS_KEY:
         return []
 
+    # Try AI keywords first if title provided
+    ai_kws = []
+    if title and GROQ_KEY:
+        ai_kws = _ai_broll_keywords(title, transcript or keywords, GROQ_KEY)
+
+    # Build keyword list: AI keywords + manual keywords
+    manual_kws = [kw.strip() for kw in keywords.replace(",", "|").split("|") if kw.strip()]
+    all_kws = (ai_kws + manual_kws)[:6]
+    if not all_kws:
+        all_kws = ["cinematic footage"]
+
     results = []
-    # Split by comma, keep multi-word phrases intact
-    kw_list = [kw.strip() for kw in keywords.replace(",", "|").split("|") if kw.strip()][:4]
+    seen_ids = set()
 
-    for kw in kw_list:
-        try:
-            resp = requests.get(
-                "https://api.pexels.com/videos/search",
-                headers={"Authorization": PEXELS_KEY},
-                params={"query": kw, "per_page": 5, "orientation": "portrait", "size": "medium"},
-                timeout=15,
-            )
-            if not resp.ok:
-                print(f"Pexels API error for '{kw}': {resp.status_code} {resp.text[:100]}")
+    def _best_file(video_files: list, prefer_portrait: bool = True) -> str | None:
+        """Pick best video file: portrait HD > landscape HD > portrait SD > any."""
+        portrait_hd, landscape_hd, portrait_sd, any_file = None, None, None, None
+        for vf in video_files:
+            w = vf.get("width", 0)
+            h = vf.get("height", 0)
+            q = vf.get("quality", "")
+            link = vf.get("link", "")
+            if not link:
                 continue
+            is_portrait = h > w
+            is_hd = q == "hd" and h >= 720
+            is_sd = q in ("hd", "sd") and h >= 480
+            if is_portrait and is_hd and not portrait_hd:
+                portrait_hd = link
+            elif not is_portrait and is_hd and not landscape_hd:
+                landscape_hd = link
+            elif is_portrait and is_sd and not portrait_sd:
+                portrait_sd = link
+            if not any_file and link:
+                any_file = link
+        if prefer_portrait:
+            return portrait_hd or landscape_hd or portrait_sd or any_file
+        return landscape_hd or portrait_hd or portrait_sd or any_file
 
-            videos = resp.json().get("videos", [])
-            for v in videos:
-                best_file = None
-                best_height = 0
-                for vf in v.get("video_files", []):
-                    h = vf.get("height", 0)
-                    # FIX: prefer portrait (height > width) HD files
-                    if vf.get("quality") in ("hd", "sd") and h >= 720:
-                        if h > best_height:
-                            best_height = h
-                            best_file = vf["link"]
-                if best_file:
-                    results.append(best_file)
-                    if len(results) >= count:
-                        return results
-        except Exception as e:
-            print(f"Pexels '{kw}': {e}")
+    for kw in all_kws:
+        if len(results) >= count:
+            break
+        for orientation in ("portrait", "landscape"):
+            if len(results) >= count:
+                break
+            try:
+                resp = requests.get(
+                    "https://api.pexels.com/videos/search",
+                    headers={"Authorization": PEXELS_KEY},
+                    params={
+                        "query": kw,
+                        "per_page": 8,
+                        "orientation": orientation,
+                        "size": "medium",
+                        "min_duration": 4,
+                        "max_duration": 20,
+                    },
+                    timeout=15,
+                )
+                if not resp.ok:
+                    continue
+                videos = resp.json().get("videos", [])
+                for v in videos:
+                    vid_id = v.get("id")
+                    if vid_id in seen_ids:
+                        continue
+                    link = _best_file(v.get("video_files", []))
+                    if link:
+                        seen_ids.add(vid_id)
+                        results.append(link)
+                        if len(results) >= count:
+                            break
+            except Exception as e:
+                print(f"Pexels '{kw}' ({orientation}): {e}")
 
+    print(f"Pexels: found {len(results)} clips for keywords: {all_kws[:3]}")
     return results[:count]
 
 
@@ -2553,7 +2619,10 @@ def editor_export():
             if broll and broll_kw and PEXELS_KEY:
                 job_update(job_id, "running", 55, "Fetching B-roll from Pexels...")
                 broll_clips_paths = []
-                urls = fetch_pexels_videos(broll_kw, count=3)
+                clip_title = gf("title", broll_kw)
+                clip_tx = TRANSCRIPT_CACHE.get(video_id, "") if video_id else ""
+                urls = fetch_pexels_videos(broll_kw, count=4,
+                                           title=clip_title, transcript=str(clip_tx)[:500])
                 for i, u in enumerate(urls):
                     bp = os.path.join(job_dir, f"broll_{i}.mp4")
                     if download_pexels_clip(u, bp, duration=5):

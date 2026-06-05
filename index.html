@@ -1044,8 +1044,14 @@ function toggleTheme(){var d=document.documentElement.getAttribute('data-theme')
                 </div>
                 <div id="ed-broll-opts" style="display:none;flex-direction:column;gap:8px">
                   <div>
-                    <div class="ed-field-label">Keywords</div>
-                    <input type="text" id="ed-broll-kw" placeholder="e.g. entrepreneur, business, laptop" style="font-size:11px"/>
+                    <div class="ed-field-label" style="display:flex;align-items:center;justify-content:space-between">
+                      <span>Keywords</span>
+                      <button onclick="autoFillBrollKw()" style="font-size:10px;font-family:var(--font-mono);background:transparent;border:1px solid var(--border);border-radius:3px;padding:2px 7px;cursor:pointer;color:var(--purple3)">✨ Auto-fill</button>
+                    </div>
+                    <input type="text" id="ed-broll-kw" placeholder="e.g. entrepreneur, office meeting, laptop typing" style="font-size:11px"/>
+                    <div style="font-size:10px;font-family:var(--font-mono);color:var(--ink3);margin-top:4px">
+                      Separate with commas. AI will enhance your keywords for best results.
+                    </div>
                   </div>
                   <div>
                     <div class="ed-field-label">Frequency</div>
@@ -1843,6 +1849,30 @@ function editorOpenByIndex(i) {
   editorOpenClip(videoUrl, clip.title||'', clip.start, clip.end, videoId, uploadPath);
 }
 
+function autoFillBrollKw() {
+  const kwEl = $('ed-broll-kw');
+  if(!kwEl) return;
+  // Generate keyword suggestions from title
+  if(currentTitle) {
+    // Extract meaningful words (skip stop words)
+    const stops = new Set(['the','a','an','and','or','but','in','on','at','to','for','of','with','by','from','this','that','is','are','was','were','be','been','have','has','had','do','does','did','will','would','could','should','may','might','can','how','what','why','when','where','who','which']);
+    const words = currentTitle.toLowerCase()
+      .replace(/[^\w\s]/g, ' ')
+      .split(/\s+/)
+      .filter(w => w.length > 3 && !stops.has(w));
+    // Build 2-3 word phrases
+    const phrases = [];
+    for(let i=0; i<words.length-1; i++) {
+      phrases.push(words[i] + ' ' + words[i+1]);
+    }
+    if(words.length) phrases.unshift(...words.slice(0,2));
+    kwEl.value = [...new Set(phrases)].slice(0,4).join(', ');
+    showOk('✨ Keywords auto-filled from video title');
+  } else {
+    showErr('Analyse a video first to auto-fill keywords');
+  }
+}
+
 function scheduleClipByIndex(i) {
   // Switch to Schedule tab and pre-fill the form with this clip's publicUrl + caption
   const d = $('cg')._clipData;
@@ -2221,7 +2251,7 @@ async function editorLoadUrl() {
   const raw=($('ed-url')||{value:''}).value.trim();
   if(!raw){showErr('Paste a URL first');return;}
   const btn=$('ed-load-btn'); btn.disabled=true; btn.textContent='Loading…';
-  await _editorLoad(raw);
+  try { await _editorLoad(raw); } catch(e){ showErr(e.message); }
   btn.disabled=false; btn.textContent='Load →';
 }
 async function editorLoadUrlTop() {
@@ -2251,13 +2281,13 @@ async function _editorLoadYouTubeStream(videoId, title) {
   $('vid-loading-msg').textContent = 'Preparing YouTube preview…';
 
   // Request the stream (backend starts download if not cached)
-  const streamUrl = `${API}/stream/${videoId}`;
+  const streamUrl = `${RAILWAY}/stream/${videoId}`;
   const r = await fetch(streamUrl,{method:'GET'});
 
   if(r.ok && r.headers.get('content-type')?.includes('video')) {
     // Already cached — set src directly
-    edVideoUrl = proxyUrl(streamUrl);
-    const v=$('ed-video'); v.src=proxyUrl(streamUrl); v.load();
+    edVideoUrl = streamUrl;
+    const v=$('ed-video'); v.src=streamUrl; v.load();
     return;
   }
 
@@ -2270,8 +2300,8 @@ async function _editorLoadYouTubeStream(videoId, title) {
         const s = await fetch(`/api/stream-status/${videoId}`).then(x=>x.json());
         if(s.ready){
           clearInterval(_streamPollTimer); _streamPollTimer=null;
-          edVideoUrl=proxyUrl(streamUrl);
-          const v=$('ed-video'); v.src=proxyUrl(streamUrl); v.load();
+          edVideoUrl=streamUrl;
+          const v=$('ed-video'); v.src=streamUrl; v.load();
         } else if(s.status==='error'){
           clearInterval(_streamPollTimer); _streamPollTimer=null;
           $('vid-loading-overlay').style.display='none';
@@ -2288,7 +2318,11 @@ async function _editorLoadYouTubeStream(videoId, title) {
 }
 
 function editorOpenClip(videoUrl, title, start, end, videoId, uploadPath) {
-  videoUrl = proxyUrl(videoUrl); // FIX: rewrite Railway absolute URLs to /api/ proxy
+  // For video src, use Railway direct — proxyUrl would route through Vercel (50MB limit, no Range)
+  // Only rewrite relative paths that need the /api prefix
+  if(videoUrl && !videoUrl.startsWith('http') && !videoUrl.startsWith('/api')) {
+    videoUrl = '/api' + videoUrl;
+  }
   switchTab('editor');
   // Reset state
   edStart=parseFloat(start)||0; edEnd=parseFloat(end)||60; edCuts=[];
@@ -2500,8 +2534,12 @@ async function editorExport(){
     <div id="ed-pmsg" style="font-size:11px;font-family:var(--font-mono);color:var(--ink2)">Sending to server…</div>
   </div>`;
   try {
+    // Use videoId when available so backend downloads fresh with yt-dlp
+    // rather than trying to re-download from the stream endpoint (which is ephemeral)
     const base={
-      video_url:edVideoUrl,start:edStart,end:edEnd,
+      video_url: currentVideoId ? '' : edVideoUrl,
+      videoId:   currentVideoId || '',
+      start:edStart,end:edEnd,
       captions:!!document.getElementById('ed-captions')?.checked,
       caption_style:edCapStyle,caption_size:edCapSize,
       formats:edFmt,quality:edQuality,
@@ -2518,7 +2556,7 @@ async function editorExport(){
       lower_third:!!document.getElementById('ed-lower-on')?.checked,
       lower_name:$('ed-lower-name')?.value||'',
       lower_title:$('ed-lower-title')?.value||'',
-      videoId:currentVideoId||undefined,
+      // videoId already set above
       user_id:currentUser?.id||'',
     };
     let body;
