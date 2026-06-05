@@ -3191,11 +3191,16 @@ def schedule_delete(post_id):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@app.route("/schedule/run", methods=["POST", "OPTIONS"])
+@app.route("/schedule/run", methods=["GET", "POST", "OPTIONS"])
 def schedule_run():
     if request.method == "OPTIONS":
         return jsonify({}), 200
-    if request.headers.get("X-Cron-Secret", "") != os.environ.get("CRON_SECRET", ""):
+    # Auth: accept secret from query param (Vercel cron) OR X-Cron-Secret header (manual)
+    cron_secret = os.environ.get("CRON_SECRET", "")
+    provided = (request.args.get("secret", "") or
+                request.headers.get("X-Cron-Secret", "") or
+                request.headers.get("Authorization", "").replace("Bearer ", ""))
+    if cron_secret and provided != cron_secret:
         return jsonify({"error": "Unauthorized"}), 401
     if not supa:
         return jsonify({"published": 0}), 200

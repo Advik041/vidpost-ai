@@ -1190,7 +1190,10 @@ function toggleTheme(){var d=document.documentElement.getAttribute('data-theme')
         <div id="sched-form" style="display:none;background:var(--bg3);border-radius:var(--r);padding:14px;border:1px solid var(--border);margin-bottom:14px">
           <div style="font-family:var(--font-head);font-size:13px;font-weight:700;margin-bottom:10px">New scheduled post</div>
           <textarea id="sched-text" rows="3" placeholder="Caption text…" style="margin-bottom:8px;resize:vertical"></textarea>
-          <input type="text" id="sched-video" placeholder="Video URL (optional)" style="margin-bottom:8px"/>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+            <input type="text" id="sched-video" placeholder="Use 'Schedule' on a clip card, or paste a direct video URL" style="flex:1;font-size:11px" readonly/>
+            <button onclick="$('sched-video').value='';$('sched-video').removeAttribute('readonly')" style="background:transparent;border:1px solid var(--border);border-radius:var(--r);padding:4px 8px;font-size:10px;cursor:pointer;color:var(--ink3);white-space:nowrap;font-family:var(--font-mono)" title="Clear and allow manual entry">✕</button>
+          </div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px" id="sched-plat-btns"></div>
           <input type="datetime-local" id="sched-dt" style="margin-bottom:10px"/>
           <div style="display:flex;gap:8px">
@@ -1802,6 +1805,8 @@ function renderClips(clips, videoId, duration, uploadPath) {
             onclick="processClipByIndex(${i})">✂ Generate clip</button>
           <button style="padding:8px 14px;font-size:12px;background:transparent;border:1px solid var(--border2);border-radius:var(--r);color:var(--ink2);cursor:pointer;font-family:var(--font-head);font-weight:600;transition:all .2s"
             onclick="editorOpenByIndex(${i})">🎬 Open in editor</button>
+          <button style="padding:8px 14px;font-size:12px;background:transparent;border:1px solid var(--border2);border-radius:var(--r);color:var(--ink2);cursor:pointer;font-family:var(--font-head);font-weight:600;transition:all .2s"
+            onclick="scheduleClipByIndex(${i})">📅 Schedule</button>
         </div>
         <div id="clip-status-${i}" style="margin-top:10px"></div>
       </div>`;
@@ -1830,6 +1835,19 @@ function editorOpenByIndex(i) {
     videoUrl = API + '/stream-upload?path=' + encodeURIComponent(uploadPath);
   }
   editorOpenClip(videoUrl, clip.title||'', clip.start, clip.end, videoId, uploadPath);
+}
+
+function scheduleClipByIndex(i) {
+  // Switch to Schedule tab and pre-fill the form with this clip's publicUrl + caption
+  const d = $('cg')._clipData;
+  if(!d) return;
+  const clip = d.clips[i];
+  // publicUrl is set on the clip object after generation; before generation use empty
+  const videoUrl = clip.publicUrl || clip.streamUrl || '';
+  const caption  = clip.caption  || clip.title     || '';
+  switchTab('schedule');
+  showScheduleForm(videoUrl, caption);
+  if(!videoUrl) showOk('Generate the clip first to get a video URL, then schedule it.');
 }
 
 function toggleClip(head) {
@@ -2123,14 +2141,22 @@ async function pollJob(jobId, formats, clipStatusEl) {
       if(j.status === 'done') {
         clearInterval(iv); hideSt();
         const files = j.files || {};
-        const btns = Object.entries(files).map(([fmt, info]) => `
+        const btns = Object.entries(files).map(([fmt, info]) => {
+          const schedUrl = info.publicUrl || (location.origin + '/api' + info.downloadUrl);
+          const schedCap = encodeURIComponent(currentTitle || '');
+          return `
           <a href="/api${info.downloadUrl}" download class="dl-btn">
             ⬇ ${fmt==='vertical'?'📱 9:16':'🖥 16:9'} ${info.sizeMb}MB
           </a>
           <button class="dl-btn" style="background:var(--bg3);color:var(--ink);border:1px solid var(--border2)"
             onclick="editorOpenClip('${proxyUrl(info.streamUrl) || ('/api' + info.downloadUrl)}','${esc(currentTitle)}',0,0,'','')">
             🎬 Edit in studio
-          </button>`).join('');
+          </button>
+          <button class="dl-btn" style="background:var(--bg3);color:var(--ink);border:1px solid var(--border2)"
+            onclick="(function(u,c){switchTab('schedule');showScheduleForm(u,decodeURIComponent(c))}('${schedUrl}',schedCap))">
+            📅 Schedule
+          </button>`;
+        }).join('');
 
         showOk('✅ Clip ready!');
         setClipStatus(`
@@ -2709,22 +2735,59 @@ function renderAnalytics(d){
 
 // ── Scheduling ────────────────────────────────────────────────────────────────
 let schedPosts=[], calDate=new Date(), schedSelPlats=new Set(['linkedin']);
-function showScheduleForm(){
+function showScheduleForm(videoUrl, prefillText){
   $('sched-form').style.display='block';
+  // Reset form state on each open
+  schedSelPlats = new Set();
+  $('sched-text').value = '';
+  $('sched-video').value = '';
+  $('sched-video').setAttribute('readonly', '');
   const t=new Date();t.setDate(t.getDate()+1);t.setHours(9,0,0,0);
   $('sched-dt').value=t.toISOString().slice(0,16);
+  // Pre-fill video URL and caption if called from a clip card
+  if(videoUrl){ $('sched-video').value=videoUrl; }
+  if(prefillText){ $('sched-text').value=prefillText; }
+  // Scroll form into view
+  $('sched-form').scrollIntoView({behavior:'smooth', block:'nearest'});
   const plats=['linkedin','youtube','instagram','tiktok','twitter','facebook'];
   $('sched-plat-btns').innerHTML=plats.map(p=>`<button class="ed-pill${schedSelPlats.has(p)?' on':''}" onclick="toggleSchedPlat(this,'${p}')">${p}</button>`).join('');
 }
 function toggleSchedPlat(btn,p){if(schedSelPlats.has(p))schedSelPlats.delete(p);else schedSelPlats.add(p);btn.classList.toggle('on',schedSelPlats.has(p));}
 async function submitSchedule(){
   if(!currentUser){showErr('Sign in first');return;}
-  const text=$('sched-text').value.trim(),dt=$('sched-dt').value;
-  if(!text||!dt||schedSelPlats.size===0){showErr('Fill in text, platforms and date/time');return;}
+  const text=$('sched-text').value.trim();
+  const dt=$('sched-dt').value;
+  const videoUrl=$('sched-video').value.trim();
+  if(!text)  { showErr('Please add a caption text.'); return; }
+  if(!dt)    { showErr('Please pick a date and time.'); return; }
+  if(schedSelPlats.size===0){ showErr('Select at least one platform.'); return; }
+  // Warn if no video — still allow (text-only posts are valid for LinkedIn/Twitter)
+  if(!videoUrl){
+    const ok=confirm('No video URL attached. Post as text-only?');
+    if(!ok) return;
+  }
+  // Validate date is in the future
+  if(new Date(dt) <= new Date()){
+    showErr('Scheduled time must be in the future.'); return;
+  }
+  const btn=event?.target; if(btn){btn.disabled=true;btn.textContent='Scheduling…';}
   try {
-    await apiFetch('/schedule/create',{user_id:currentUser.id,platforms:[...schedSelPlats],text,video_url:$('sched-video').value.trim(),scheduled_at:new Date(dt).toISOString()});
-    showOk('✅ Scheduled!'); $('sched-form').style.display='none'; $('sched-text').value=''; $('sched-video').value=''; loadSchedule();
-  } catch(e){showErr('Schedule failed: '+e.message);}
+    await apiFetch('/schedule/create',{
+      user_id: currentUser.id,
+      platforms: [...schedSelPlats],
+      text,
+      video_url: videoUrl,
+      scheduled_at: new Date(dt).toISOString()
+    });
+    showOk('✅ Scheduled for '+new Date(dt).toLocaleString());
+    $('sched-form').style.display='none';
+    schedSelPlats=new Set();
+    loadSchedule();
+  } catch(e){
+    showErr('Schedule failed: '+e.message);
+  } finally {
+    if(btn){btn.disabled=false;btn.textContent='Schedule →';}
+  }
 }
 async function loadSchedule(){
   if(!currentUser) return;
@@ -2734,13 +2797,46 @@ async function loadSchedule(){
   } catch(e){}
 }
 function renderScheduleList(){
-  const all=[...schedPosts.filter(p=>p.status==='pending').sort((a,b)=>a.scheduled_at>b.scheduled_at?1:-1),...schedPosts.filter(p=>p.status!=='pending').slice(-5).reverse()];
-  $('sched-list').innerHTML=all.length?all.map(p=>{
-    const dt=new Date(p.scheduled_at);
-    const dtStr=dt.toLocaleDateString()+' '+dt.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
-    const cls={'pending':'sched-status-pending','posted':'sched-status-posted','failed':'sched-status-failed'}[p.status]||'sched-status-pending';
-    return `<div class="sched-item"><span class="sched-plat-badge">${p.platform}</span><div style="flex:1"><div style="font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(p.text||'').slice(0,60)}</div><div style="font-size:10px;font-family:var(--font-mono);color:var(--ink3);margin-top:2px">${dtStr}</div></div><span class="${cls}">${p.status==='pending'?'⏰':p.status==='posted'?'✓':'✗'}</span>${p.status==='pending'?`<button onclick="deleteScheduled('${p.id}')" style="padding:3px 8px;background:transparent;border:1px solid var(--border);border-radius:var(--r);color:var(--ink3);font-size:10px;cursor:pointer;font-family:var(--font-mono)">✕</button>`:''}</div>`;
-  }).join(''):'<div style="color:var(--ink3);font-size:12px;font-family:var(--font-mono);padding:24px;text-align:center">No scheduled posts yet.</div>';
+  const all=[
+    ...schedPosts.filter(p=>p.status==='pending').sort((a,b)=>a.scheduled_at>b.scheduled_at?1:-1),
+    ...schedPosts.filter(p=>p.status!=='pending').slice(-10).reverse()
+  ];
+  if(!all.length){
+    $('sched-list').innerHTML='<div style="color:var(--ink3);font-size:12px;font-family:var(--font-mono);padding:24px;text-align:center">No scheduled posts yet.<br><span style="opacity:.6">Use the Schedule → button on any generated clip.</span></div>';
+    return;
+  }
+  $('sched-list').innerHTML = all.map(p => {
+    const dt    = new Date(p.scheduled_at);
+    const isPast = dt < new Date();
+    const dtStr = dt.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})
+                + ' · ' + dt.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+    const statusIcon = {pending:'⏰',posted:'✅',failed:'❌'}[p.status]||'⏰';
+    const statusCls  = {pending:'sched-status-pending',posted:'sched-status-posted',failed:'sched-status-failed'}[p.status]||'sched-status-pending';
+    const videoChip  = p.video_url
+      ? `<a href="${p.video_url}" target="_blank" rel="noopener" style="font-size:10px;font-family:var(--font-mono);color:var(--purple);text-decoration:none;border:1px solid rgba(139,92,246,.3);border-radius:3px;padding:1px 5px;white-space:nowrap">📎 video</a>`
+      : `<span style="font-size:10px;font-family:var(--font-mono);color:var(--ink3);opacity:.5">text-only</span>`;
+    const errorMsg = p.status==='failed' && p.error_msg
+      ? `<div style="font-size:10px;color:#ef4444;font-family:var(--font-mono);margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(p.error_msg)}">⚠ ${esc(p.error_msg).slice(0,80)}</div>`
+      : '';
+    const actions = p.status==='pending'
+      ? `<button onclick="deleteScheduled('${p.id}')" style="padding:3px 8px;background:transparent;border:1px solid var(--border);border-radius:var(--r);color:var(--ink3);font-size:10px;cursor:pointer;font-family:var(--font-mono)" title="Cancel post">✕</button>`
+      : '';
+    return `<div class="sched-item" style="flex-direction:column;gap:4px;padding:10px 12px">
+      <div style="display:flex;align-items:center;gap:8px;width:100%">
+        <span class="sched-plat-badge">${p.platform}</span>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc((p.text||'').slice(0,70))}</div>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:3px">
+            <span style="font-size:10px;font-family:var(--font-mono);color:var(--ink3)">${dtStr}</span>
+            ${videoChip}
+          </div>
+          ${errorMsg}
+        </div>
+        <span class="${statusCls}" style="display:flex;align-items:center;gap:4px">${statusIcon} ${p.status}</span>
+        ${actions}
+      </div>
+    </div>`;
+  }).join('');
 }
 async function deleteScheduled(id){
   if(!currentUser) return;
