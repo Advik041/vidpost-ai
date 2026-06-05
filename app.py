@@ -1503,44 +1503,107 @@ def _groq_chat(messages: list, max_tokens: int = 1000, temperature: float = 0.1)
 # ════════════════════════════════════════════════════════════════════════════════
 
 def _detect_clips(title: str, duration: int, transcript: str, groq_key: str) -> list:
+    """
+    AI-powered clip detection using Groq.
+    Returns clips ranked by virality with hook, retention, and topic signals.
+    Falls back to evenly-spaced segments if AI fails.
+    """
     clips = []
     if groq_key:
         try:
-            prompt = f"""Find 5 best viral moments to clip from this video.
-VIDEO: "{title}" DURATION: {duration}s
-TRANSCRIPT: {transcript[:4000]}
+            # Truncate transcript intelligently — keep start and end (hooks + CTAs)
+            tx = transcript.strip()
+            if len(tx) > 5000:
+                tx = tx[:3000] + "\n...[middle trimmed]...\n" + tx[-1500:]
 
-Return ONLY a JSON array, no other text:
-[{{"start":10,"end":70,"title":"Hook Title","hook":"First sentence hook","virality_score":8,"reason":"Why viral"}}]
+            prompt = f"""You are a viral video editor. Find the 5 best moments to clip from this video for social media.
 
-Rules:
-- Each clip 30-90 seconds
-- start/end must be within 0-{duration}
-- Space clips throughout the video
-- virality_score 1-10
-- ONLY return the JSON array"""
-            raw = _groq_chat([{"role": "user", "content": prompt}], max_tokens=1000)
+VIDEO TITLE: "{title}"
+DURATION: {duration} seconds
+TRANSCRIPT:
+{tx}
+
+Analyze for:
+- Strong hooks (surprising statements, questions, bold claims)
+- Emotional peaks (stories, reveals, humor, inspiration)
+- High-value information (tips, how-tos, lists)
+- Story arcs with clear beginning, middle, end
+- Curiosity gaps that make viewers watch till the end
+- Energy spikes (laughter, emphasis, reactions)
+
+Return ONLY a valid JSON array. No explanation, no markdown, no code fences:
+[
+  {{
+    "start": 10,
+    "end": 75,
+    "title": "Punchy clip title (under 60 chars)",
+    "hook": "First sentence that hooks viewers immediately",
+    "virality_score": 8,
+    "retention_score": 7,
+    "emotion": "curiosity",
+    "topic": "main topic keyword",
+    "reason": "Why this moment works for social media"
+  }}
+]
+
+RULES:
+- Each clip: 30-90 seconds (optimal for short-form)
+- start and end must be within 0 to {duration}
+- Spread clips throughout the video — don't cluster at the start
+- virality_score and retention_score: 1-10
+- emotion: one of: curiosity, humor, inspiration, shock, education, story
+- Return ONLY the JSON array, nothing else"""
+
+            raw = _groq_chat([{"role": "user", "content": prompt}], max_tokens=1500)
             if raw:
+                # Strip any accidental markdown fences
+                raw = re.sub(r'```(?:json)?|```', '', raw).strip()
                 match = re.search(r'\[[\s\S]*?\]', raw)
                 if match:
                     parsed = json.loads(match.group())
-                    clips = [c for c in parsed
-                             if isinstance(c.get("start"), (int, float))
-                             and isinstance(c.get("end"), (int, float))
-                             and 0 <= c["start"] < c["end"] <= duration
-                             and (c["end"] - c["start"]) >= 15]
+                    validated = []
+                    for c in parsed:
+                        s = float(c.get("start", 0))
+                        e = float(c.get("end", 0))
+                        if (isinstance(s, (int, float)) and isinstance(e, (int, float))
+                                and 0 <= s < e <= duration
+                                and (e - s) >= 15
+                                and (e - s) <= 120):
+                            validated.append({
+                                "start":           round(s, 1),
+                                "end":             round(e, 1),
+                                "title":           str(c.get("title", f"Clip"))[:80],
+                                "hook":            str(c.get("hook", ""))[:200],
+                                "virality_score":  max(1, min(10, int(c.get("virality_score", 7)))),
+                                "retention_score": max(1, min(10, int(c.get("retention_score", 7)))),
+                                "emotion":         str(c.get("emotion", ""))[:30],
+                                "topic":           str(c.get("topic", ""))[:50],
+                                "reason":          str(c.get("reason", ""))[:300],
+                            })
+                    # Sort by virality descending
+                    clips = sorted(validated, key=lambda x: x["virality_score"], reverse=True)[:5]
         except Exception as e:
             print(f"AI clip detection error: {e}")
 
     if not clips:
-        seg = max(duration // 6, 40)
-        for i in range(5):
-            s = i * seg + 10
+        # Fallback: intelligent spacing — skip first 5s and last 5s of video
+        usable = max(duration - 10, 30)
+        seg = max(usable // 5, 35)
+        for i in range(min(5, usable // 35)):
+            s = 5 + i * seg
             e = min(s + 60, duration - 5)
             if e > s + 15:
-                clips.append({"start": s, "end": e, "title": f"Highlight {i+1}",
-                               "hook": "Watch this...", "virality_score": 7,
-                               "reason": "Auto-detected segment"})
+                clips.append({
+                    "start":           round(s, 1),
+                    "end":             round(e, 1),
+                    "title":           f"Highlight {i + 1}",
+                    "hook":            "Watch this moment...",
+                    "virality_score":  7,
+                    "retention_score": 6,
+                    "emotion":         "education",
+                    "topic":           title[:50],
+                    "reason":          "Auto-detected segment",
+                })
     return clips
 
 

@@ -1784,6 +1784,10 @@ function renderClips(clips, videoId, duration, uploadPath) {
 
   clips.forEach((c,i)=>{
     const score=Math.round(c.virality_score||7);
+    const retScore=Math.round(c.retention_score||7);
+    const emotion=c.emotion||'';
+    const topic=c.topic||'';
+    const emotionEmoji={'curiosity':'🤔','humor':'😂','inspiration':'✨','shock':'😱','education':'📚','story':'📖'}[emotion]||'🎬';
     const dur=Math.round(c.end-c.start);
     const div=document.createElement('div');
     div.className='clip-card2';
@@ -1797,6 +1801,8 @@ function renderClips(clips, videoId, duration, uploadPath) {
         </div>
         <div class="clip-score">${Array(10).fill(0).map((_,j)=>`<div class="sdot${j<score?' on':''}"></div>`).join('')}</div>
         <span style="font-family:var(--font-mono);font-size:10px;color:var(--purple3);margin-left:6px">${score}/10</span>
+        ${emotion?`<span style="font-size:10px;font-family:var(--font-mono);color:var(--ink3);background:var(--bg3);border:1px solid var(--border);border-radius:3px;padding:1px 6px;margin-left:6px">${emotionEmoji} ${emotion}</span>`:''}
+        ${topic?`<span style="font-size:10px;font-family:var(--font-mono);color:var(--ink3);background:var(--bg3);border:1px solid var(--border);border-radius:3px;padding:1px 6px;margin-left:4px"># ${topic}</span>`:''}
       </div>
       <div class="clip-body2">
         <div style="font-size:12px;color:var(--ink2);line-height:1.6;margin-bottom:12px">${esc(c.reason||'')}</div>
@@ -1941,93 +1947,9 @@ async function processClip(videoId, uploadPath, start, end, clipIndex) {
     } catch(e) { console.warn('cobalt attempt:', inst, e.message); }
   }
 
-  // YTStream RapidAPI - called from browser (residential IP = not blocked)
-  if(!streamUrl) {
-    const RAPIDAPI_KEY = 'baed285076msh1d8942d32e8f72fp1c2d50jsn16c752545bef';
-    try {
-      setStatus(spin('Getting video URL from RapidAPI YTStream…'));
-      const rr = await fetch(
-        `https://ytstream-download-youtube-videos.p.rapidapi.com/dl?id=${resolvedVideo}`,
-        { headers: {
-            'X-RapidAPI-Key':  RAPIDAPI_KEY,
-            'X-RapidAPI-Host': 'ytstream-download-youtube-videos.p.rapidapi.com',
-          }
-        }
-      );
-      if(rr.ok) {
-        const rd = await rr.json();
-        console.log('YTStream response keys:', Object.keys(rd));
-
-        // YTStream response structure:
-        // { status, id, title, formats: { "18": {url,qualityLabel}, "22": {...}, ... } }
-        // OR { status, id, title, url: { "360p": "https://...", "720p": "https://..." } }
-        // OR { status, id, title, "360": "https://...", "720": "https://..." } (flat)
-
-        const extractUrl = (obj) => {
-          if(!obj || typeof obj !== 'object') return null;
-
-          // YTStream returns formats and adaptiveFormats as ARRAYS
-          // Each item: { itag, url, mimeType, qualityLabel, width, height, ... }
-          // Priority: formats[] first (muxed video+audio), then adaptiveFormats[]
-          
-          const tryArray = (arr) => {
-            if(!Array.isArray(arr)) return null;
-            // First: find muxed mp4 with audio (itag 22=720p, 18=360p)
-            const MUXED_ITAGS = [22, 18, 59, 78];
-            for(const itag of MUXED_ITAGS) {
-              const f = arr.find(x => x.itag === itag || x.itag === String(itag));
-              if(f && f.url && f.url.startsWith('http')) return f.url;
-            }
-            // Then: any mp4 video up to 720p
-            const mp4s = arr.filter(x =>
-              x.url && x.url.startsWith('http') &&
-              (x.mimeType||'').includes('video/mp4') &&
-              parseInt(x.height||x.qualityLabel||'0') <= 720
-            ).sort((a,b) => (parseInt(b.height||0) - parseInt(a.height||0)));
-            if(mp4s.length) return mp4s[0].url;
-            // Any item with a URL
-            const any = arr.find(x => x.url && x.url.startsWith('http'));
-            return any ? any.url : null;
-          };
-
-          // Try formats array first (muxed)
-          let url = tryArray(obj.formats);
-          if(url) return url;
-
-          // Try adaptiveFormats (may be video-only but better than nothing)
-          url = tryArray(obj.adaptiveFormats);
-          if(url) return url;
-
-          // Legacy: dict-based formats
-          const fmt = obj.url || obj.link || obj.links || obj.qualities;
-          if(fmt && typeof fmt === 'object' && !Array.isArray(fmt)) {
-            for(const q of ['22','720','18','480','360','hd','sd','mp4','best']) {
-              const f = fmt[q] || fmt[q+'p'];
-              if(!f) continue;
-              const u = typeof f === 'string' ? f : f.url || f.link;
-              if(u && u.startsWith('http')) return u;
-            }
-          }
-          if(typeof obj.url === 'string' && obj.url.startsWith('http')) return obj.url;
-          return null;
-        };
-
-        const extracted = extractUrl(rd);
-        if(extracted) {
-          streamUrl = extracted;
-          method = 'ytstream';
-          console.log('YTStream URL found:', streamUrl.slice(0,80));
-        } else {
-          console.warn('YTStream: could not extract URL from response:', JSON.stringify(rd).slice(0,400));
-        }
-      } else {
-        const errText = await rr.text();
-        console.warn('YTStream HTTP error:', rr.status, errText.slice(0,100));
-      }
-    } catch(e) {
-      console.warn('YTStream fetch error:', e.message);
-    }
-  }
+  // NOTE: RapidAPI call removed from frontend for security.
+  // The backend /yt-stream-url route handles RapidAPI + all fallbacks server-side.
+  // This prevents API key exposure in browser devtools.
 
   // Server-side extraction as next fallback
   if(!streamUrl) {
@@ -2129,7 +2051,10 @@ async function pollJob(jobId, formats, clipStatusEl) {
 
       if(!r.ok || j.status === 'not_found') {
         clearInterval(iv); hideSt();
-        setClipStatus(`<div style="color:#ff6b6b;font-size:11px;font-family:var(--font-mono)">⚠ Job not found — server may have restarted. Try again.</div>`);
+        setClipStatus(`<div style="color:#ff6b6b;font-size:11px;font-family:var(--font-mono);display:flex;align-items:center;gap:8px;padding:8px 12px;background:rgba(255,107,107,.08);border:1px solid rgba(255,107,107,.25);border-radius:var(--r)">
+          ⚠ Job not found (server may have restarted)
+          <button onclick="processClipByIndex(${clipIndex})" style="padding:3px 10px;background:var(--purple);color:#fff;border:none;border-radius:var(--r);font-size:10px;cursor:pointer;font-family:var(--font-mono)">↺ Retry</button>
+        </div>`);
         return;
       }
 
@@ -2142,14 +2067,14 @@ async function pollJob(jobId, formats, clipStatusEl) {
         clearInterval(iv); hideSt();
         const files = j.files || {};
         const btns = Object.entries(files).map(([fmt, info]) => {
-          const schedUrl = info.publicUrl || (location.origin + '/api' + info.downloadUrl);
+          const schedUrl = info.publicUrl || (RAILWAY + info.downloadUrl);
           const schedCap = encodeURIComponent(currentTitle || '');
           return `
-          <a href="/api${info.downloadUrl}" download class="dl-btn">
+          <a href="${RAILWAY}${info.downloadUrl}" download class="dl-btn" target="_blank">
             ⬇ ${fmt==='vertical'?'📱 9:16':'🖥 16:9'} ${info.sizeMb}MB
           </a>
           <button class="dl-btn" style="background:var(--bg3);color:var(--ink);border:1px solid var(--border2)"
-            onclick="editorOpenClip('${proxyUrl(info.streamUrl) || ('/api' + info.downloadUrl)}','${esc(currentTitle)}',0,0,'','')">
+            onclick="editorOpenClip('${info.streamUrl || (RAILWAY + info.downloadUrl)}','${esc(currentTitle)}',0,0,'','')">
             🎬 Edit in studio
           </button>
           <button class="dl-btn" style="background:var(--bg3);color:var(--ink);border:1px solid var(--border2)"
@@ -2168,8 +2093,12 @@ async function pollJob(jobId, formats, clipStatusEl) {
 
       } else if(j.status === 'error') {
         clearInterval(iv); hideSt();
-        setClipStatus(`<div style="color:#ff6b6b;font-size:11px;font-family:var(--font-mono)">⚠ ${esc(j.message||'Processing failed')}</div>`);
-        showErr(j.message || 'Processing failed');
+        const errMsg = j.message || 'Processing failed';
+        setClipStatus(`<div style="color:#ff6b6b;font-size:11px;font-family:var(--font-mono);padding:10px 12px;background:rgba(255,107,107,.08);border:1px solid rgba(255,107,107,.25);border-radius:var(--r);display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <span>⚠ ${esc(errMsg)}</span>
+          <button onclick="processClipByIndex(${clipIndex})" style="padding:4px 12px;background:var(--purple);color:#fff;border:none;border-radius:var(--r);font-size:11px;cursor:pointer;font-family:var(--font-mono);white-space:nowrap">↺ Retry</button>
+        </div>`);
+        showErr(errMsg);
       }
 
     } catch(e) {
@@ -2625,7 +2554,7 @@ function pollEditorJob(jid){
       if(j.status==='done'){
         clearInterval(iv);$('ed-export-btn').disabled=false;$('ed-export-btn').textContent='✂ Trim, enhance & export';
         const btns=Object.entries(j.files||{}).map(([fmt,info])=>
-          `<a href="/api${info.downloadUrl}" download class="dl-btn">⬇ ${fmt==='vertical'?'📱 9:16':'🖥 16:9'} ${info.sizeMb}MB</a>`
+          `<a href="${RAILWAY}${info.downloadUrl}" download class="dl-btn" target="_blank">⬇ ${fmt==='vertical'?'📱 9:16':'🖥 16:9'} ${info.sizeMb}MB</a>`
         ).join('');
         $('ed-export-status').innerHTML=`<div style="background:rgba(139,92,246,.05);border:1px solid rgba(139,92,246,.3);border-radius:var(--r2);padding:16px">
           <div style="font-family:var(--font-mono);font-size:12px;color:var(--purple3);margin-bottom:10px">✅ Export complete!</div>
