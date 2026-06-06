@@ -2424,7 +2424,7 @@ def download_clip(job_id, fmt):
                      download_name=f"vidpost_{fmt}_{job_id}.mp4")
 
 
-@app.route("/stream/<video_id>", methods=["GET", "OPTIONS"])
+@app.route("/stream/<video_id>", methods=["GET", "HEAD", "OPTIONS"])
 def stream_video(video_id):
     """
     Stream YouTube video preview for editor.
@@ -2437,7 +2437,13 @@ def stream_video(video_id):
     The frontend should poll until the video is ready, then load it.
     """
     if request.method == "OPTIONS":
-        return jsonify({}), 200
+        resp = jsonify({})
+        resp.headers["Access-Control-Allow-Origin"]  = "*"
+        resp.headers["Access-Control-Allow-Methods"] = "GET, OPTIONS"
+        resp.headers["Access-Control-Allow-Headers"] = "Range, Content-Type, Authorization"
+        resp.headers["Access-Control-Expose-Headers"]= "Content-Range, Accept-Ranges, Content-Length"
+        resp.headers["Access-Control-Max-Age"]       = "86400"
+        return resp, 200
 
     # Sanitize video_id
     if not re.match(r'^[A-Za-z0-9_-]{11}$', video_id):
@@ -2446,13 +2452,18 @@ def stream_video(video_id):
     out_path = os.path.join(CLIPS_DIR, f"preview_{video_id}.mp4")
 
     if os.path.exists(out_path) and os.path.getsize(out_path) > 10000:
+        if request.method == "HEAD":
+            resp = Response(status=200, mimetype="video/mp4")
+            resp.headers["Access-Control-Allow-Origin"] = "*"
+            resp.headers["Content-Length"] = str(os.path.getsize(out_path))
+            return resp
         return _serve_video_with_range(out_path)
 
     # Start background download and return 202
     cache_job_id = f"preview_{video_id}"
     existing = job_get(cache_job_id)
     if existing.get("status") in ("downloading", "queued"):
-        resp = jsonify({"status": "downloading", "message": "Video is being prepared..."})
+        resp = jsonify({"status": "downloading", "message": "Video is being prepared..."})             if request.method != "HEAD" else Response(status=202)
         resp.headers["Access-Control-Allow-Origin"] = "*"
         return resp, 202
 
@@ -2475,7 +2486,12 @@ def stream_video(video_id):
 def stream_status(video_id):
     """Frontend polls this to know when /stream/<video_id> is ready."""
     if request.method == "OPTIONS":
-        return jsonify({}), 200
+        resp = jsonify({})
+        resp.headers["Access-Control-Allow-Origin"]  = "*"
+        resp.headers["Access-Control-Allow-Methods"] = "GET, OPTIONS"
+        resp.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+        resp.headers["Access-Control-Max-Age"]       = "86400"
+        return resp, 200
     if not re.match(r'^[A-Za-z0-9_-]{11}$', video_id):
         return jsonify({"error": "Invalid video ID"}), 400
     out_path = os.path.join(CLIPS_DIR, f"preview_{video_id}.mp4")

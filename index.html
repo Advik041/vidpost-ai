@@ -1605,7 +1605,7 @@ window.addEventListener('DOMContentLoaded',()=>{
 
   // Restore session
   const saved = localStorage.getItem('vp_user');
-  if(saved){try{currentUser=JSON.parse(saved);updateAuthUI();loadConnections();}catch(e){}}
+  if(saved){try{currentUser=JSON.parse(saved);updateAuthUI();loadConnections();loadBilling();}catch(e){}}
 
   // Tone chips
   document.querySelectorAll('[data-tone]').forEach(b=>{
@@ -1952,6 +1952,18 @@ async function processClip(videoId, uploadPath, start, end, clipIndex) {
       return;
     } catch(e) {
       hideSt();
+      // Detect limit errors — show upgrade UI, not manual download
+      const isLimit = e.message && (e.message.toLowerCase().includes('limit') || e.message.toLowerCase().includes('upgrade') || e.message.includes('403'));
+      if(isLimit) {
+        // Refresh usage from server so pill shows correct count
+        loadBilling();
+        setStatus(`<div style="padding:12px 14px;background:rgba(139,92,246,.08);border:1px solid rgba(139,92,246,.3);border-radius:var(--r);font-family:var(--font-mono)">
+          <div style="font-size:13px;font-weight:600;color:var(--purple3);margin-bottom:6px">🚫 Clip limit reached</div>
+          <div style="font-size:11px;color:var(--ink2);margin-bottom:10px">You've used all ${userLimit} clips this month. Upgrade to generate more.</div>
+          <button onclick="switchTab('billing')" style="padding:6px 16px;background:var(--purple);color:#fff;border:none;border-radius:var(--r);font-size:12px;cursor:pointer;font-family:var(--font-head);font-weight:600">⚡ Upgrade plan</button>
+        </div>`);
+        return;
+      }
       setStatus(`<div style="color:#ff6b6b;font-size:11px;padding:10px 12px;background:rgba(255,107,107,.08);border:1px solid rgba(255,107,107,.25);border-radius:var(--r);font-family:var(--font-mono);display:flex;align-items:center;gap:10px;flex-wrap:wrap">
         <span>⚠ ${esc(e.message)}</span>
         <button onclick="processClipByIndex(${clipIndex})" style="padding:4px 12px;background:var(--purple);color:#fff;border:none;border-radius:var(--r);font-size:11px;cursor:pointer;font-family:var(--font-mono)">↺ Retry</button>
@@ -2257,8 +2269,8 @@ async function _editorLoadYouTubeStream(videoId, title) {
   async function _tryLoad() {
     attempts++;
     try {
-      const r = await fetch(streamUrl, {method:'GET', headers:{'Range':'bytes=0-1'}});
-      if(r.ok || r.status === 206) {
+      const r = await fetch(streamUrl, {method:'HEAD'});
+      if(r.ok && r.status === 200) {
         // File is ready and serving
         _setVideoSrc();
         return;
