@@ -1473,7 +1473,7 @@ GROQ_MODELS = [
     "gemma2-9b-it",
 ]
 
-def _groq_chat(messages: list, max_tokens: int = 1000, temperature: float = 0.1) -> str | None:
+def _groq_chat(messages: list, max_tokens: int = 1000, temperature: float = 0.1):
     """Call Groq with automatic model fallback and retry on rate limit."""
     if not GROQ_KEY:
         return None
@@ -1757,7 +1757,7 @@ def fetch_pexels_videos(keywords: str, count: int = 4,
     results = []
     seen_ids = set()
 
-    def _best_file(video_files: list, prefer_portrait: bool = True) -> str | None:
+    def _best_file(video_files: list, prefer_portrait: bool = True):
         """Pick best video file: portrait HD > landscape HD > portrait SD > any."""
         portrait_hd, landscape_hd, portrait_sd, any_file = None, None, None, None
         for vf in video_files:
