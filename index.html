@@ -1931,93 +1931,33 @@ async function processClip(videoId, uploadPath, start, end, clipIndex) {
     return;
   }
 
-  // ── YouTube: browser-side download (residential IP = not blocked) ─────────
-  const ytUrl = `https://www.youtube.com/watch?v=${resolvedVideo}`;
-
-  // Step 1: Try cobalt.tools directly from browser (residential IP works)
-  setStatus(spin('Getting download URL from cobalt.tools…'));
-  showSt('Fetching YouTube video…');
-
-  let streamUrl = null;
-  let method = '';
-
-  // Cobalt.tools - called from browser JS (user's IP, never blocked)
-  // cobalt.tools - multiple instances, correct API format
-  const cobaltInstances = [
-    'https://api.cobalt.tools',
-    'https://cobalt.tools',
-    'https://cob.193024.xyz',
-  ];
-  for(const inst of cobaltInstances) {
-    try {
-      const cr = await fetch(inst + '/api/json', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/124.0',
-        },
-        body: JSON.stringify({
-          url: ytUrl,
-          vQuality: '720',
-          filenamePattern: 'basic',
-          isAudioOnly: false,
-        })
-      });
-      if(cr.ok) {
-        const cd = await cr.json();
-        console.log('cobalt response:', cd.status, cd.url ? cd.url.slice(0,60) : 'no url');
-        const u = cd.url || (cd.picker && cd.picker[0] && cd.picker[0].url);
-        if(u && u.startsWith('http')) {
-          streamUrl = u; method = 'cobalt';
-          console.log('cobalt OK:', inst);
-          break;
-        }
-      }
-    } catch(e) { console.warn('cobalt attempt:', inst, e.message); }
-  }
-
-  // NOTE: RapidAPI call removed from frontend for security.
-  // The backend /yt-stream-url route handles RapidAPI + all fallbacks server-side.
-  // This prevents API key exposure in browser devtools.
-
-  // Server-side extraction as next fallback
-  if(!streamUrl) {
-    try {
-      setStatus(spin('Trying server extraction…'));
-      const sr = await fetch('/api/yt-stream-url', {
-        method: 'POST',
-        headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({url: ytUrl})
-      });
-      const sd = await sr.json().catch(() => ({}));
-      if(sd.stream_url) { streamUrl = sd.stream_url; method = sd.method || 'server'; }
-    } catch(e) { console.warn('server extract:', e.message); }
-  }
-
-  // ── Got a stream URL → send to backend to download + process ────────────────
-  if(streamUrl) {
-    console.log(`Stream URL via ${method}:`, streamUrl.slice(0,80));
-    setStatus(spin(`Downloading & processing via ${method}…`));
-    showSt('Processing YouTube video…');
-
-    // Send the CDN URL directly to the clip endpoint
-    // Backend downloads with proper headers (Range, User-Agent etc.)
-    // and processes in one step — no browser download needed
+  // ── YouTube: send videoId directly to backend ──────────────────────────────
+  // The backend has a 7-strategy yt-dlp waterfall (android, ios, tv_embedded,
+  // mweb, pytubefix, Invidious) that handles Railway IP restrictions.
+  // Cobalt/streamUrl approach removed — googlevideo.com CDN URLs are
+  // IP-locked and expire, causing silent failures on the backend.
+  if(resolvedVideo) {
+    setStatus(spin('Downloading & clipping YouTube video…'));
+    showSt('Sending to server…');
     try {
       const d = await apiFetch('/clip', {
-        videoId:    '',
+        videoId:    resolvedVideo,
         uploadPath: '',
-        streamUrl:  streamUrl,
+        streamUrl:  '',
         start, end, formats,
         user_id: currentUser?.id || '',
       });
-      if(!d.jobId) throw new Error(d.error || 'No job ID');
+      if(!d.jobId) throw new Error(d.error || 'No job returned');
       pollJob(d.jobId, formats, clipStatusEl);
       return;
     } catch(e) {
-      console.warn('Direct clip from streamUrl failed:', e.message);
-      // Fall through to manual prompt
+      hideSt();
+      setStatus(`<div style="color:#ff6b6b;font-size:11px;padding:10px 12px;background:rgba(255,107,107,.08);border:1px solid rgba(255,107,107,.25);border-radius:var(--r);font-family:var(--font-mono);display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <span>⚠ ${esc(e.message)}</span>
+        <button onclick="processClipByIndex(${clipIndex})" style="padding:4px 12px;background:var(--purple);color:#fff;border:none;border-radius:var(--r);font-size:11px;cursor:pointer;font-family:var(--font-mono)">↺ Retry</button>
+      </div>`);
+      showErr(e.message);
+      return;
     }
   }
 
