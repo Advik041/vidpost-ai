@@ -2264,57 +2264,109 @@ async function _editorLoad(raw) {
   const ytMatch = raw.match(/(?:v=|youtu\.be\/|\/shorts\/)([A-Za-z0-9_-]{11})/);
   if(ytMatch) {
     const videoId = ytMatch[1];
-    try {
-      const d = await apiFetch('/analyse',{url:raw});
-      currentVideoId = d.videoId; currentTitle = d.title;
-      // FIX: load via stream endpoint, but wait for it to be ready
-      await _editorLoadYouTubeStream(d.videoId, d.title);
-    } catch(e){ showErr('Could not load: '+e.message); }
+    currentVideoId = videoId;
+    // Start stream immediately — don't wait for /analyse
+    // /analyse runs in parallel to fetch title
+    _editorLoadYouTubeStream(videoId, 'Loading…');
+    // Fetch title in background and update
+    apiFetch('/analyse', {url: raw}).then(d => {
+      if(d && d.title) {
+        currentTitle = d.title;
+        // Update the title bar if visible
+        const tb = $('ed-title-bar');
+        if(tb) tb.textContent = d.title;
+        if($('vid-loading-msg') && $('vid-loading-msg').textContent.includes('Loading'))
+          $('vid-loading-msg').textContent = `Loading "${d.title}"…`;
+      }
+    }).catch(() => {}); // ignore analyse errors — stream already loading
   } else {
-    // Direct URL — load immediately
+    // Direct MP4/video URL — load immediately
     editorMount(raw, raw.split('/').pop().split('?')[0]);
   }
 }
 
 async function _editorLoadYouTubeStream(videoId, title) {
-  editorMount('', title); // show workspace with loading overlay
-  $('vid-loading-msg').textContent = 'Preparing YouTube preview…';
+  editorMount('', title);
+  const loadMsg = $('vid-loading-msg');
+  if(loadMsg) loadMsg.textContent = '⏳ Preparing video preview…';
 
-  // Request the stream (backend starts download if not cached)
   const streamUrl = `${RAILWAY}/stream/${videoId}`;
-  const r = await fetch(streamUrl,{method:'GET'});
 
-  if(r.ok && r.headers.get('content-type')?.includes('video')) {
-    // Already cached — set src directly
+  // Helper to set video src once ready
+  function _setVideoSrc() {
     edVideoUrl = streamUrl;
-    const v=$('ed-video'); v.src=streamUrl; v.load();
-    return;
+    const v = $('ed-video');
+    if(!v) return;
+    v.src = streamUrl;
+    v.load();
+    // Once loadedmetadata fires, hide overlay and set trim
+    v.onloadedmetadata = () => {
+      const overlay = $('vid-loading-overlay');
+      if(overlay) overlay.style.display = 'none';
+    };
+    v.onerror = () => {
+      const overlay = $('vid-loading-overlay');
+      if(overlay) overlay.style.display = 'none';
+      showErr('Video load error — try uploading the file directly.');
+    };
   }
 
-  // 202: downloading in background — poll status
-  if(r.status===202) {
-    $('vid-loading-msg').textContent='Downloading video preview (may take 30-60s)…';
-    if(_streamPollTimer) clearInterval(_streamPollTimer);
-    _streamPollTimer = setInterval(async()=>{
-      try {
-        const s = await fetch(`/api/stream-status/${videoId}`).then(x=>x.json());
-        if(s.ready){
-          clearInterval(_streamPollTimer); _streamPollTimer=null;
-          edVideoUrl=streamUrl;
-          const v=$('ed-video'); v.src=streamUrl; v.load();
-        } else if(s.status==='error'){
-          clearInterval(_streamPollTimer); _streamPollTimer=null;
-          $('vid-loading-overlay').style.display='none';
-          showErr('Preview download failed. Use Upload tab instead.');
-        } else {
-          $('vid-loading-msg').textContent=s.message||'Downloading preview…';
-        }
-      } catch(e){ clearInterval(_streamPollTimer); _streamPollTimer=null; }
-    },3000);
-    return;
+  let attempts = 0;
+  const maxAttempts = 3;
+
+  async function _tryLoad() {
+    attempts++;
+    try {
+      const r = await fetch(streamUrl, {method:'GET', headers:{'Range':'bytes=0-1'}});
+      if(r.ok || r.status === 206) {
+        // File is ready and serving
+        _setVideoSrc();
+        return;
+      }
+      if(r.status === 202 || r.status === 503) {
+        // Downloading in background — poll
+        if(loadMsg) loadMsg.textContent = '⬇ Downloading video (30–90s)…';
+        if(_streamPollTimer) clearInterval(_streamPollTimer);
+        let pollCount = 0;
+        _streamPollTimer = setInterval(async () => {
+          pollCount++;
+          try {
+            const s = await fetch(`${RAILWAY}/stream-status/${videoId}`).then(x => x.json());
+            if(s.ready) {
+              clearInterval(_streamPollTimer); _streamPollTimer = null;
+              if(loadMsg) loadMsg.textContent = '✅ Video ready!';
+              _setVideoSrc();
+            } else if(s.status === 'error') {
+              clearInterval(_streamPollTimer); _streamPollTimer = null;
+              const overlay = $('vid-loading-overlay');
+              if(overlay) overlay.style.display = 'none';
+              showErr('⚠ Could not download preview. Please upload the video file directly.');
+            } else {
+              const dots = '.'.repeat((pollCount % 3) + 1);
+              if(loadMsg) loadMsg.textContent = `⬇ Downloading preview${dots} (${s.message || ''})`;
+            }
+          } catch(e) {
+            clearInterval(_streamPollTimer); _streamPollTimer = null;
+          }
+        }, 3000);
+        return;
+      }
+      // Unexpected status — retry up to 3 times
+      if(attempts < maxAttempts) {
+        setTimeout(_tryLoad, 2000);
+      } else {
+        const overlay = $('vid-loading-overlay');
+        if(overlay) overlay.style.display = 'none';
+        showErr('Could not load video preview. Try uploading the file instead.');
+      }
+    } catch(e) {
+      const overlay = $('vid-loading-overlay');
+      if(overlay) overlay.style.display = 'none';
+      showErr('Network error loading preview: ' + e.message);
+    }
   }
-  $('vid-loading-overlay').style.display='none';
-  showErr('Could not stream video — please upload directly.');
+
+  _tryLoad();
 }
 
 function editorOpenClip(videoUrl, title, start, end, videoId, uploadPath) {

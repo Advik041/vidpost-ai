@@ -645,10 +645,13 @@ def _serve_video_with_range(filepath: str) -> Response:
             mimetype="video/mp4",
             direct_passthrough=True,
         )
-        resp.headers["Content-Range"] = f"bytes {start}-{end}/{file_size}"
-        resp.headers["Accept-Ranges"] = "bytes"
+        resp.headers["Content-Range"]  = f"bytes {start}-{end}/{file_size}"
+        resp.headers["Accept-Ranges"]  = "bytes"
         resp.headers["Content-Length"] = str(length)
-        resp.headers["Cache-Control"] = "public, max-age=3600"
+        resp.headers["Cache-Control"]  = "public, max-age=3600"
+        resp.headers["Access-Control-Allow-Origin"]  = "*"
+        resp.headers["Access-Control-Allow-Headers"] = "Range, Content-Type"
+        resp.headers["Access-Control-Expose-Headers"]= "Content-Range, Accept-Ranges, Content-Length"
         return resp
 
     # Full file: stream in chunks, not read-all-at-once
@@ -666,9 +669,12 @@ def _serve_video_with_range(filepath: str) -> Response:
         mimetype="video/mp4",
         direct_passthrough=True,
     )
-    resp.headers["Accept-Ranges"] = "bytes"
-    resp.headers["Content-Length"] = str(file_size)
-    resp.headers["Cache-Control"] = "public, max-age=3600"
+    resp.headers["Accept-Ranges"]   = "bytes"
+    resp.headers["Content-Length"]  = str(file_size)
+    resp.headers["Cache-Control"]   = "public, max-age=3600"
+    resp.headers["Access-Control-Allow-Origin"]   = "*"
+    resp.headers["Access-Control-Allow-Headers"]  = "Range, Content-Type"
+    resp.headers["Access-Control-Expose-Headers"] = "Content-Range, Accept-Ranges, Content-Length"
     return resp
 
 
@@ -2446,7 +2452,9 @@ def stream_video(video_id):
     cache_job_id = f"preview_{video_id}"
     existing = job_get(cache_job_id)
     if existing.get("status") in ("downloading", "queued"):
-        return jsonify({"status": "downloading", "message": "Video is being prepared..."}), 202
+        resp = jsonify({"status": "downloading", "message": "Video is being prepared..."})
+        resp.headers["Access-Control-Allow-Origin"] = "*"
+        return resp, 202
 
     def _bg_download():
         job_update(cache_job_id, "downloading", 10, "Downloading preview...")
@@ -2458,20 +2466,27 @@ def stream_video(video_id):
 
     job_update(cache_job_id, "queued", 0, "Queued")
     threading.Thread(target=_bg_download, daemon=True).start()
-    return jsonify({"status": "queued", "message": "Preparing video preview..."}), 202
+    resp = jsonify({"status": "queued", "message": "Preparing video preview..."})
+    resp.headers["Access-Control-Allow-Origin"] = "*"
+    return resp, 202
 
 
-@app.route("/stream-status/<video_id>", methods=["GET"])
+@app.route("/stream-status/<video_id>", methods=["GET", "OPTIONS"])
 def stream_status(video_id):
     """Frontend polls this to know when /stream/<video_id> is ready."""
+    if request.method == "OPTIONS":
+        return jsonify({}), 200
     if not re.match(r'^[A-Za-z0-9_-]{11}$', video_id):
         return jsonify({"error": "Invalid video ID"}), 400
     out_path = os.path.join(CLIPS_DIR, f"preview_{video_id}.mp4")
     if os.path.exists(out_path) and os.path.getsize(out_path) > 10000:
-        return jsonify({"ready": True})
-    job = job_get(f"preview_{video_id}")
-    return jsonify({"ready": False, "status": job.get("status", "unknown"),
-                    "message": job.get("message", "")})
+        resp = jsonify({"ready": True})
+    else:
+        job = job_get(f"preview_{video_id}")
+        resp = jsonify({"ready": False, "status": job.get("status", "unknown"),
+                        "message": job.get("message", "")})
+    resp.headers["Access-Control-Allow-Origin"] = "*"
+    return resp
 
 
 # ════════════════════════════════════════════════════════════════════════════════
