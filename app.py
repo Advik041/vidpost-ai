@@ -173,6 +173,7 @@ YT_COOKIES = ""  # set by setup_yt_cookies() below
 # FIX: Added _jobs_lock to prevent race conditions between gthread workers
 # FIX: Added TTL-based cleanup so memory doesn't grow unboundedly
 _jobs: dict = {}
+_last_whisper_words: list = []  # word timestamps from last Whisper call
 _jobs_lock = threading.Lock()
 UPLOAD_STORE: dict = {}
 _upload_lock = threading.Lock()
@@ -1508,6 +1509,134 @@ def _groq_chat(messages: list, max_tokens: int = 1000, temperature: float = 0.1)
 # CLIP DETECTION
 # ════════════════════════════════════════════════════════════════════════════════
 
+
+def _transcribe_with_whisper(audio_path: str, groq_key: str) -> dict:
+    """
+    Transcribe audio using Groq Whisper API (whisper-large-v3).
+    Returns: {"text": str, "words": [{"word": str, "start": float, "end": float}]}
+    Free on Groq — uses the same GROQ_API_KEY.
+    Falls back to empty if file too large (>25MB Groq limit).
+    """
+    if not groq_key or not os.path.exists(audio_path):
+        return {"text": "", "words": []}
+    file_size = os.path.getsize(audio_path)
+    if file_size > 24 * 1024 * 1024:  # 24MB safety margin
+        print(f"[whisper] file too large ({file_size//1024//1024}MB) — skipping")
+        return {"text": "", "words": []}
+    try:
+        with open(audio_path, "rb") as f:
+            resp = requests.post(
+                "https://api.groq.com/openai/v1/audio/transcriptions",
+                headers={"Authorization": f"Bearer {groq_key}"},
+                files={"file": (os.path.basename(audio_path), f, "audio/mp4")},
+                data={
+                    "model":            "whisper-large-v3",
+                    "response_format":  "verbose_json",
+                    "timestamp_granularities[]": "word",
+                    "language":         "en",
+                },
+                timeout=120,
+            )
+        if not resp.ok:
+            print(f"[whisper] API error {resp.status_code}: {resp.text[:200]}")
+            return {"text": "", "words": []}
+        data = resp.json()
+        text  = data.get("text", "")
+        words = [
+            {"word": w.get("word", ""), "start": w.get("start", 0.0), "end": w.get("end", 0.0)}
+            for w in data.get("words", [])
+        ]
+        print(f"[whisper] transcribed {len(text.split())} words, {len(words)} timed segments")
+        return {"text": text, "words": words}
+    except Exception as e:
+        print(f"[whisper] error: {e}")
+        return {"text": "", "words": []}
+
+
+def _extract_audio_for_whisper(video_path: str, out_dir: str) -> str:
+    """Extract a 16kHz mono WAV from video for Whisper (smaller than MP4)."""
+    audio_path = os.path.join(out_dir, "whisper_audio.m4a")
+    try:
+        cmd = [
+            FFMPEG, "-y", "-i", video_path,
+            "-vn", "-acodec", "aac", "-ar", "16000", "-ac", "1",
+            "-b:a", "64k", audio_path,
+        ]
+        r = subprocess.run(cmd, capture_output=True, timeout=120)
+        if r.returncode == 0 and os.path.exists(audio_path):
+            return audio_path
+    except Exception as e:
+        print(f"[whisper] audio extract error: {e}")
+    return ""
+
+
+def _get_transcript_for_video(video_id: str, video_path: str,
+                               title: str, duration: int) -> dict:
+    """
+    Get transcript for a video using the best available method:
+    1. LRU cache (instant)
+    2. Supadata YouTube API (fast, YouTube-only, no word timestamps)
+    3. Groq Whisper on extracted audio (works for ALL videos, has word timestamps)
+    4. Fallback: title + duration string
+
+    Returns: {"text": str, "words": [...], "source": str}
+    """
+    cache_key = video_id or os.path.basename(video_path)
+
+    # Check cache
+    cached = TRANSCRIPT_CACHE.get(cache_key)
+    if cached:
+        if isinstance(cached, dict):
+            return cached
+        return {"text": cached, "words": [], "source": "cache"}
+
+    result = {"text": f"Video: {title}. Duration: {duration}s.", "words": [], "source": "fallback"}
+
+    # Strategy 1: Supadata (YouTube only, fast, no word timestamps)
+    if video_id and SUPADATA:
+        try:
+            resp = requests.get(
+                "https://api.supadata.ai/v1/youtube/transcript",
+                params={"videoId": video_id, "text": "true"},
+                headers={"x-api-key": SUPADATA},
+                timeout=20,
+            )
+            if resp.ok:
+                d = resp.json()
+                c = d.get("content", "")
+                t = c if isinstance(c, str) else " ".join([s.get("text", "") for s in c if isinstance(s, dict)])
+                if t and len(t) > 30:
+                    result = {"text": t, "words": [], "source": "supadata"}
+                    TRANSCRIPT_CACHE[cache_key] = result
+                    print(f"[transcript] supadata OK: {len(t.split())} words")
+                    return result
+        except Exception as e:
+            print(f"[transcript] supadata error: {e}")
+
+    # Strategy 2: Groq Whisper (works for uploads + YouTube when supadata fails)
+    if GROQ_KEY and video_path and os.path.exists(video_path):
+        tmp_dir = os.path.dirname(video_path)
+        audio_path = _extract_audio_for_whisper(video_path, tmp_dir)
+        if audio_path:
+            whisper_result = _transcribe_with_whisper(audio_path, GROQ_KEY)
+            try:
+                os.remove(audio_path)
+            except Exception:
+                pass
+            if whisper_result.get("text") and len(whisper_result["text"]) > 30:
+                result = {
+                    "text":   whisper_result["text"],
+                    "words":  whisper_result["words"],
+                    "source": "whisper",
+                }
+                TRANSCRIPT_CACHE[cache_key] = result
+                print(f"[transcript] whisper OK: {len(result['text'].split())} words, "
+                      f"{len(result['words'])} timed")
+                return result
+
+    TRANSCRIPT_CACHE[cache_key] = result
+    return result
+
 def _detect_clips(title: str, duration: int, transcript: str, groq_key: str) -> list:
     """
     AI-powered clip detection using Groq.
@@ -1618,24 +1747,49 @@ RULES:
 # ════════════════════════════════════════════════════════════════════════════════
 
 def transcribe_with_whisper(audio_path: str) -> list:
+    """
+    Transcribe audio using Groq Whisper.
+    Returns segment-level list for SRT fallback.
+    Also stores word-level timestamps on module-level _last_whisper_words
+    so Step 8 can use them for karaoke captions.
+    """
+    global _last_whisper_words
+    _last_whisper_words = []
+
     if GROQ_KEY and os.path.exists(audio_path):
-        try:
-            with open(audio_path, "rb") as f:
-                resp = requests.post(
-                    "https://api.groq.com/openai/v1/audio/transcriptions",
-                    headers={"Authorization": f"Bearer {GROQ_KEY}"},
-                    files={"file": (os.path.basename(audio_path), f, "audio/mp4")},
-                    data={"model": "whisper-large-v3", "response_format": "verbose_json",
-                          "timestamp_granularities[]": "segment"},
-                    timeout=120,
-                )
-            if resp.ok:
-                segs = resp.json().get("segments", [])
-                result = [{"start": s["start"], "end": s["end"], "text": s["text"].strip()} for s in segs]
-                print(f"Groq Whisper OK: {len(result)} segments")
-                return result
-        except Exception as e:
-            print(f"Groq Whisper: {e}")
+        file_size = os.path.getsize(audio_path)
+        if file_size > 24 * 1024 * 1024:
+            print(f"[whisper] file too large ({file_size//1024//1024}MB), skipping word timestamps")
+        else:
+            try:
+                with open(audio_path, "rb") as f:
+                    resp = requests.post(
+                        "https://api.groq.com/openai/v1/audio/transcriptions",
+                        headers={"Authorization": f"Bearer {GROQ_KEY}"},
+                        files={"file": (os.path.basename(audio_path), f, "audio/mp4")},
+                        data={
+                            "model": "whisper-large-v3",
+                            "response_format": "verbose_json",
+                            "timestamp_granularities[]": "word",
+                        },
+                        timeout=120,
+                    )
+                if resp.ok:
+                    data = resp.json()
+                    segs  = data.get("segments", [])
+                    words = data.get("words", [])
+                    # Store word timestamps for karaoke caption use
+                    _last_whisper_words = [
+                        {"word": w.get("word", ""), "start": w.get("start", 0.0), "end": w.get("end", 0.0)}
+                        for w in words
+                    ]
+                    result = [{"start": s["start"], "end": s["end"], "text": s["text"].strip()} for s in segs]
+                    print(f"[whisper] OK: {len(result)} segments, {len(_last_whisper_words)} words")
+                    return result
+                else:
+                    print(f"[whisper] API error {resp.status_code}: {resp.text[:200]}")
+            except Exception as e:
+                print(f"[whisper] error: {e}")
 
     if OPENAI_KEY and os.path.exists(audio_path):
         try:
@@ -1657,6 +1811,116 @@ def transcribe_with_whisper(audio_path: str) -> list:
             print(f"OpenAI Whisper: {e}")
     return []
 
+
+
+def words_to_ass(words: list, clip_start: float = 0.0, clip_end: float = 9999.0,
+                 style: str = "bold", size: str = "medium", accent: str = "#8b5cf6",
+                 position: str = "bottom") -> str:
+    """
+    Convert Whisper word timestamps to ASS format with karaoke highlighting.
+    Each word lights up in the accent colour as it's spoken.
+    Falls back gracefully if words list is empty.
+    """
+    if not words:
+        return ""
+
+    fs  = {"small": 16, "medium": 22, "large": 30}.get(size, 22)
+    mar = {"top": 200, "middle": 0, "bottom": 40}.get(position, 40)
+    aln = {"top": 8, "middle": 5, "bottom": 2}.get(position, 2)
+
+    def hex_ass(h):
+        h = h.lstrip("#")
+        r, g, b = int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16)
+        return f"&H00{b:02X}{g:02X}{r:02X}"
+
+    acc     = hex_ass(accent)
+    white   = "&H00FFFFFF"
+    black   = "&H00000000"
+    shadow  = "&H80000000"
+
+    style_defs = {
+        "bold":    f"FontName=Arial,FontSize={fs},Bold=1,PrimaryColour={white},SecondaryColour={acc},OutlineColour={black},BackColour={shadow},Outline=2,Shadow=1,Alignment={aln},MarginV={mar}",
+        "outline": f"FontName=Arial,FontSize={fs},Bold=0,PrimaryColour={white},SecondaryColour={acc},OutlineColour={black},Outline=2,Alignment={aln},MarginV={mar}",
+        "box":     f"FontName=Arial,FontSize={fs},Bold=1,PrimaryColour={white},SecondaryColour={acc},BackColour=&H80000000,BorderStyle=3,Outline=0,Alignment={aln},MarginV={mar}",
+        "neon":    f"FontName=Arial,FontSize={fs},Bold=1,PrimaryColour={white},SecondaryColour={acc},OutlineColour={acc},Outline=3,Shadow=2,Alignment={aln},MarginV={mar}",
+        "karaoke": f"FontName=Arial,FontSize={fs},Bold=1,PrimaryColour={white},SecondaryColour={acc},OutlineColour={black},Outline=1,Shadow=1,Alignment={aln},MarginV={mar}",
+    }
+    sdef = style_defs.get(style, style_defs["bold"])
+
+    def ts_ass(t):
+        t = max(0.0, t - clip_start)
+        h = int(t // 3600)
+        m = int((t % 3600) // 60)
+        s = t % 60
+        return f"{h}:{m:02d}:{s:05.2f}"
+
+    # Group words into lines of ~6 words max (fits 9:16 safe zone)
+    MAX_PER_LINE = 6
+    lines_out    = []
+    i = 0
+    wds = [w for w in words
+           if clip_start <= w.get("start", 0) <= clip_end]
+
+    while i < len(wds):
+        chunk = wds[i:i + MAX_PER_LINE]
+        i += MAX_PER_LINE
+        if not chunk:
+            continue
+        t_start = ts_ass(chunk[0]["start"])
+        t_end   = ts_ass(chunk[-1]["end"] + 0.05)
+
+        # Build karaoke line: {\k<centiseconds>}word for each word
+        parts = []
+        for idx, w in enumerate(chunk):
+            dur_cs = max(1, int((w["end"] - w["start"]) * 100))
+            k_tag = "{" + chr(92) + "k" + str(dur_cs) + "}"
+            parts.append(k_tag + " " + w['word'].strip())
+        text = " ".join(parts)
+        lines_out.append(f"Dialogue: 0,{t_start},{t_end},Default,,0,0,0,,{text}")
+
+    if not lines_out:
+        return ""
+
+    header = f"""[Script Info]
+ScriptType: v4.00+
+PlayResX: 1080
+PlayResY: 1920
+
+[V4+ Styles]
+Format: Name,{sdef}
+Style: Default,{sdef}
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+"""
+    return header + "\n".join(lines_out) + "\n"
+
+
+def burn_word_captions(inp: str, words: list, out: str,
+                        clip_start: float = 0.0, clip_end: float = 9999.0,
+                        style: str = "bold", size: str = "medium",
+                        accent: str = "#8b5cf6", position: str = "bottom") -> bool:
+    """Burn word-level karaoke captions using ASS format."""
+    ass_content = words_to_ass(words, clip_start, clip_end, style, size, accent, position)
+    if not ass_content:
+        return False
+    ass_path = inp.replace(".mp4", "_captions.ass")
+    with open(ass_path, "w", encoding="utf-8") as f:
+        f.write(ass_content)
+    safe_ass = ass_path.replace("\\", "/").replace(":", "\\:")
+    r = subprocess.run([
+        FFMPEG, "-y", "-i", inp,
+        "-vf", f"ass={safe_ass}",
+        "-c:v", "libx264", "-preset", "fast", "-crf", "20",
+        "-c:a", "copy", out,
+    ], capture_output=True, text=True, timeout=300)
+    if r.returncode != 0:
+        print(f"burn_word_captions error: {r.stderr[-300:]}")
+    try:
+        os.remove(ass_path)
+    except Exception:
+        pass
+    return r.returncode == 0
 
 def segments_to_srt(segments: list, offset: float = 0.0) -> str:
     def ts(s):
@@ -2029,32 +2293,16 @@ def analyse():
         title = info.get("title", title)
         duration = int(info.get("duration", 600))
 
-    if video_id in TRANSCRIPT_CACHE:
-        transcript = TRANSCRIPT_CACHE[video_id]
-    else:
-        transcript = f"Video: {title}. Duration: {duration}s."
-        if SUPADATA:
-            try:
-                resp = requests.get(
-                    "https://api.supadata.ai/v1/youtube/transcript",
-                    params={"videoId": video_id, "text": "true"},
-                    headers={"x-api-key": SUPADATA},
-                    timeout=20,
-                )
-                if resp.ok:
-                    d = resp.json()
-                    c = d.get("content", "")
-                    t = c if isinstance(c, str) else " ".join([s.get("text", "") for s in c])
-                    if t and len(t) > 30:
-                        transcript = t
-                        TRANSCRIPT_CACHE[video_id] = transcript
-            except Exception:
-                pass
+    # Use unified transcript getter (Supadata → Whisper → fallback)
+    # No video_path available at /analyse time — Whisper runs later during clip generation
+    tx_result = _get_transcript_for_video(video_id, "", title, duration)
+    transcript = tx_result["text"]
 
     clips = _detect_clips(title, duration, transcript, GROQ_KEY)
     return jsonify({
         "videoId": video_id, "title": title, "duration": duration,
-        "clips": clips, "transcriptLength": len(transcript.split()), "mode": "url",
+        "clips": clips, "transcriptLength": len(transcript.split()),
+        "mode": "url", "transcriptSource": tx_result.get("source", "fallback"),
     })
 
 
@@ -2082,13 +2330,21 @@ def analyse_upload():
     except Exception:
         pass
 
-    clips = _detect_clips(title, duration, f"Uploaded: {title}. Duration: {duration}s.", GROQ_KEY)
+    # Run Whisper transcription on the actual uploaded video file
+    print(f"[analyse-upload] running transcription on {upload_path}")
+    tx_result = _get_transcript_for_video("", upload_path, title, duration)
+    upload_transcript = tx_result["text"]
+    print(f"[analyse-upload] transcript source={tx_result.get('source')} words={len(upload_transcript.split())}")
+    clips = _detect_clips(title, duration, upload_transcript, GROQ_KEY)
     with _upload_lock:
         UPLOAD_STORE[upload_id] = upload_path
     threading.Timer(7200, lambda: _cleanup_upload(upload_id, upload_path)).start()
     return jsonify({
         "uploadId": upload_id, "uploadPath": upload_path, "title": title,
-        "duration": duration, "clips": clips, "transcriptLength": 0, "mode": "upload",
+        "duration": duration, "clips": clips,
+        "transcriptLength": len(upload_transcript.split()),
+        "transcriptSource": tx_result.get("source", "fallback"),
+        "mode": "upload",
     })
 
 
@@ -2675,16 +2931,29 @@ def editor_export():
                 if r_norm.returncode == 0 and os.path.exists(norm_out):
                     current = norm_out
 
-            # Step 8: Captions
+            # Step 8: Captions (word-level if Whisper gave us word timestamps, else SRT)
             if captions and segments:
                 job_update(job_id, "running", 70, "Burning captions...")
-                srt_path = os.path.join(job_dir, "captions.srt")
-                with open(srt_path, "w", encoding="utf-8") as sf:
-                    # offset=0 since segments are already relative to trimmed start
-                    sf.write(segments_to_srt(segments, offset=0.0))
                 cap_out = os.path.join(job_dir, "captioned.mp4")
-                if burn_captions_ffmpeg(current, srt_path, cap_out,
-                                        style=cap_style, size=cap_size, accent=accent_color):
+                used_words = False
+                if _last_whisper_words:
+                    job_update(job_id, "running", 71, "Burning word-level karaoke captions...")
+                    used_words = burn_word_captions(
+                        current, _last_whisper_words, cap_out,
+                        clip_start=0.0, clip_end=(end_t - start_t),
+                        style=cap_style, size=cap_size,
+                        accent=accent_color, position=cap_pos,
+                    )
+                if not used_words:
+                    # Fallback to segment-level SRT
+                    srt_path = os.path.join(job_dir, "captions.srt")
+                    with open(srt_path, "w", encoding="utf-8") as sf:
+                        sf.write(segments_to_srt(segments, offset=0.0))
+                    used_words = burn_captions_ffmpeg(
+                        current, srt_path, cap_out,
+                        style=cap_style, size=cap_size, accent=accent_color,
+                    )
+                if used_words and os.path.exists(cap_out):
                     current = cap_out
 
             # Step 9: Logo overlay
