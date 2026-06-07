@@ -1583,12 +1583,13 @@ def _get_transcript_for_video(video_id: str, video_path: str,
     """
     cache_key = video_id or os.path.basename(video_path)
 
-    # Check cache
+    # Check cache — may contain dict (new format) or plain string (legacy)
     cached = TRANSCRIPT_CACHE.get(cache_key)
     if cached:
-        if isinstance(cached, dict):
+        if isinstance(cached, dict) and cached.get("text"):
             return cached
-        return {"text": cached, "words": [], "source": "cache"}
+        if isinstance(cached, str) and len(cached) > 10:
+            return {"text": cached, "words": [], "source": "cache"}
 
     result = {"text": f"Video: {title}. Duration: {duration}s.", "words": [], "source": "fallback"}
 
@@ -3454,9 +3455,13 @@ def generate_posts():
     if m:
         vid = m.group(1)
         if vid in TRANSCRIPT_CACHE:
-            transcript = TRANSCRIPT_CACHE[vid]
+            cached = TRANSCRIPT_CACHE[vid]
+            # FIX: TRANSCRIPT_CACHE now stores dicts {"text":..,"words":..,"source":..}
+            # but also may store plain strings from old cached data — handle both
+            transcript = cached.get("text", cached) if isinstance(cached, dict) else cached
         info = ytdlp_info(vid)
-        title = info.get("title", title)
+        if info:
+            title = info.get("title", title)
 
     plat_guides = {
         "linkedin": "Professional, insight-driven, 150-300 words, end with a question",
