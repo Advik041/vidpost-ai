@@ -2464,6 +2464,19 @@ def process_clip_job(job_id, video_id, upload_path, start, end, formats, user_id
         if not raw_video or not os.path.exists(raw_video) or os.path.getsize(raw_video) == 0:
             raise Exception("Source video not found or empty")
 
+        # ── Whisper transcription after download ──────────────────────────────
+        # Run on the actual video file so YouTube clips get word-level captions.
+        # Result cached in TRANSCRIPT_CACHE — subsequent clips on same video are instant.
+        if video_id:
+            cache_key = video_id
+            cached_tx = TRANSCRIPT_CACHE.get(cache_key)
+            cached_has_words = isinstance(cached_tx, dict) and bool(cached_tx.get("words"))
+            if not cached_has_words:
+                job_update(job_id, "running", 16, "Transcribing audio (Whisper)...")
+                tx = _get_transcript_for_video(video_id, raw_video, video_id, 600)
+                print(f"[clip_job] transcript source={tx.get('source')} "
+                      f"words={len(tx.get('words', []))} text_len={len(tx.get('text',''))}")
+
         job_update(job_id, "cutting", 35, "Cutting clip to exact timestamps...")
         cut_video = os.path.join(job_dir, "cut.mp4")
 
