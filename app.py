@@ -1126,6 +1126,68 @@ def health():
     })
 
 
+
+# ════════════════════════════════════════════════════════════════════════════════
+# SUPABASE STORAGE — Persistent clip storage (survives Railway restarts)
+# Bucket: "clips" — created automatically if it doesn't exist
+# Free tier: 1GB storage, 2GB bandwidth/month
+# ════════════════════════════════════════════════════════════════════════════════
+
+STORAGE_BUCKET = "clips"
+
+def _ensure_storage_bucket():
+    """Create the clips bucket if it doesn't exist."""
+    if not supa:
+        return False
+    try:
+        supa.storage.get_bucket(STORAGE_BUCKET)
+        return True
+    except Exception:
+        try:
+            supa.storage.create_bucket(STORAGE_BUCKET, options={"public": True})
+            print(f"[storage] Created bucket: {STORAGE_BUCKET}")
+            return True
+        except Exception as e:
+            print(f"[storage] Could not create bucket: {e}")
+            return False
+
+
+def upload_clip_to_storage(local_path: str, job_id: str, fmt: str,
+                            user_id: str = "") -> str:
+    """
+    Upload a clip MP4 to Supabase Storage.
+    Returns the permanent public URL, or empty string if upload fails.
+
+    Path in bucket: {user_id}/{job_id}/{fmt}.mp4
+    Public URL:     {SUPABASE_URL}/storage/v1/object/public/clips/{path}
+    """
+    if not supa or not os.path.exists(local_path):
+        return ""
+    try:
+        _ensure_storage_bucket()
+        uid = user_id or "anon"
+        storage_path = f"{uid}/{job_id}/{fmt}.mp4"
+        with open(local_path, "rb") as f:
+            file_data = f.read()
+        # Upload with upsert (overwrite if exists)
+        supa.storage.from_(STORAGE_BUCKET).upload(
+            path=storage_path,
+            file=file_data,
+            file_options={"content-type": "video/mp4", "upsert": "true"},
+        )
+        public_url = f"{SUPABASE_URL}/storage/v1/object/public/{STORAGE_BUCKET}/{storage_path}"
+        print(f"[storage] Uploaded {fmt}.mp4 → {public_url}")
+        return public_url
+    except Exception as e:
+        print(f"[storage] Upload failed for {job_id}/{fmt}: {e}")
+        return ""
+
+
+def get_clip_storage_url(job_id: str, fmt: str, user_id: str = "") -> str:
+    """Get the Supabase Storage URL for an existing clip (without re-uploading)."""
+    uid = user_id or "anon"
+    return f"{SUPABASE_URL}/storage/v1/object/public/{STORAGE_BUCKET}/{uid}/{job_id}/{fmt}.mp4"
+
 # ════════════════════════════════════════════════════════════════════════════════
 # SUPABASE HELPERS
 # ════════════════════════════════════════════════════════════════════════════════
@@ -2548,11 +2610,16 @@ def process_clip_job(job_id, video_id, upload_path, start, end, formats, user_id
         if user_id:
             record_clip_usage(user_id, job_id)
 
+        # Upload to Supabase Storage for permanent URLs (survives Railway restarts)
+        storage_urls = {}
+        for fmt, out_path in output_files.items():
+            storage_urls[fmt] = upload_clip_to_storage(out_path, job_id, fmt, user_id)
+
         refs = {
             fmt: {
                 "downloadUrl": f"/download/{job_id}/{fmt}",
-                "publicUrl": f"{BACKEND_URL}/download/{job_id}/{fmt}",
-                "streamUrl": f"{BACKEND_URL}/stream-clip/{job_id}/{fmt}",
+                "publicUrl":  storage_urls.get(fmt) or f"{BACKEND_URL}/download/{job_id}/{fmt}",
+                "streamUrl":  storage_urls.get(fmt) or f"{BACKEND_URL}/stream-clip/{job_id}/{fmt}",
                 "sizeMb": round(os.path.getsize(p) / (1024 * 1024), 1),
                 "resolution": vert_res if fmt == "vertical" else horiz_res,
                 "quality": "1080p HD" if src_height >= 1080 else "720p",
@@ -2836,6 +2903,7 @@ def editor_export():
     # gf() calls inside a background thread crash with "Working outside of request context"
     _upload_path   = gf("uploadPath", "")
     _editor_title  = gf("title", broll_kw or "")
+    _editor_uid    = gf("user_id", "")
 
     def run_editor_job():
         try:
@@ -3038,11 +3106,18 @@ def editor_export():
                 job_update(job_id, "error", 0, "Final render failed")
                 return
 
+            # Upload to Supabase Storage for permanent URLs
+            storage_urls = {}
+            for fmt, out_path in output_files.items():
+                storage_urls[fmt] = upload_clip_to_storage(
+                    out_path, job_id, fmt, _editor_uid
+                )
+
             refs = {
                 fmt: {
                     "downloadUrl": f"/download/{job_id}/{fmt}",
-                    "publicUrl": f"{BACKEND_URL}/download/{job_id}/{fmt}",
-                    "streamUrl": f"{BACKEND_URL}/stream-clip/{job_id}/{fmt}",
+                    "publicUrl":  storage_urls.get(fmt) or f"{BACKEND_URL}/download/{job_id}/{fmt}",
+                    "streamUrl":  storage_urls.get(fmt) or f"{BACKEND_URL}/stream-clip/{job_id}/{fmt}",
                     "sizeMb": round(os.path.getsize(p) / (1024 * 1024), 1),
                 }
                 for fmt, p in output_files.items()
