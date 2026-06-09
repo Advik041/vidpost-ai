@@ -2832,13 +2832,18 @@ def editor_export():
         logo_path = os.path.join(job_dir, "logo.png")
         logo_file.save(logo_path)
 
+    # FIX: extract ALL values from request context NOW, before thread starts
+    # gf() calls inside a background thread crash with "Working outside of request context"
+    _upload_path   = gf("uploadPath", "")
+    _editor_title  = gf("title", broll_kw or "")
+
     def run_editor_job():
         try:
             job_update(job_id, "running", 5, "Getting source video...")
 
             # Step 1: Get source video — try all available sources in priority order
             src = None
-            upload_path = gf("uploadPath", "")
+            upload_path = _upload_path  # extracted before thread start
 
             # Priority 1: Uploaded file (already on disk — instant)
             if not src and upload_path and os.path.exists(upload_path)                and os.path.getsize(upload_path) > 10000:
@@ -2942,7 +2947,7 @@ def editor_export():
             if broll and broll_kw and PEXELS_KEY:
                 job_update(job_id, "running", 55, "Fetching B-roll from Pexels...")
                 broll_clips_paths = []
-                clip_title = gf("title", broll_kw)
+                clip_title = _editor_title
                 clip_tx = TRANSCRIPT_CACHE.get(video_id, "") if video_id else ""
                 urls = fetch_pexels_videos(broll_kw, count=4,
                                            title=clip_title, transcript=str(clip_tx)[:500])
