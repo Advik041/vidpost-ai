@@ -2269,13 +2269,15 @@ async function _editorLoadYouTubeStream(videoId, title) {
   async function _tryLoad() {
     attempts++;
     try {
-      const r = await fetch(streamUrl, {method:'HEAD'});
-      if(r.ok && r.status === 200) {
-        // File is ready and serving
+      // Use GET with no body — HEAD can be blocked by some servers
+      // We just need to know if the file is ready (200) or still downloading (202)
+      const r = await fetch(streamUrl, {method:'GET', headers:{'Range':'bytes=0-0'}});
+      if(r.ok || r.status === 206) {
+        // File is ready and serving (200 or 206 Partial Content)
         _setVideoSrc();
         return;
       }
-      if(r.status === 202 || r.status === 503) {
+      if(r.status === 202 || r.status === 503 || r.status === 404) {
         // Downloading in background — poll
         if(loadMsg) loadMsg.textContent = '⬇ Downloading video (30–90s)…';
         if(_streamPollTimer) clearInterval(_streamPollTimer);
@@ -2540,9 +2542,19 @@ async function editorExport(){
   try {
     // Use videoId when available so backend downloads fresh with yt-dlp
     // rather than trying to re-download from the stream endpoint (which is ephemeral)
+    // Extract videoId from stream URL as ultimate fallback
+    let exportVideoId = currentVideoId || '';
+    let exportVideoUrl = '';
+    if(!exportVideoId && edVideoUrl) {
+      // Try to extract videoId from stream URL: /stream/VIDEOID or RAILWAY/stream/VIDEOID
+      const streamMatch = edVideoUrl.match(/\/stream\/([A-Za-z0-9_-]{11})/);
+      if(streamMatch) exportVideoId = streamMatch[1];
+      else exportVideoUrl = edVideoUrl; // non-YouTube direct URL
+    }
     const base={
-      video_url: currentVideoId ? '' : edVideoUrl,
-      videoId:   currentVideoId || '',
+      video_url:  exportVideoUrl,
+      videoId:    exportVideoId,
+      uploadPath: currentUploadPath || '',
       start:edStart,end:edEnd,
       captions:!!document.getElementById('ed-captions')?.checked,
       caption_style:edCapStyle,caption_size:edCapSize,
@@ -2560,7 +2572,7 @@ async function editorExport(){
       lower_third:!!document.getElementById('ed-lower-on')?.checked,
       lower_name:$('ed-lower-name')?.value||'',
       lower_title:$('ed-lower-title')?.value||'',
-      // videoId already set above
+
       user_id:currentUser?.id||'',
     };
     let body;

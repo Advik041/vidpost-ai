@@ -2836,28 +2836,50 @@ def editor_export():
         try:
             job_update(job_id, "running", 5, "Getting source video...")
 
-            # Step 1: Get source video
+            # Step 1: Get source video — try all available sources in priority order
             src = None
-            if video_id:
+            upload_path = gf("uploadPath", "")
+
+            # Priority 1: Uploaded file (already on disk — instant)
+            if not src and upload_path and os.path.exists(upload_path)                and os.path.getsize(upload_path) > 10000:
+                src = upload_path
+                job_update(job_id, "running", 10, "Using uploaded file...")
+
+            # Priority 2: Cached stream preview (downloaded when editor loaded URL)
+            if not src and video_id:
                 cache_path = os.path.join(CLIPS_DIR, f"preview_{video_id}.mp4")
                 if os.path.exists(cache_path) and os.path.getsize(cache_path) > 10000:
                     src = cache_path
-                else:
-                    dl_path = os.path.join(job_dir, "source.mp4")
-                    job_update(job_id, "running", 8, "Downloading from YouTube...")
-                    if ytdlp_download(video_id, dl_path, height=1080) or \
-                       ytdlp_download(video_id, dl_path, height=720):
-                        src = dl_path
-            elif video_url:
-                src = os.path.join(job_dir, "source.mp4")
-                job_update(job_id, "running", 8, "Fetching video...")
-                r2 = requests.get(video_url, stream=True, timeout=120)
-                with open(src, "wb") as f2:
-                    for chunk in r2.iter_content(65536):
-                        f2.write(chunk)
+                    job_update(job_id, "running", 10, "Using cached preview...")
+
+            # Priority 3: Fresh yt-dlp download
+            if not src and video_id:
+                dl_path = os.path.join(job_dir, "source.mp4")
+                job_update(job_id, "running", 8, "Downloading from YouTube...")
+                if ytdlp_download(video_id, dl_path, height=1080) or                    ytdlp_download(video_id, dl_path, height=720):
+                    src = dl_path
+
+            # Priority 4: Direct URL (non-Railway, non-stream URLs only)
+            if not src and video_url and video_url.startswith("http") and                "railway" not in video_url.lower() and "/stream/" not in video_url:
+                try:
+                    src = os.path.join(job_dir, "source.mp4")
+                    job_update(job_id, "running", 8, "Fetching video from URL...")
+                    with requests.get(video_url, stream=True, timeout=120) as r2:
+                        r2.raise_for_status()
+                        with open(src, "wb") as f2:
+                            for chunk in r2.iter_content(65536):
+                                if chunk:
+                                    f2.write(chunk)
+                    if not os.path.exists(src) or os.path.getsize(src) < 10000:
+                        src = None
+                except Exception as url_e:
+                    print(f"[editor_export] URL fetch failed: {url_e}")
+                    src = None
 
             if not src or not os.path.exists(src) or os.path.getsize(src) < 10000:
-                job_update(job_id, "error", 0, "Could not obtain video. Please upload directly.")
+                hint = "Try generating a clip first then clicking 'Edit in studio'"                        if video_id else "Use the Upload file tab to upload the video"
+                job_update(job_id, "error", 0,
+                           f"Could not obtain video. {hint}.")
                 return
 
             # Step 2: Trim first (input-seeking for accuracy)
