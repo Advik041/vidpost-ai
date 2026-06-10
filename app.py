@@ -2029,128 +2029,464 @@ def burn_captions_ffmpeg(inp: str, srt_path: str, out: str,
 
 
 # ════════════════════════════════════════════════════════════════════════════════
-# PEXELS B-ROLL — FIXED
+# PEXELS B-ROLL — SEMANTIC UPGRADE v3
 # ════════════════════════════════════════════════════════════════════════════════
 
+# Emotion → search modifier mapping used by build_broll_slot_query()
+_EMOTION_SEARCH_MODIFIERS = {
+    "curiosity":   ["exploring discovery mystery"],
+    "humor":       ["playful fun lighthearted"],
+    "inspiration": ["achievement sunrise success motivation"],
+    "shock":       ["dramatic intense cinematic"],
+    "education":   ["learning professional workspace"],
+    "story":       ["cinematic personal journey"],
+    "excitement":  ["dynamic energy fast motion"],
+    "sadness":     ["reflective calm quiet"],
+    "anger":       ["intense dramatic confrontation"],
+    "fear":        ["dramatic tension suspense"],
+}
+
+# Narrative position → shot-type guidance for Pexels queries
+_POSITION_SHOT_HINTS = {
+    "hook":     "wide establishing shot",
+    "problem":  "struggle difficulty challenge",
+    "conflict": "tense dramatic intense",
+    "solution": "clear decisive action confident",
+    "result":   "achievement success outcome celebration",
+    "cta":      "direct call action forward",
+    "middle":   "illustrative action specific",
+    "opening":  "wide establishing context",
+    "closing":  "intimate result conclusion",
+}
+
+
+def _probe_video_duration(video_path: str) -> float:
+    """Return duration of a video file in seconds, or 60.0 on failure."""
+    try:
+        r = subprocess.run(
+            [FFPROBE, "-v", "quiet", "-print_format", "json",
+             "-show_format", video_path],
+            capture_output=True, text=True, timeout=15,
+        )
+        return float(json.loads(r.stdout).get("format", {}).get("duration", 60))
+    except Exception:
+        return 60.0
+
+
+# ---------------------------------------------------------------------------
+# Stage 1 — Semantic segment builder from Whisper word timestamps
+# ---------------------------------------------------------------------------
+def build_semantic_segments(words: list, min_dur: float = 1.5,
+                             max_dur: float = 12.0) -> list:
+    """
+    Group Whisper word-timestamp dicts into sentence-level segments.
+    Each output dict: start, end, text, gap_after.
+    words: [{"word": str, "start": float, "end": float}, ...]
+    """
+    if not words:
+        return []
+    segments = []
+    current: list = []
+    for i, w in enumerate(words):
+        current.append(w)
+        text_so_far = " ".join(x["word"] for x in current).strip()
+        seg_dur = current[-1]["end"] - current[0]["start"]
+        is_sentence_end = text_so_far.rstrip().endswith((".", "?", "!", ",", ";"))
+        next_gap = (words[i + 1]["start"] - w["end"]
+                    if i + 1 < len(words) else 999.0)
+        should_split = (
+            (is_sentence_end and seg_dur >= min_dur)
+            or next_gap > 0.45
+            or seg_dur >= max_dur
+        )
+        if should_split and seg_dur >= min_dur:
+            segments.append({
+                "start":     current[0]["start"],
+                "end":       current[-1]["end"],
+                "text":      text_so_far,
+                "gap_after": next_gap,
+            })
+            current = []
+    if current:
+        seg_dur = current[-1]["end"] - current[0]["start"]
+        if seg_dur >= min_dur:
+            segments.append({
+                "start":     current[0]["start"],
+                "end":       current[-1]["end"],
+                "text":      " ".join(x["word"] for x in current).strip(),
+                "gap_after": 0.0,
+            })
+    return segments
+
+
+# ---------------------------------------------------------------------------
+# Stage 2+3 — Batch intent + emotion + narrative classification (1 Groq call)
+# ---------------------------------------------------------------------------
+def classify_segments_for_broll(segments: list, clip_title: str,
+                                 groq_key: str) -> list:
+    """
+    Classify each segment with: intent, emotion, narrative_position,
+    broll_needed, importance_score, visual_category, confidence_score.
+    Single Groq call for all segments to minimise latency.
+    """
+    if not groq_key or not segments:
+        for seg in segments:
+            seg.update({
+                "intent": "factual", "emotion": "education",
+                "narrative_position": "middle", "broll_needed": True,
+                "importance_score": 5, "visual_category": "general",
+                "confidence_score": 0.5,
+            })
+        return segments
+
+    seg_lines = []
+    for i, seg in enumerate(segments):
+        dur = round(seg["end"] - seg["start"], 1)
+        seg_lines.append(f'{i}: [{dur}s] "{seg["text"][:120]}"')
+
+    clip_dur = segments[-1]["end"] if segments else 60
+    total_segs = len(segments)
+
+    prompt = f"""You are an expert video editor. Classify each transcript segment for B-roll placement.
+
+VIDEO TITLE: "{clip_title}"
+TOTAL SEGMENTS: {total_segs}
+CLIP DURATION: {round(clip_dur, 1)}s
+
+SEGMENTS (index: [duration] "text"):
+{chr(10).join(seg_lines)}
+
+For EACH segment return one JSON object.
+intent: factual | story | emotional | instructional | transition | question | cta
+emotion: curiosity | humor | inspiration | shock | education | story | excitement | sadness | neutral
+narrative_position: hook | problem | conflict | solution | result | cta | opening | middle | closing
+visual_category: action | abstract | person | nature | technology | business | lifestyle | general
+broll_needed: true for factual/story/instructional/emotional — false for question/cta/transition
+importance_score: 1-10
+confidence_score: 0.1-1.0
+
+Return ONLY a valid JSON array, one object per segment, same order. No markdown:
+[{{"intent":"factual","emotion":"education","narrative_position":"middle","broll_needed":true,"importance_score":7,"visual_category":"business","confidence_score":0.8}}]"""
+
+    try:
+        raw = _groq_chat([{"role": "user", "content": prompt}],
+                         max_tokens=min(4000, total_segs * 120 + 200),
+                         temperature=0.05)
+        if raw:
+            raw = re.sub(r"```(?:json)?|```", "", raw).strip()
+            m = re.search(r"\[[\s\S]*\]", raw)
+            if m:
+                classifications = json.loads(m.group())
+                valid_intents   = {"factual","story","emotional","instructional",
+                                   "transition","question","cta"}
+                valid_emotions  = {"curiosity","humor","inspiration","shock",
+                                   "education","story","excitement","sadness","neutral"}
+                valid_positions = {"hook","problem","conflict","solution","result",
+                                   "cta","opening","middle","closing"}
+                valid_visual    = {"action","abstract","person","nature","technology",
+                                   "business","lifestyle","general"}
+                for i, cls in enumerate(classifications[:len(segments)]):
+                    segments[i]["intent"]             = cls.get("intent","factual") if cls.get("intent") in valid_intents else "factual"
+                    segments[i]["emotion"]            = cls.get("emotion","education") if cls.get("emotion") in valid_emotions else "education"
+                    segments[i]["narrative_position"] = cls.get("narrative_position","middle") if cls.get("narrative_position") in valid_positions else "middle"
+                    segments[i]["broll_needed"]       = bool(cls.get("broll_needed", True))
+                    segments[i]["importance_score"]   = max(1, min(10, int(cls.get("importance_score", 5))))
+                    segments[i]["visual_category"]    = cls.get("visual_category","general") if cls.get("visual_category") in valid_visual else "general"
+                    segments[i]["confidence_score"]   = max(0.1, min(1.0, float(cls.get("confidence_score", 0.5))))
+                print(f"[broll-classify] classified {len(classifications)} segments")
+                return segments
+    except Exception as e:
+        print(f"[broll-classify] error: {e}")
+
+    for seg in segments:
+        if "broll_needed" not in seg:
+            seg.update({
+                "intent": "factual", "emotion": "education",
+                "narrative_position": "middle", "broll_needed": True,
+                "importance_score": 5, "visual_category": "general",
+                "confidence_score": 0.5,
+            })
+    return segments
+
+
+# ---------------------------------------------------------------------------
+# Stage 4 — Scene planner: decide which segments get B-roll slots
+# ---------------------------------------------------------------------------
+def plan_broll_slots(classified_segments: list, clip_duration: float,
+                     frequency: str = "medium") -> list:
+    """
+    Select segments that should receive B-roll. Assigns position + target_duration.
+    frequency: low = importance>=7, medium = importance>=5, high = importance>=3
+    """
+    NO_BROLL_INTENTS   = {"question", "cta", "transition"}
+    freq_threshold     = {"low": 7, "medium": 5, "high": 3}.get(frequency, 5)
+    slots              = []
+    last_broll_end     = -5.0
+
+    for seg in classified_segments:
+        if seg.get("intent") in NO_BROLL_INTENTS:
+            continue
+        if not seg.get("broll_needed", True):
+            continue
+        duration = seg["end"] - seg["start"]
+        if duration < 1.5:
+            continue
+        if seg.get("importance_score", 5) < freq_threshold:
+            continue
+        if seg["start"] - last_broll_end < 2.0:
+            continue
+
+        position_pct = seg["start"] / max(clip_duration, 1)
+        if position_pct < 0.15:
+            pos_label = "opening"
+        elif position_pct > 0.82:
+            pos_label = "closing"
+        else:
+            pos_label = seg.get("narrative_position", "middle")
+
+        target_dur = min(max(duration, 2.0), 10.0)
+        slots.append({**seg, "position": pos_label,
+                      "target_duration": round(target_dur, 2)})
+        last_broll_end = seg["end"]
+
+    print(f"[broll-planner] {len(slots)}/{len(classified_segments)} segments "
+          f"selected (frequency={frequency})")
+    return slots
+
+
+# ---------------------------------------------------------------------------
+# Stage 5 — Per-slot query builder (1 Groq call per slot)
+# ---------------------------------------------------------------------------
+def build_broll_slot_query(slot: dict, clip_title: str, groq_key: str) -> str:
+    """
+    Generate a targeted Pexels search query for a specific transcript slot.
+    Falls back to title + visual_category if Groq unavailable.
+    """
+    if not groq_key:
+        title_words = " ".join(clip_title.split()[:3])
+        return f"{title_words} {slot.get('visual_category','')}".strip()
+
+    emotion      = slot.get("emotion", "education")
+    position     = slot.get("position", "middle")
+    visual_cat   = slot.get("visual_category", "general")
+    shot_hint    = _POSITION_SHOT_HINTS.get(position, "illustrative action")
+    emotion_mods = _EMOTION_SEARCH_MODIFIERS.get(emotion, [""])
+    emotion_words = emotion_mods[0] if emotion_mods else ""
+
+    prompt = f"""Generate ONE Pexels video search query (3-6 words max) for B-roll footage.
+
+Spoken text: "{slot['text'][:200]}"
+Video topic: "{clip_title}"
+Visual category: {visual_cat}
+Emotional tone: {emotion} ({emotion_words})
+Shot type: {shot_hint}
+
+Rules:
+- Describe what the CAMERA SEES — not an abstract concept
+- Be specific: "entrepreneur pitching investors boardroom" not "business"
+- 3-6 words maximum
+Return ONLY the search query string. Nothing else."""
+
+    try:
+        result = _groq_chat(
+            [{"role": "user", "content": prompt}],
+            max_tokens=25, temperature=0.15,
+        )
+        if result:
+            query = result.strip().strip('"').strip("'").replace("\n", " ")
+            if 2 <= len(query.split()) <= 10:
+                return query
+    except Exception as e:
+        print(f"[broll-query] {e}")
+
+    title_words = " ".join(clip_title.split()[:3])
+    return f"{title_words} {emotion_words}".strip()
+
+
+# ---------------------------------------------------------------------------
+# Stage 6 — B-roll confidence scorer
+# ---------------------------------------------------------------------------
+def score_pexels_candidate(video: dict, target_duration: float,
+                            prefer_portrait: bool = True) -> float:
+    """Score a Pexels video JSON object. Max ≈ 10.0."""
+    files = video.get("video_files", [])
+    w     = video.get("width", 0)
+    h     = video.get("height", 0)
+    dur   = float(video.get("duration", 0))
+    is_portrait = h > w
+
+    has_fhd = any(f.get("quality") == "hd" and f.get("height", 0) >= 1080 for f in files)
+    has_hd  = any(f.get("quality") == "hd" and f.get("height", 0) >= 720  for f in files)
+    score   = 3.0 if has_fhd else (1.5 if has_hd else 0.0)
+
+    if prefer_portrait:
+        score += 2.5 if is_portrait else 0.5
+    else:
+        score += 2.5 if not is_portrait else 0.5
+
+    if 4.0 <= dur <= 12.0:
+        score += 2.0
+    elif 2.0 <= dur <= 20.0:
+        score += 1.0
+    if abs(dur - target_duration) <= 2.0:
+        score += 0.5
+
+    max_h = max((f.get("height", 0) for f in files), default=0)
+    score += 1.5 if max_h >= 1920 else (0.8 if max_h >= 1280 else 0.0)
+    score += min(1.0, len(files) / 8.0)
+    return round(score, 2)
+
+
+def _pick_best_pexels_video(videos: list, target_duration: float,
+                             prefer_portrait: bool, blocked_ids: set) -> dict | None:
+    """Score all Pexels candidates, filter blocked IDs, return best-scored."""
+    def _best_url(video_files: list, prefer_portrait: bool) -> str:
+        ph = lh = ps = any_u = None
+        for vf in video_files:
+            vw, vh = vf.get("width", 0), vf.get("height", 0)
+            q, lnk = vf.get("quality",""), vf.get("link","")
+            if not lnk:
+                continue
+            isp  = vh > vw
+            ishd = q == "hd" and vh >= 720
+            issd = q in ("hd","sd") and vh >= 480
+            if isp and ishd  and not ph: ph = lnk
+            if not isp and ishd and not lh: lh = lnk
+            if isp and issd  and not ps: ps = lnk
+            if not any_u: any_u = lnk
+        return (ph or lh or ps or any_u or "") if prefer_portrait else (lh or ph or ps or any_u or "")
+
+    scored = []
+    for v in videos:
+        vid_id = v.get("id")
+        if not vid_id or vid_id in blocked_ids:
+            continue
+        url = _best_url(v.get("video_files",[]), prefer_portrait)
+        if not url:
+            continue
+        s = score_pexels_candidate(v, target_duration, prefer_portrait)
+        scored.append({"id": vid_id, "url": url, "score": s,
+                        "duration": float(v.get("duration",0)),
+                        "width": v.get("width",0), "height": v.get("height",0)})
+    if not scored:
+        return None
+    scored.sort(key=lambda x: x["score"], reverse=True)
+    return scored[0]
+
+
+# ---------------------------------------------------------------------------
+# Stage 7 — Single-slot Pexels fetcher with scoring + fallback
+# ---------------------------------------------------------------------------
+def fetch_pexels_for_slot(query: str, target_duration: float,
+                          prefer_portrait: bool = True,
+                          blocked_ids: set | None = None) -> dict | None:
+    """
+    Search Pexels for one B-roll slot. Returns best-scored candidate dict
+    {id, url, score, duration, width, height} or None.
+    """
+    if not PEXELS_KEY:
+        return None
+    if blocked_ids is None:
+        blocked_ids = set()
+    MIN_SCORE = 3.0
+
+    for orientation in ("portrait", "landscape"):
+        try:
+            resp = requests.get(
+                "https://api.pexels.com/videos/search",
+                headers={"Authorization": PEXELS_KEY},
+                params={"query": query, "per_page": 10,
+                        "orientation": orientation, "size": "medium",
+                        "min_duration": 3, "max_duration": 20},
+                timeout=15,
+            )
+            if not resp.ok:
+                continue
+            best = _pick_best_pexels_video(
+                resp.json().get("videos", []),
+                target_duration, prefer_portrait, blocked_ids,
+            )
+            if best and best["score"] >= MIN_SCORE:
+                print(f"[pexels] '{query}' ({orientation}): "
+                      f"score={best['score']} id={best['id']}")
+                return best
+        except Exception as e:
+            print(f"[pexels] '{query}' ({orientation}): {e}")
+
+    # Broader fallback (first 2 words)
+    fallback_q = " ".join(query.split()[:2])
+    if fallback_q and fallback_q != query:
+        try:
+            resp = requests.get(
+                "https://api.pexels.com/videos/search",
+                headers={"Authorization": PEXELS_KEY},
+                params={"query": fallback_q, "per_page": 8,
+                        "orientation": "portrait",
+                        "min_duration": 3, "max_duration": 20},
+                timeout=12,
+            )
+            if resp.ok:
+                best = _pick_best_pexels_video(
+                    resp.json().get("videos", []),
+                    target_duration, prefer_portrait, blocked_ids,
+                )
+                if best:
+                    print(f"[pexels-fallback] '{fallback_q}': score={best['score']}")
+                    return best
+        except Exception as e:
+            print(f"[pexels-fallback] '{fallback_q}': {e}")
+    return None
+
+
+# ---------------------------------------------------------------------------
+# Legacy wrapper — backward-compatible, kept for any direct callers
+# ---------------------------------------------------------------------------
 def _ai_broll_keywords(title: str, transcript: str, groq_key: str) -> list:
-    """Use Groq to extract the best B-roll search keywords for a video clip."""
+    """Legacy global keyword extractor — kept for fetch_pexels_videos() fallback."""
     if not groq_key:
         return []
     try:
-        prompt = f"""Extract 5 specific B-roll video search keywords for this content.
+        prompt = f"""Extract 5 specific B-roll video search keywords.
 Title: "{title}"
 Context: {transcript[:500]}
-
-Rules:
-- Each keyword/phrase should describe a VISUAL scene that would enhance the content
-- Be specific: "businessman shaking hands" not "business"
-- Prefer action/cinematic scenes over abstract concepts
-- Think like a video editor choosing cutaway footage
-
-Return ONLY a JSON array of strings:
-["keyword 1", "keyword 2", "keyword 3", "keyword 4", "keyword 5"]"""
-        raw = _groq_chat([{"role": "user", "content": prompt}], max_tokens=200)
+Return ONLY a JSON array: ["keyword 1","keyword 2","keyword 3","keyword 4","keyword 5"]"""
+        raw = _groq_chat([{"role": "user", "content": prompt}], max_tokens=150)
         if raw:
             raw = re.sub(r"```(?:json)?|```", "", raw).strip()
             m = re.search(r"\[.*?\]", raw, re.DOTALL)
             if m:
                 return [str(k).strip() for k in json.loads(m.group()) if k][:5]
     except Exception as e:
-        print(f"AI broll keywords error: {e}")
+        print(f"[broll-kw-legacy] {e}")
     return []
 
 
 def fetch_pexels_videos(keywords: str, count: int = 4,
-                         title: str = "", transcript: str = "") -> list:
+                        title: str = "", transcript: str = "") -> list:
     """
-    Fetch contextually relevant B-roll from Pexels.
-    Enhanced: AI keyword extraction, portrait-first, quality ranking,
-    deduplication, fallback to landscape if portrait unavailable.
+    Backward-compatible wrapper. Returns list of video URLs (strings).
+    New pipeline calls fetch_pexels_for_slot() per transcript slot instead.
     """
     if not PEXELS_KEY:
         return []
-
-    # Try AI keywords first if title provided
-    ai_kws = []
-    if title and GROQ_KEY:
-        ai_kws = _ai_broll_keywords(title, transcript or keywords, GROQ_KEY)
-
-    # Build keyword list: AI keywords + manual keywords
     manual_kws = [kw.strip() for kw in keywords.replace(",", "|").split("|") if kw.strip()]
-    all_kws = (ai_kws + manual_kws)[:6]
-    if not all_kws:
-        all_kws = ["cinematic footage"]
-
+    ai_kws = _ai_broll_keywords(title, transcript or keywords, GROQ_KEY) if (title and GROQ_KEY) else []
+    all_kws = (ai_kws + manual_kws)[:6] or ["cinematic footage"]
     results = []
-    seen_ids = set()
-
-    def _best_file(video_files: list, prefer_portrait: bool = True):
-        """Pick best video file: portrait HD > landscape HD > portrait SD > any."""
-        portrait_hd, landscape_hd, portrait_sd, any_file = None, None, None, None
-        for vf in video_files:
-            w = vf.get("width", 0)
-            h = vf.get("height", 0)
-            q = vf.get("quality", "")
-            link = vf.get("link", "")
-            if not link:
-                continue
-            is_portrait = h > w
-            is_hd = q == "hd" and h >= 720
-            is_sd = q in ("hd", "sd") and h >= 480
-            if is_portrait and is_hd and not portrait_hd:
-                portrait_hd = link
-            elif not is_portrait and is_hd and not landscape_hd:
-                landscape_hd = link
-            elif is_portrait and is_sd and not portrait_sd:
-                portrait_sd = link
-            if not any_file and link:
-                any_file = link
-        if prefer_portrait:
-            return portrait_hd or landscape_hd or portrait_sd or any_file
-        return landscape_hd or portrait_hd or portrait_sd or any_file
-
+    seen_ids: set = set()
     for kw in all_kws:
         if len(results) >= count:
             break
-        for orientation in ("portrait", "landscape"):
-            if len(results) >= count:
-                break
-            try:
-                resp = requests.get(
-                    "https://api.pexels.com/videos/search",
-                    headers={"Authorization": PEXELS_KEY},
-                    params={
-                        "query": kw,
-                        "per_page": 8,
-                        "orientation": orientation,
-                        "size": "medium",
-                        "min_duration": 4,
-                        "max_duration": 20,
-                    },
-                    timeout=15,
-                )
-                if not resp.ok:
-                    continue
-                videos = resp.json().get("videos", [])
-                for v in videos:
-                    vid_id = v.get("id")
-                    if vid_id in seen_ids:
-                        continue
-                    link = _best_file(v.get("video_files", []))
-                    if link:
-                        seen_ids.add(vid_id)
-                        results.append(link)
-                        if len(results) >= count:
-                            break
-            except Exception as e:
-                print(f"Pexels '{kw}' ({orientation}): {e}")
-
-    print(f"Pexels: found {len(results)} clips for keywords: {all_kws[:3]}")
+        best = fetch_pexels_for_slot(kw, 5.0, prefer_portrait=True, blocked_ids=seen_ids)
+        if best:
+            seen_ids.add(best["id"])
+            results.append(best["url"])
+    print(f"[pexels-legacy] {len(results)} clips for: {all_kws[:3]}")
     return results[:count]
 
 
-def download_pexels_clip(url: str, out_path: str, duration: int = 5) -> bool:
-    """Download and trim a Pexels clip to the target duration."""
+def download_pexels_clip(url: str, out_path: str, duration: float = 5.0) -> bool:
+    """Download and trim a Pexels clip. duration now accepts float."""
     try:
         r = requests.get(url, stream=True, timeout=60)
         r.raise_for_status()
@@ -2158,9 +2494,8 @@ def download_pexels_clip(url: str, out_path: str, duration: int = 5) -> bool:
         with open(raw, "wb") as f:
             for chunk in r.iter_content(65536):
                 f.write(chunk)
-        # Trim to duration and re-encode to ensure compatibility
         result = subprocess.run([
-            FFMPEG, "-y", "-i", raw, "-t", str(duration),
+            FFMPEG, "-y", "-i", raw, "-t", str(round(duration, 2)),
             "-c:v", "libx264", "-preset", "fast", "-crf", "22",
             "-vf", "scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920",
             "-an", out_path,
@@ -2169,74 +2504,207 @@ def download_pexels_clip(url: str, out_path: str, duration: int = 5) -> bool:
             os.remove(raw)
         return os.path.exists(out_path) and os.path.getsize(out_path) > 1000
     except Exception as e:
-        print(f"Pexels download '{url}': {e}")
+        print(f"[pexels-dl] '{url}': {e}")
         return False
 
 
+# ---------------------------------------------------------------------------
+# Stage 8 — Transcript-aligned B-roll timeline builder
+# Replaces fixed-interval insert_broll() with Whisper-aligned assembly
+# ---------------------------------------------------------------------------
+def insert_broll_semantic(main_video: str, broll_slot_map: dict,
+                          broll_slots: list, output_path: str) -> bool:
+    """
+    Assemble final video with B-roll at Whisper-aligned timestamps.
+    Speaker AUDIO is always preserved. B-roll replaces VIDEO only.
+
+    broll_slot_map: {slot_index: local_file_path}
+    broll_slots:    list of slot dicts from plan_broll_slots()
+    """
+    if not broll_slot_map:
+        shutil.copy(main_video, output_path)
+        return True
+
+    job_dir = os.path.dirname(output_path)
+    total   = _probe_video_duration(main_video)
+
+    try:
+        probe = subprocess.run(
+            [FFPROBE, "-v", "quiet", "-print_format", "json",
+             "-show_streams", main_video],
+            capture_output=True, text=True, timeout=15,
+        )
+        streams = json.loads(probe.stdout).get("streams", [])
+        vid_w, vid_h = 1080, 1920
+        for s in streams:
+            if s.get("codec_type") == "video":
+                vid_w = int(s.get("width", 1080))
+                vid_h = int(s.get("height", 1920))
+                break
+    except Exception:
+        vid_w, vid_h = 1080, 1920
+
+    ENCODE_ARGS = ["-c:v","libx264","-preset","fast","-crf","20",
+                   "-c:a","aac","-b:a","128k"]
+    SCALE_VF = (f"scale={vid_w}:{vid_h}:force_original_aspect_ratio=decrease,"
+                f"pad={vid_w}:{vid_h}:(ow-iw)/2:(oh-ih)/2:black,setsar=1")
+
+    def _cut_main(t_start: float, t_end: float, tag: str) -> str | None:
+        dur = t_end - t_start
+        if dur < 0.2:
+            return None
+        out = os.path.join(job_dir, f"sem_{tag}.mp4")
+        r = subprocess.run(
+            [FFMPEG, "-y", "-ss", str(round(t_start, 3)),
+             "-i", main_video, "-t", str(round(dur, 3)),
+             "-vf", SCALE_VF] + ENCODE_ARGS + [out],
+            capture_output=True, timeout=120,
+        )
+        if r.returncode == 0 and os.path.exists(out) and os.path.getsize(out) > 500:
+            return out
+        return None
+
+    def _overlay_broll(broll_path: str, audio_start: float,
+                       seg_dur: float, tag: str) -> str | None:
+        if not os.path.exists(broll_path):
+            return _cut_main(audio_start, audio_start + seg_dur, f"{tag}_fb")
+        audio_seg = os.path.join(job_dir, f"aud_{tag}.aac")
+        subprocess.run(
+            [FFMPEG, "-y", "-ss", str(round(audio_start, 3)),
+             "-i", main_video, "-t", str(round(seg_dur, 3)),
+             "-vn", "-c:a", "aac", "-b:a", "128k", audio_seg],
+            capture_output=True, timeout=30,
+        )
+        out = os.path.join(job_dir, f"sem_{tag}.mp4")
+        if os.path.exists(audio_seg):
+            r = subprocess.run(
+                [FFMPEG, "-y", "-i", broll_path, "-i", audio_seg,
+                 "-t", str(round(seg_dur, 3)),
+                 "-map", "0:v:0", "-map", "1:a:0",
+                 "-vf", SCALE_VF] + ENCODE_ARGS + [out],
+                capture_output=True, timeout=60,
+            )
+        else:
+            r = subprocess.run(
+                [FFMPEG, "-y", "-i", broll_path,
+                 "-t", str(round(seg_dur, 3)),
+                 "-vf", SCALE_VF] + ENCODE_ARGS + [out],
+                capture_output=True, timeout=60,
+            )
+        if r.returncode == 0 and os.path.exists(out) and os.path.getsize(out) > 500:
+            return out
+        return None
+
+    # Build sorted B-roll windows from slots that have downloaded files
+    broll_windows = sorted(
+        [{"start": broll_slots[i]["start"], "end": broll_slots[i]["end"],
+          "path": broll_slot_map[i], "idx": i}
+         for i in broll_slot_map if i < len(broll_slots)],
+        key=lambda x: x["start"],
+    )
+
+    segments_manifest: list = []
+    pos = 0.0
+    seg_counter = 0
+
+    for bw in broll_windows:
+        if bw["start"] > pos + 0.15:
+            seg = _cut_main(pos, bw["start"], f"spk{seg_counter}")
+            if seg:
+                segments_manifest.append(seg)
+                seg_counter += 1
+        seg_dur = bw["end"] - bw["start"]
+        seg = _overlay_broll(bw["path"], bw["start"], seg_dur, f"br{bw['idx']}")
+        if seg:
+            segments_manifest.append(seg)
+        else:
+            fb = _cut_main(bw["start"], bw["end"], f"fb{seg_counter}")
+            if fb:
+                segments_manifest.append(fb)
+        seg_counter += 1
+        pos = bw["end"]
+
+    if pos < total - 0.15:
+        seg = _cut_main(pos, total, "spk_final")
+        if seg:
+            segments_manifest.append(seg)
+
+    if not segments_manifest:
+        shutil.copy(main_video, output_path)
+        return True
+
+    cf = os.path.join(job_dir, "semantic_concat.txt")
+    with open(cf, "w") as f:
+        for p in segments_manifest:
+            f.write(f"file '{p}'\n")
+
+    r = subprocess.run([
+        FFMPEG, "-y", "-f", "concat", "-safe", "0", "-i", cf,
+        "-c:v", "libx264", "-preset", "fast", "-crf", "20",
+        "-c:a", "aac", "-b:a", "128k",
+        "-movflags", "+faststart", output_path,
+    ], capture_output=True, text=True, timeout=400)
+
+    if r.returncode == 0 and os.path.exists(output_path):
+        print(f"[broll-semantic] {len(segments_manifest)} segments → {output_path}")
+        return True
+    print(f"[broll-semantic] concat failed: {r.stderr[-200:]}")
+    shutil.copy(main_video, output_path)
+    return False
+
+
+# Legacy fixed-interval inserter — kept for backward compatibility
 def insert_broll(main_video: str, broll_clips: list, output_path: str,
                  frequency: str = "medium") -> bool:
     """
-    ROOT CAUSE OF OLD BUG:
-    The old concat used -c copy on segments cut from the main video, then
-    concatenated with b-roll clips that were encoded differently. FFmpeg's
-    concat demuxer requires identical codec parameters; mismatched clips
-    cause corrupted output or silent failures.
-
-    FIX: Re-encode all segments to a common spec before concat.
-         Also probe the main video to get its actual dimensions first.
+    Legacy fixed-interval B-roll insertion. Kept for backward compatibility.
+    New pipeline uses insert_broll_semantic() in run_editor_job().
     """
     if not broll_clips:
         shutil.copy(main_video, output_path)
         return True
     try:
         probe = subprocess.run(
-            [FFPROBE, "-v", "quiet", "-print_format", "json", "-show_format", "-show_streams", main_video],
-            capture_output=True, text=True
+            [FFPROBE, "-v", "quiet", "-print_format", "json",
+             "-show_format", "-show_streams", main_video],
+            capture_output=True, text=True,
         )
-        info = json.loads(probe.stdout)
+        info  = json.loads(probe.stdout)
         total = float(info.get("format", {}).get("duration", 60))
-
-        # Get video dimensions from stream
-        w, h = 1080, 1920
+        w, h  = 1080, 1920
         for s in info.get("streams", []):
             if s.get("codec_type") == "video":
                 w, h = int(s.get("width", 1080)), int(s.get("height", 1920))
                 break
-
         interval = {"low": 30, "medium": 20, "high": 12}.get(frequency, 20)
-        job_dir = os.path.dirname(output_path)
+        job_dir  = os.path.dirname(output_path)
         segments = []
         pos = 0.0
-        bi = 0
-
+        bi  = 0
         while pos < total:
             seg_end = min(pos + interval, total)
             sp = os.path.join(job_dir, f"bseg_{int(pos)}.mp4")
-            # FIX: re-encode to common spec (1080x1920, libx264, aac)
             subprocess.run([
                 FFMPEG, "-y", "-i", main_video,
                 "-ss", str(pos), "-t", str(seg_end - pos),
-                "-vf", f"scale={w}:{h}:force_original_aspect_ratio=decrease,pad={w}:{h}:(ow-iw)/2:(oh-ih)/2:black",
+                "-vf", f"scale={w}:{h}:force_original_aspect_ratio=decrease,"
+                       f"pad={w}:{h}:(ow-iw)/2:(oh-ih)/2:black",
                 "-c:v", "libx264", "-preset", "fast", "-crf", "20",
                 "-c:a", "aac", "-b:a", "128k", sp,
             ], capture_output=True, timeout=120)
             if os.path.exists(sp) and os.path.getsize(sp) > 1000:
                 segments.append(sp)
-
             if bi < len(broll_clips) and seg_end < total:
                 segments.append(broll_clips[bi])
                 bi += 1
             pos = seg_end
-
         if not segments:
             shutil.copy(main_video, output_path)
             return True
-
         cf = os.path.join(job_dir, "broll_concat.txt")
         with open(cf, "w") as f:
             for p in segments:
                 f.write(f"file '{p}'\n")
-
         r = subprocess.run([
             FFMPEG, "-y", "-f", "concat", "-safe", "0", "-i", cf,
             "-c:v", "libx264", "-preset", "fast", "-crf", "20",
@@ -3011,22 +3479,113 @@ def editor_export():
                         if os.path.exists(audio_path2) and os.path.getsize(audio_path2) > 1000:
                             segments = transcribe_with_whisper(audio_path2)
 
-            # Step 6: B-roll
-            if broll and broll_kw and PEXELS_KEY:
-                job_update(job_id, "running", 55, "Fetching B-roll from Pexels...")
-                broll_clips_paths = []
-                clip_title = _editor_title
-                clip_tx = TRANSCRIPT_CACHE.get(video_id, "") if video_id else ""
-                urls = fetch_pexels_videos(broll_kw, count=4,
-                                           title=clip_title, transcript=str(clip_tx)[:500])
-                for i, u in enumerate(urls):
-                    bp = os.path.join(job_dir, f"broll_{i}.mp4")
-                    if download_pexels_clip(u, bp, duration=5):
-                        broll_clips_paths.append(bp)
-                if broll_clips_paths:
-                    broll_out = os.path.join(job_dir, "with_broll.mp4")
-                    if insert_broll(current, broll_clips_paths, broll_out, broll_freq):
-                        current = broll_out
+            # ── Step 6: B-roll (semantic pipeline) ───────────────────────────
+            if broll and PEXELS_KEY:
+                job_update(job_id, "running", 55, "Analysing transcript for B-roll...")
+
+                # Decide whether we have Whisper word timestamps for semantic
+                # alignment, or must fall back to the legacy timed inserter.
+                use_semantic = bool(_last_whisper_words)
+
+                if use_semantic:
+                    # ── Stage 1: build sentence-level segments ────────────────
+                    sem_segs = build_semantic_segments(_last_whisper_words)
+                    print(f"[broll] {len(sem_segs)} semantic segments from "
+                          f"{len(_last_whisper_words)} words")
+
+                    if sem_segs:
+                        # ── Stage 2+3: classify all segments in 1 Groq call ──
+                        job_update(job_id, "running", 57,
+                                   "Classifying scene intent and emotion...")
+                        classified = classify_segments_for_broll(
+                            sem_segs, _editor_title, GROQ_KEY
+                        )
+
+                        # ── Stage 4: scene planner — select slots ─────────────
+                        clip_dur    = end - start
+                        broll_slots = plan_broll_slots(
+                            classified, clip_dur, broll_freq
+                        )
+
+                        # ── Stages 5–7: per-slot query + scored fetch ─────────
+                        broll_slot_map: dict = {}   # {slot_index: local_path}
+                        seen_pexels_ids: set  = set()
+                        total_slots = len(broll_slots)
+
+                        for slot_i, slot in enumerate(broll_slots):
+                            pct = 57 + int((slot_i / max(total_slots, 1)) * 15)
+                            job_update(job_id, "running", pct,
+                                       f"Finding B-roll {slot_i+1}/{total_slots}...")
+
+                            # Per-slot Groq query
+                            query = build_broll_slot_query(
+                                slot, _editor_title, GROQ_KEY
+                            )
+                            # Scored Pexels fetch
+                            candidate = fetch_pexels_for_slot(
+                                query,
+                                target_duration=slot["target_duration"],
+                                prefer_portrait=True,
+                                blocked_ids=seen_pexels_ids,
+                            )
+                            if candidate:
+                                bp = os.path.join(
+                                    job_dir, f"broll_{slot_i}.mp4"
+                                )
+                                # Dynamic duration = actual segment length
+                                if download_pexels_clip(
+                                    candidate["url"], bp,
+                                    duration=slot["target_duration"],
+                                ):
+                                    broll_slot_map[slot_i] = bp
+                                    seen_pexels_ids.add(candidate["id"])
+
+                        # ── Stage 8: transcript-aligned timeline ──────────────
+                        if broll_slot_map:
+                            job_update(job_id, "running", 72,
+                                       "Assembling B-roll timeline...")
+                            broll_out = os.path.join(job_dir, "with_broll.mp4")
+                            if insert_broll_semantic(
+                                current, broll_slot_map,
+                                broll_slots, broll_out,
+                            ):
+                                current = broll_out
+                            print(f"[broll] semantic: used "
+                                  f"{len(broll_slot_map)}/{total_slots} slots")
+                        else:
+                            print("[broll] semantic: no clips downloaded, "
+                                  "skipping B-roll")
+                    else:
+                        print("[broll] no semantic segments built — "
+                              "check Whisper word timestamps")
+
+                else:
+                    # ── Legacy path: no Whisper words, fall back to keyword
+                    #    fetch + fixed-interval insert ─────────────────────────
+                    job_update(job_id, "running", 55,
+                               "Fetching B-roll (keyword mode)...")
+                    clip_tx = ""
+                    if video_id:
+                        cached = TRANSCRIPT_CACHE.get(video_id)
+                        if isinstance(cached, dict):
+                            clip_tx = cached.get("text", "")
+                        elif isinstance(cached, str):
+                            clip_tx = cached
+                    urls = fetch_pexels_videos(
+                        broll_kw, count=4,
+                        title=_editor_title,
+                        transcript=clip_tx[:500],
+                    )
+                    broll_clips_paths = []
+                    for i, u in enumerate(urls):
+                        bp = os.path.join(job_dir, f"broll_{i}.mp4")
+                        if download_pexels_clip(u, bp, duration=5.0):
+                            broll_clips_paths.append(bp)
+                    if broll_clips_paths:
+                        broll_out = os.path.join(job_dir, "with_broll.mp4")
+                        if insert_broll(current, broll_clips_paths,
+                                        broll_out, broll_freq):
+                            current = broll_out
 
             # Step 7: Audio normalisation
             if audio_norm:
@@ -3230,6 +3789,178 @@ def _add_lower_third(src: str, out: str, name: str, title_text: str, color: str)
     except Exception as e:
         print(f"_add_lower_third: {e}")
         return False
+
+
+# ════════════════════════════════════════════════════════════════════════════════
+# B-ROLL REPLACEMENT & SCENE PLAN ROUTES
+# ════════════════════════════════════════════════════════════════════════════════
+
+@app.route("/broll/replace", methods=["POST", "OPTIONS"])
+def broll_replace():
+    """
+    Replace a single B-roll slot in an existing editor job with a better clip.
+
+    POST body (JSON):
+      job_id      str   — existing editor job ID
+      slot_index  int   — which slot to replace (0-based)
+      query       str   — new Pexels search query (optional; re-generates if absent)
+      duration    float — target clip duration in seconds (optional, default 5.0)
+      user_id     str   — for dedup tracking
+
+    Returns: {"ok": true, "query": str, "clip_url": str, "score": float}
+    """
+    if request.method == "OPTIONS":
+        return jsonify({}), 200
+
+    data       = request.get_json() or {}
+    job_id     = data.get("job_id", "")
+    slot_index = int(data.get("slot_index", 0))
+    query      = data.get("query", "").strip()
+    duration   = float(data.get("duration", 5.0))
+    user_id    = data.get("user_id", "")
+
+    if not job_id:
+        return jsonify({"error": "job_id required"}), 400
+
+    job_dir = os.path.join(CLIPS_DIR, job_id)
+    if not os.path.isdir(job_dir):
+        return jsonify({"error": "Job not found or expired"}), 404
+
+    # Load existing blocked IDs from this job to avoid exact repeats
+    blocked_file = os.path.join(job_dir, "broll_used_ids.json")
+    blocked_ids: set = set()
+    if os.path.exists(blocked_file):
+        try:
+            blocked_ids = set(json.load(open(blocked_file)))
+        except Exception:
+            pass
+
+    # If no query provided, try to re-generate from stored slot data
+    if not query:
+        slots_file = os.path.join(job_dir, "broll_slots.json")
+        if os.path.exists(slots_file):
+            try:
+                stored_slots = json.load(open(slots_file))
+                if slot_index < len(stored_slots):
+                    slot = stored_slots[slot_index]
+                    query = build_broll_slot_query(
+                        slot, data.get("title", ""), GROQ_KEY
+                    )
+            except Exception:
+                pass
+        if not query:
+            query = data.get("title", "cinematic footage")
+
+    # Fetch a new scored candidate (excluding the old one)
+    candidate = fetch_pexels_for_slot(
+        query, target_duration=duration,
+        prefer_portrait=True, blocked_ids=blocked_ids,
+    )
+    if not candidate:
+        return jsonify({"error": "No suitable B-roll found for this query",
+                        "query": query}), 404
+
+    # Download replacement clip
+    new_path = os.path.join(job_dir, f"broll_{slot_index}_v{int(time.time())}.mp4")
+    ok = download_pexels_clip(candidate["url"], new_path, duration=duration)
+    if not ok:
+        return jsonify({"error": "Failed to download replacement clip"}), 502
+
+    # Update blocked IDs so next replacement is also unique
+    blocked_ids.add(candidate["id"])
+    try:
+        with open(blocked_file, "w") as bf:
+            json.dump(list(blocked_ids), bf)
+    except Exception:
+        pass
+
+    return jsonify({
+        "ok":       True,
+        "query":    query,
+        "clip_url": f"{BACKEND_URL}/stream-clip/{job_id}/{os.path.basename(new_path).replace('.mp4','')}",
+        "local_path": new_path,
+        "score":    candidate["score"],
+        "pexels_id": candidate["id"],
+    })
+
+
+@app.route("/broll/scene-plan", methods=["POST", "OPTIONS"])
+def broll_scene_plan():
+    """
+    Return the scene classification plan for a given transcript + title.
+    Used by the frontend to preview what B-roll will be placed where.
+
+    POST body (JSON):
+      transcript  str  — full transcript text
+      title       str  — clip title
+      words       list — Whisper word timestamps (optional; enables semantic segs)
+      duration    float — clip duration in seconds
+      frequency   str  — "low" | "medium" | "high"
+
+    Returns: {"segments": [...], "slots": [...], "total_broll_s": float}
+    """
+    if request.method == "OPTIONS":
+        return jsonify({}), 200
+
+    data       = request.get_json() or {}
+    transcript = data.get("transcript", "")
+    title      = data.get("title", "")
+    words      = data.get("words", [])
+    duration   = float(data.get("duration", 60.0))
+    frequency  = data.get("frequency", "medium")
+
+    if not transcript and not words:
+        return jsonify({"error": "transcript or words required"}), 400
+
+    # Build segments
+    if words:
+        segments = build_semantic_segments(words)
+    else:
+        # Approximate from plain text — split on sentence boundaries
+        import re as _re
+        sentences = _re.split(r'(?<=[.!?])\s+', transcript.strip())
+        if not sentences:
+            return jsonify({"segments": [], "slots": [], "total_broll_s": 0})
+        avg_wps   = 2.5  # average words per second for spoken content
+        segments  = []
+        pos       = 0.0
+        for sent in sentences:
+            word_count = len(sent.split())
+            seg_dur    = max(1.0, word_count / avg_wps)
+            segments.append({
+                "start":     round(pos, 2),
+                "end":       round(pos + seg_dur, 2),
+                "text":      sent,
+                "gap_after": 0.3,
+            })
+            pos += seg_dur + 0.3
+
+    if not segments:
+        return jsonify({"segments": [], "slots": [], "total_broll_s": 0})
+
+    # Classify
+    classified = classify_segments_for_broll(segments, title, GROQ_KEY)
+
+    # Plan slots
+    slots = plan_broll_slots(classified, duration, frequency)
+
+    total_broll_s = sum(s["end"] - s["start"] for s in slots)
+
+    # Build queries for preview (non-blocking, best-effort)
+    for slot in slots:
+        try:
+            slot["suggested_query"] = build_broll_slot_query(
+                slot, title, GROQ_KEY
+            )
+        except Exception:
+            slot["suggested_query"] = title
+
+    return jsonify({
+        "segments":      classified,
+        "slots":         slots,
+        "total_broll_s": round(total_broll_s, 1),
+        "slot_count":    len(slots),
+    })
 
 
 # ════════════════════════════════════════════════════════════════════════════════

@@ -1043,22 +1043,41 @@ function toggleTheme(){var d=document.documentElement.getAttribute('data-theme')
                   </label>
                 </div>
                 <div id="ed-broll-opts" style="display:none;flex-direction:column;gap:8px">
-                  <div>
-                    <div class="ed-field-label" style="display:flex;align-items:center;justify-content:space-between">
-                      <span>Keywords</span>
-                      <button onclick="autoFillBrollKw()" style="font-size:10px;font-family:var(--font-mono);background:transparent;border:1px solid var(--border);border-radius:3px;padding:2px 7px;cursor:pointer;color:var(--purple3)">✨ Auto-fill</button>
-                    </div>
-                    <input type="text" id="ed-broll-kw" placeholder="e.g. entrepreneur, office meeting, laptop typing" style="font-size:11px"/>
-                    <div style="font-size:10px;font-family:var(--font-mono);color:var(--ink3);margin-top:4px">
-                      Separate with commas. AI will enhance your keywords for best results.
+                  <!-- Semantic mode badge -->
+                  <div style="display:flex;align-items:center;gap:6px;background:rgba(139,92,246,.10);border:1px solid rgba(139,92,246,.25);border-radius:6px;padding:6px 10px">
+                    <span style="font-size:14px">✨</span>
+                    <div>
+                      <div style="font-size:11px;font-weight:600;color:#c4b5fd;font-family:var(--font-mono)">SEMANTIC MODE ACTIVE</div>
+                      <div style="font-size:10px;color:var(--ink3);font-family:var(--font-mono);margin-top:1px">AI aligns B-roll to transcript emotion &amp; intent — no keywords needed</div>
                     </div>
                   </div>
+                  <!-- Optional hint keywords (now just a topic hint, not required) -->
+                  <div>
+                    <div class="ed-field-label" style="display:flex;align-items:center;justify-content:space-between">
+                      <span>Topic Hint <span style="font-size:10px;color:var(--ink3)">(optional)</span></span>
+                      <button onclick="autoFillBrollKw()" style="font-size:10px;font-family:var(--font-mono);background:transparent;border:1px solid var(--border);border-radius:3px;padding:2px 7px;cursor:pointer;color:var(--purple3)">✨ Auto-fill</button>
+                    </div>
+                    <input type="text" id="ed-broll-kw" placeholder="e.g. startup, fitness, cooking — AI handles the rest" style="font-size:11px"/>
+                    <div style="font-size:10px;font-family:var(--font-mono);color:var(--ink3);margin-top:4px">
+                      Leave blank — AI reads your transcript and places B-roll scene-by-scene.
+                    </div>
+                  </div>
+                  <!-- Frequency -->
                   <div>
                     <div class="ed-field-label">Frequency</div>
                     <div style="display:flex;gap:5px;flex-wrap:wrap">
                       <button class="ed-pill" data-bfreq="low" onclick="selectBrollFreq(this)">Low</button>
                       <button class="ed-pill on" data-bfreq="medium" onclick="selectBrollFreq(this)">Medium</button>
                       <button class="ed-pill" data-bfreq="high" onclick="selectBrollFreq(this)">High</button>
+                    </div>
+                  </div>
+                  <!-- Scene plan preview -->
+                  <div>
+                    <button onclick="previewBrollPlan()" id="btn-broll-preview"
+                      style="width:100%;padding:7px;font-size:11px;font-family:var(--font-mono);background:transparent;border:1px solid var(--border);border-radius:6px;cursor:pointer;color:var(--purple3)">
+                      🔍 Preview Scene Plan
+                    </button>
+                    <div id="broll-plan-preview" style="display:none;margin-top:8px;max-height:200px;overflow-y:auto;border:1px solid var(--border);border-radius:6px;padding:8px;background:var(--surface2)">
                     </div>
                   </div>
                 </div>
@@ -1852,24 +1871,101 @@ function editorOpenByIndex(i) {
 function autoFillBrollKw() {
   const kwEl = $('ed-broll-kw');
   if(!kwEl) return;
-  // Generate keyword suggestions from title
   if(currentTitle) {
-    // Extract meaningful words (skip stop words)
     const stops = new Set(['the','a','an','and','or','but','in','on','at','to','for','of','with','by','from','this','that','is','are','was','were','be','been','have','has','had','do','does','did','will','would','could','should','may','might','can','how','what','why','when','where','who','which']);
     const words = currentTitle.toLowerCase()
       .replace(/[^\w\s]/g, ' ')
       .split(/\s+/)
       .filter(w => w.length > 3 && !stops.has(w));
-    // Build 2-3 word phrases
-    const phrases = [];
-    for(let i=0; i<words.length-1; i++) {
-      phrases.push(words[i] + ' ' + words[i+1]);
-    }
-    if(words.length) phrases.unshift(...words.slice(0,2));
-    kwEl.value = [...new Set(phrases)].slice(0,4).join(', ');
-    showOk('✨ Keywords auto-filled from video title');
+    kwEl.value = [...new Set(words)].slice(0,3).join(', ');
+    showOk('✨ Topic hint auto-filled — AI will generate scene-specific queries');
   } else {
-    showErr('Analyse a video first to auto-fill keywords');
+    showOk('✨ No keyword needed — AI reads your transcript automatically');
+  }
+}
+
+async function previewBrollPlan() {
+  const btn = $('btn-broll-preview');
+  const panel = $('broll-plan-preview');
+  if(!panel) return;
+
+  // Need a transcript — use cached or derive from title
+  const transcript = (typeof currentTranscript !== 'undefined' && currentTranscript)
+    ? currentTranscript
+    : (currentTitle || '');
+
+  if(!transcript) {
+    panel.style.display = 'block';
+    panel.innerHTML = '<div style="font-size:11px;font-family:var(--font-mono);color:var(--ink3)">Analyse a video first to preview the scene plan.</div>';
+    return;
+  }
+
+  btn.textContent = '⏳ Analysing...';
+  btn.disabled = true;
+  panel.style.display = 'block';
+  panel.innerHTML = '<div style="font-size:11px;font-family:var(--font-mono);color:var(--ink3)">Classifying transcript scenes...</div>';
+
+  try {
+    const dur = edEnd - edStart || 60;
+    const freq = edBrollFreq || 'medium';
+    const resp = await fetch(`/api/broll/scene-plan`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        transcript,
+        title: currentTitle || '',
+        duration: dur,
+        frequency: freq,
+      }),
+    });
+    const data = await resp.json();
+    if(!resp.ok || data.error) {
+      panel.innerHTML = `<div style="font-size:11px;font-family:var(--font-mono);color:#f87171">${data.error||'Scene plan failed'}</div>`;
+      return;
+    }
+
+    const slots = data.slots || [];
+    const total  = data.total_broll_s || 0;
+
+    if(!slots.length) {
+      panel.innerHTML = '<div style="font-size:11px;font-family:var(--font-mono);color:var(--ink3)">No B-roll slots planned for this frequency setting. Try "High".</div>';
+      return;
+    }
+
+    const EMOTION_EMOJI = {
+      curiosity:'🔍', humor:'😄', inspiration:'🌟', shock:'⚡',
+      education:'📚', story:'📖', excitement:'🔥', sadness:'💙', neutral:'▪️',
+    };
+    const NARRATIVE_COLOR = {
+      hook:'#f59e0b', problem:'#ef4444', conflict:'#f97316',
+      solution:'#22c55e', result:'#8b5cf6', cta:'#ec4899',
+      opening:'#60a5fa', middle:'#9ca3af', closing:'#a78bfa',
+    };
+
+    let html = `<div style="font-size:10px;font-family:var(--font-mono);color:var(--ink3);margin-bottom:6px">`
+      + `${slots.length} B-roll slots · ${total}s total coverage</div>`;
+
+    slots.forEach((s, i) => {
+      const em  = EMOTION_EMOJI[s.emotion] || '▪️';
+      const col = NARRATIVE_COLOR[s.narrative_position] || '#9ca3af';
+      const dur = (s.end - s.start).toFixed(1);
+      const q   = s.suggested_query || '';
+      html += `<div style="margin-bottom:5px;padding:5px 7px;background:var(--surface);border-radius:4px;border-left:2px solid ${col}">
+        <div style="display:flex;align-items:center;gap:5px;margin-bottom:2px">
+          <span style="font-size:10px;font-family:var(--font-mono);color:${col};font-weight:600">${s.narrative_position.toUpperCase()}</span>
+          <span style="font-size:10px;font-family:var(--font-mono);color:var(--ink3)">${em} ${s.emotion}</span>
+          <span style="font-size:10px;font-family:var(--font-mono);color:var(--ink3);margin-left:auto">${s.start.toFixed(1)}s–${s.end.toFixed(1)}s (${dur}s)</span>
+        </div>
+        <div style="font-size:10px;font-family:var(--font-mono);color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${s.text}">${s.text.slice(0,80)}${s.text.length>80?'...':''}</div>
+        ${q ? `<div style="font-size:10px;font-family:var(--font-mono);color:var(--purple3);margin-top:2px">🔎 "${q}"</div>` : ''}
+      </div>`;
+    });
+    panel.innerHTML = html;
+  } catch(e) {
+    panel.innerHTML = `<div style="font-size:11px;font-family:var(--font-mono);color:#f87171">Error: ${e.message}</div>`;
+  } finally {
+    btn.textContent = '🔍 Preview Scene Plan';
+    btn.disabled = false;
   }
 }
 
@@ -2567,6 +2663,7 @@ async function editorExport(){
       audio_norm:!!document.getElementById('ed-audio-norm')?.checked,
       broll:!!document.getElementById('ed-broll')?.checked,
       broll_kw:$('ed-broll-kw')?.value||'',
+      broll_freq:edBrollFreq||'medium',
       brand_primary:document.getElementById('ed-brand-primary')?.value||'#8b5cf6',
       accent_color:document.getElementById('ed-accent-color')?.value||'#8b5cf6',
       lower_third:!!document.getElementById('ed-lower-on')?.checked,
