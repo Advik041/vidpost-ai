@@ -3792,8 +3792,195 @@ def _add_lower_third(src: str, out: str, name: str, title_text: str, color: str)
 
 
 # ════════════════════════════════════════════════════════════════════════════════
-# B-ROLL REPLACEMENT & SCENE PLAN ROUTES
+# EDITOR AI COMMAND — interprets natural-language editing instructions
 # ════════════════════════════════════════════════════════════════════════════════
+
+@app.route("/editor/ai-command", methods=["POST", "OPTIONS"])
+def editor_ai_command():
+    """
+    Interprets a natural-language editor command and returns structured actions.
+
+    POST body: {command: str, context: {title, duration, start, end, captions,
+                                        broll, capStyle, fillerRemoval}}
+
+    Returns: {action: "update_settings"|"message_only", settings: {...},
+              message: str}
+    """
+    if request.method == "OPTIONS":
+        return jsonify({}), 200
+
+    data    = request.get_json() or {}
+    command = data.get("command", "").strip()
+    context = data.get("context", {})
+
+    if not command:
+        return jsonify({"error": "command required"}), 400
+
+    if not GROQ_KEY:
+        return jsonify({"action": "message_only",
+                        "message": "AI commands require GROQ_KEY."}), 200
+
+    title    = context.get("title", "")
+    duration = context.get("duration", 60)
+    start    = context.get("start", 0)
+    end      = context.get("end", 60)
+
+    prompt = f"""You are an AI video editor assistant. The user gave you this command:
+"{command}"
+
+Current clip context:
+- Title: "{title}"
+- Duration: {duration}s
+- Trim: {start}s → {end}s ({round(end-start,1)}s selected)
+- Captions: {context.get('captions', False)}
+- B-roll: {context.get('broll', False)}
+- Caption style: {context.get('capStyle', 'bold')}
+- Filler removal: {context.get('fillerRemoval', False)}
+
+Respond ONLY with a JSON object:
+{{
+  "action": "update_settings",
+  "settings": {{
+    "cap_style": null or one of: bold|outline|box|lime|karaoke|neon,
+    "cap_size": null or one of: small|medium|large,
+    "cap_pos": null or one of: top|middle|bottom,
+    "broll": null or true|false,
+    "filler": null or true|false,
+    "trim_end": null or number of seconds from start (clip duration),
+    "audio_norm": null or true|false
+  }},
+  "message": "one sentence describing what you did"
+}}
+
+Rules:
+- Only set fields that should change. Use null for everything unchanged.
+- "Style like MrBeast" → bold, large, bottom captions + broll=true + filler=true
+- "Style like Alex Hormozi" → lime, large, bottom captions + filler=true
+- "Increase retention" → broll=true + filler=true
+- "Optimize hook" → trim_end=30
+- "Add B-roll" → broll=true
+- "Remove fillers" → filler=true
+- "Normalize audio" → audio_norm=true
+- For unknown commands, set action="message_only" and explain in message."""
+
+    try:
+        raw = _groq_chat([{"role": "user", "content": prompt}],
+                         max_tokens=300, temperature=0.1)
+        if raw:
+            raw = re.sub(r"```(?:json)?|```", "", raw).strip()
+            m = re.search(r"\{[\s\S]*\}", raw)
+            if m:
+                result = json.loads(m.group())
+                # Validate action
+                if result.get("action") not in ("update_settings", "message_only"):
+                    result["action"] = "message_only"
+                # Sanitize settings
+                s = result.get("settings", {})
+                valid_styles   = {None, "bold", "outline", "box", "lime", "karaoke", "neon"}
+                valid_sizes    = {None, "small", "medium", "large"}
+                valid_positions= {None, "top", "middle", "bottom"}
+                s["cap_style"] = s.get("cap_style") if s.get("cap_style") in valid_styles else None
+                s["cap_size"]  = s.get("cap_size")  if s.get("cap_size")  in valid_sizes  else None
+                s["cap_pos"]   = s.get("cap_pos")   if s.get("cap_pos")   in valid_positions else None
+                if s.get("trim_end") is not None:
+                    try:
+                        s["trim_end"] = max(5, min(float(s["trim_end"]), duration))
+                    except (TypeError, ValueError):
+                        s["trim_end"] = None
+                result["settings"] = s
+                return jsonify(result)
+    except Exception as e:
+        print(f"[editor-ai-command] {e}")
+
+    return jsonify({
+        "action":  "message_only",
+        "message": "Command not understood. Try: 'Add more B-roll', 'Remove fillers', 'Style like MrBeast', 'Increase retention'.",
+    })
+
+
+
+@app.route("/broll/search", methods=["POST", "OPTIONS"])
+def broll_search():
+    """
+    Search Pexels for multiple scored B-roll candidates.
+    Used by the B-roll replacement drawer in the editor.
+
+    POST body: {query: str, duration: float, count: int (max 8)}
+    Returns: {results: [{url, score, duration, width, height, id, query}]}
+    """
+    if request.method == "OPTIONS":
+        return jsonify({}), 200
+
+    data     = request.get_json() or {}
+    query    = data.get("query", "").strip()
+    duration = float(data.get("duration", 5.0))
+    count    = min(int(data.get("count", 6)), 8)
+
+    if not query:
+        return jsonify({"error": "query required"}), 400
+    if not PEXELS_KEY:
+        return jsonify({"error": "PEXELS_KEY not configured"}), 503
+
+    results = []
+    seen_ids: set = set()
+
+    def _best_file_url(video_files: list) -> str:
+        ph = lh = ps = any_u = None
+        for vf in video_files:
+            vw, vh = vf.get("width",0), vf.get("height",0)
+            q, lnk = vf.get("quality",""), vf.get("link","")
+            if not lnk: continue
+            isp  = vh > vw
+            ishd = q == "hd" and vh >= 720
+            issd = q in ("hd","sd") and vh >= 480
+            if isp and ishd  and not ph: ph = lnk
+            if not isp and ishd and not lh: lh = lnk
+            if isp and issd  and not ps: ps = lnk
+            if not any_u: any_u = lnk
+        return ph or lh or ps or any_u or ""
+
+    for orientation in ("portrait", "landscape"):
+        if len(results) >= count:
+            break
+        try:
+            resp = requests.get(
+                "https://api.pexels.com/videos/search",
+                headers={"Authorization": PEXELS_KEY},
+                params={"query": query, "per_page": 10,
+                        "orientation": orientation,
+                        "min_duration": 3, "max_duration": 20},
+                timeout=15,
+            )
+            if not resp.ok:
+                continue
+            videos = resp.json().get("videos", [])
+            for v in videos:
+                vid_id = v.get("id")
+                if not vid_id or vid_id in seen_ids:
+                    continue
+                url = _best_file_url(v.get("video_files", []))
+                if not url:
+                    continue
+                score = score_pexels_candidate(v, duration, prefer_portrait=True)
+                results.append({
+                    "id":       vid_id,
+                    "url":      url,
+                    "score":    score,
+                    "duration": float(v.get("duration", 0)),
+                    "width":    v.get("width", 0),
+                    "height":   v.get("height", 0),
+                    "query":    query,
+                })
+                seen_ids.add(vid_id)
+                if len(results) >= count:
+                    break
+        except Exception as e:
+            print(f"[broll-search] {orientation}: {e}")
+
+    # Sort by score descending
+    results.sort(key=lambda x: x["score"], reverse=True)
+    return jsonify({"results": results[:count]})
+
 
 @app.route("/broll/replace", methods=["POST", "OPTIONS"])
 def broll_replace():
@@ -3964,8 +4151,85 @@ def broll_scene_plan():
 
 
 # ════════════════════════════════════════════════════════════════════════════════
-# VIRALITY SCORE
+# EDITOR AI COMMAND
 # ════════════════════════════════════════════════════════════════════════════════
+
+@app.route("/editor/ai-command", methods=["POST", "OPTIONS"])
+def editor_ai_command():
+    """
+    Interpret a natural-language editor command and return structured settings
+    changes + a human-readable response message.
+
+    POST body:
+      command  str   — e.g. "Make this look like MrBeast"
+      context  dict  — current editor state (title, duration, capStyle, etc.)
+
+    Returns:
+      {"action": "update_settings", "settings": {...}, "message": str}
+    """
+    if request.method == "OPTIONS":
+        return jsonify({}), 200
+
+    data    = request.get_json() or {}
+    command = data.get("command", "").strip()
+    context = data.get("context", {})
+
+    if not command:
+        return jsonify({"error": "command required"}), 400
+
+    if not GROQ_KEY:
+        return jsonify({"error": "AI not configured"}), 503
+
+    system_prompt = """You are a professional video editor assistant for VidPost AI.
+The user gives you a natural language editing command. You must interpret it and
+return a JSON object describing the settings change and a short message.
+
+Available settings to change:
+- cap_style: "bold"|"outline"|"box"|"lime"|"neon"|"karaoke"
+- cap_size: "small"|"medium"|"large"
+- cap_pos: "top"|"middle"|"bottom"
+- broll: true|false
+- filler: true|false (remove filler words)
+- trim_end: number (max seconds from start, e.g. 30 for "cut to 30s")
+- audio_norm: true|false
+
+Creator presets:
+- MrBeast: cap_style=bold, cap_size=large, cap_pos=bottom, broll=true, filler=true
+- Alex Hormozi: cap_style=lime, cap_size=large, cap_pos=bottom, filler=true
+- CapCut style: cap_style=karaoke, cap_size=medium, cap_pos=bottom
+- Podcast style: cap_style=box, cap_size=small, cap_pos=bottom, filler=true
+
+Return ONLY valid JSON:
+{"action":"update_settings","settings":{...},"message":"short human response"}
+
+Only include settings that should change. If no settings need changing, return empty settings."""
+
+    user_prompt = f"""Command: "{command}"
+Current editor state: {json.dumps(context)}"""
+
+    try:
+        raw = _groq_chat(
+            [{"role": "system", "content": system_prompt},
+             {"role": "user",   "content": user_prompt}],
+            max_tokens=300, temperature=0.1,
+        )
+        if raw:
+            raw = re.sub(r"```(?:json)?|```", "", raw).strip()
+            m = re.search(r"\{[\s\S]*\}", raw)
+            if m:
+                result = json.loads(m.group())
+                return jsonify(result)
+    except Exception as e:
+        print(f"[ai-command] {e}")
+
+    return jsonify({
+        "action":   "update_settings",
+        "settings": {},
+        "message":  f"Command understood but no automatic setting found for: {command}",
+    })
+
+
+
 
 @app.route("/virality-score", methods=["POST", "OPTIONS"])
 def virality_score():
