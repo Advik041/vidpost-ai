@@ -1044,7 +1044,7 @@ function toggleTheme(){var d=document.documentElement.getAttribute('data-theme')
                   <div style="margin-bottom:8px">
                     <input type="text" id="ed2-br-drawer-query" placeholder="Search query…"
                       style="width:100%;font-family:var(--font-mono);font-size:11px;padding:6px 9px;border:1.5px solid var(--border);border-radius:var(--r);background:var(--bg4);color:var(--ink);outline:none"/>
-                    <button onclick="ed2BrDrawerSearch()" style="width:100%;margin-top:4px;padding:6px;font-size:11px;font-family:var(--font-mono);background:var(--purple);color:#fff;border:none;border-radius:var(--r);cursor:pointer">🔎 Search Pexels</button>
+                    <button onclick="ed2BrDrawerSearch()" style="width:100%;margin-top:4px;padding:6px;font-size:11px;font-family:var(--font-mono);background:var(--purple);color:#fff;border:none;border-radius:var(--r);cursor:pointer">🔎 Search Pexels + Pixabay</button>
                   </div>
                   <div id="ed2-br-candidates"></div>
                 </div>
@@ -2036,11 +2036,9 @@ async function _ed2LoadYouTubeStream(videoId, title){
     v.src=streamUrl;
     v.load();
   }
-  // Check if already cached
-  try {
-    const head=await fetch(streamUrl,{method:'HEAD'});
-    if(head.ok){ _setVideoSrc(); return; }
-  } catch(e){}
+  // Set video source directly — skip HEAD check which CORS-blocks on googlevideo.com URLs
+  // and adds console noise. The video element handles load errors natively.
+  _setVideoSrc();
   // Poll stream-status
   if(_streamPollTimer) clearInterval(_streamPollTimer);
   let polls=0;
@@ -2541,7 +2539,11 @@ function _ed2RenderSceneCards() {
           <span class="ed2-sb-card-retention" style="color:${rsColor}">⚡ ${rs}/10 retention</span>
           <span style="font-size:9px;font-family:var(--font-mono);color:${col};border:1px solid ${col};padding:1px 4px;border-radius:3px">${sc.narrativePos.toUpperCase()}</span>
         </div>
-        <div style="font-size:9px;font-family:var(--font-mono);padding:2px 5px;border-radius:4px;background:${brollBg};color:var(--ink3);margin-bottom:5px">${brollLabel}</div>
+        <div style="font-size:9px;font-family:var(--font-mono);padding:2px 5px;border-radius:4px;background:${brollBg};color:var(--ink3);margin-bottom:5px;display:flex;align-items:center;gap:4px">
+          <span>${brollLabel}</span>
+          ${sc.brollEffect && sc.brollEffect !== 'none' ? `<span style="background:rgba(139,92,246,.2);color:#a78bfa;border-radius:3px;padding:1px 4px;font-size:8px">${sc.brollEffect.replace('_',' ')}</span>` : ''}
+          ${sc.brollSource === 'pixabay' ? '<span style="background:rgba(30,104,35,.2);color:#7ee787;border-radius:3px;padding:1px 4px;font-size:8px">Pixabay</span>' : ''}
+        </div>
         <div class="ed2-sb-card-actions">
           <button class="ed2-sb-act" onclick="event.stopPropagation();ed2SceneSeek(${i})">▶</button>
           <button class="ed2-sb-act primary" onclick="event.stopPropagation();ed2SceneBrollReplace(${i})">B-roll</button>
@@ -2653,7 +2655,7 @@ async function ed2BrDrawerSearch() {
   const cands  = ed2$('ed2-br-candidates');
   const query  = (qInput?.value||'').trim();
   if(!query) { showErr('Enter a search query first'); return; }
-  if(cands) cands.innerHTML = '<div style="font-size:10px;font-family:var(--font-mono);color:var(--ink3)">Searching Pexels…</div>';
+  if(cands) cands.innerHTML = '<div style="font-size:10px;font-family:var(--font-mono);color:var(--ink3)">Searching Pexels + Pixabay…</div>';
   try {
     const dur = (_ed2BrDrawerSlotIdx >= 0 && _ed2SceneCards[_ed2BrDrawerSlotIdx])
       ? _ed2SceneCards[_ed2BrDrawerSlotIdx].end - _ed2SceneCards[_ed2BrDrawerSlotIdx].start
@@ -2661,21 +2663,32 @@ async function ed2BrDrawerSearch() {
     const r = await fetch('/api/broll/search', {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({query, duration: dur, count: 6}),
+      body: JSON.stringify({query, duration: dur, count: 8}),
     });
     const d = await r.json();
     if(!r.ok || d.error) { if(cands) cands.innerHTML=`<div style="color:#f87171;font-size:10px;font-family:var(--font-mono)">${d.error||'Search failed'}</div>`; return; }
     const results = d.results || [];
     if(!results.length) { if(cands) cands.innerHTML='<div style="font-size:10px;font-family:var(--font-mono);color:var(--ink3)">No results. Try a different query.</div>'; return; }
-    if(cands) cands.innerHTML = results.map((res, i) => `
+    if(cands) cands.innerHTML = results.map((res, i) => {
+      const sourceBadge = res.source === 'pixabay'
+        ? '<span style="font-size:9px;background:#1e6823;color:#7ee787;border-radius:3px;padding:1px 4px;margin-left:4px">Pixabay</span>'
+        : '<span style="font-size:9px;background:#1a3a5c;color:#58a6ff;border-radius:3px;padding:1px 4px;margin-left:4px">Pexels</span>';
+      const qualityColor = res.score >= 7 ? '#4ade80' : res.score >= 4 ? '#fbbf24' : '#f87171';
+      const orient = res.height > res.width ? '📱 Portrait' : '🖥 Landscape';
+      return `
       <div class="ed2-br-candidate" id="br-cand-${i}" onclick="ed2BrCandSelect(${i},${JSON.stringify(res).replace(/"/g,'&quot;')})">
-        <div class="ed2-br-cand-query">${esc(res.query||query)}</div>
-        <div style="display:flex;gap:6px;align-items:center;margin-top:3px">
-          <span class="ed2-br-cand-score">⭐ ${res.score}/10</span>
+        <div style="display:flex;align-items:center;gap:4px">
+          <span class="ed2-br-cand-query" style="flex:1">${esc(res.query||query)}</span>
+          ${sourceBadge}
+        </div>
+        <div style="display:flex;gap:6px;align-items:center;margin-top:3px;flex-wrap:wrap">
+          <span class="ed2-br-cand-score" style="color:${qualityColor}">⭐ ${res.score}/10</span>
           <span class="ed2-br-cand-score">${res.duration}s</span>
           <span class="ed2-br-cand-score">${res.width}×${res.height}</span>
+          <span class="ed2-br-cand-score" style="color:var(--ink3)">${orient}</span>
         </div>
-      </div>`).join('');
+      </div>`;
+    }).join('');
   } catch(e) {
     if(cands) cands.innerHTML = `<div style="color:#f87171;font-size:10px;font-family:var(--font-mono)">${e.message}</div>`;
   }
@@ -2709,14 +2722,18 @@ async function ed2BrDrawerApply() {
     });
     const d = await r.json();
     if(d.ok) {
-      // Update scene card status
+      // Update scene card with source + effect metadata
       if(_ed2SceneCards[_ed2BrDrawerSlotIdx]) {
         _ed2SceneCards[_ed2BrDrawerSlotIdx].brollStatus = 'active';
+        _ed2SceneCards[_ed2BrDrawerSlotIdx].brollSource = d.source || 'pexels';
+        _ed2SceneCards[_ed2BrDrawerSlotIdx].brollEffect = d.effect || 'none';
       }
       _ed2RenderSceneCards();
       // Update broll track if visible
       _ed2RenderBrollTrack();
-      showOk('✅ B-roll slot updated. Re-export to render new footage.');
+      const effectLabel = d.effect && d.effect !== 'none' ? ` + ${d.effect.replace('_',' ')}` : '';
+      const srcLabel = d.source === 'pixabay' ? 'Pixabay' : 'Pexels';
+      showOk(`✅ B-roll updated (${srcLabel}${effectLabel}). Re-export to render.`);
       ed2CloseBrDrawer();
     } else {
       showErr(d.error || 'Replacement failed');

@@ -162,12 +162,13 @@ os.makedirs(CLIPS_DIR, exist_ok=True)
 os.makedirs(UPLOADS_DIR, exist_ok=True)
 
 # ── API keys ──────────────────────────────────────────────────────────────────
-GROQ_KEY   = os.environ.get("GROQ_API_KEY", "")
-SUPADATA   = os.environ.get("SUPADATA_API_KEY", "")
-PROXY      = os.environ.get("PROXY_URL", "")
-PEXELS_KEY = os.environ.get("PEXELS_API_KEY", "")
-OPENAI_KEY = os.environ.get("OPENAI_API_KEY", "")
-YT_COOKIES = ""  # set by setup_yt_cookies() below
+GROQ_KEY    = os.environ.get("GROQ_API_KEY", "")
+SUPADATA    = os.environ.get("SUPADATA_API_KEY", "")
+PROXY       = os.environ.get("PROXY_URL", "")
+PEXELS_KEY  = os.environ.get("PEXELS_API_KEY", "")
+PIXABAY_KEY = os.environ.get("PIXABAY_API_KEY", "")  # FREE: pixabay.com/api/docs/
+OPENAI_KEY  = os.environ.get("OPENAI_API_KEY", "")
+YT_COOKIES  = ""  # set by setup_yt_cookies() below
 
 # ── In-memory job store (thread-safe) ─────────────────────────────────────────
 # FIX: Added _jobs_lock to prevent race conditions between gthread workers
@@ -985,23 +986,7 @@ def yt_stream_url():
                     return jsonify({"stream_url":link,"video_id":vid,"title":title,"method":"rapidapi_dl2"})
         except Exception as e: log("rapidapi-dl-api2", e)
 
-    # ── 4. Cobalt.tools (open source, no key needed) ─────────────────────────
-    for cobalt in ["https://api.cobalt.tools","https://cobalt.tools/api/json"]:
-        try:
-            r = requests.post(
-                cobalt if cobalt.endswith("json") else cobalt+"/api/json",
-                json={"url": yt_url, "vQuality": quality, "filenamePattern":"basic","isNoTTWatermark":True},
-                headers={"Accept":"application/json","Content-Type":"application/json",
-                         "User-Agent":"VidPostAI/2.0"},
-                timeout=15)
-            if r.ok:
-                d = r.json()
-                if d.get("url"):
-                    log("cobalt", f"OK ({cobalt})")
-                    return jsonify({"stream_url":d["url"],"video_id":vid,"title":title,"method":"cobalt"})
-        except Exception as e: log(f"cobalt({cobalt})", e)
-
-    # ── 5. Y2mate API ────────────────────────────────────────────────────────
+    # ── 4. Y2mate API ────────────────────────────────────────────────────────
     try:
         r1 = requests.post("https://www.y2mate.com/mates/analyzeV2/ajax",
             data={"k_query":yt_url,"k_page":"home","hl":"en","q_auto":1},
@@ -2439,6 +2424,265 @@ def fetch_pexels_for_slot(query: str, target_duration: float,
 
 
 # ---------------------------------------------------------------------------
+# Pixabay video search — free tier, no quota issues
+# ---------------------------------------------------------------------------
+def fetch_pixabay_for_slot(query: str, target_duration: float,
+                            prefer_portrait: bool = True,
+                            blocked_ids: set | None = None) -> dict | None:
+    """
+    Search Pixabay Videos API for a B-roll slot.
+    Free API — pixabay.com/api/docs/ — supports video search.
+    Returns same shape as fetch_pexels_for_slot: {id, url, score, duration, width, height}
+    """
+    if not PIXABAY_KEY:
+        return None
+    if blocked_ids is None:
+        blocked_ids = set()
+
+    try:
+        resp = requests.get(
+            "https://pixabay.com/api/videos/",
+            params={
+                "key":       PIXABAY_KEY,
+                "q":         query,
+                "video_type": "film",
+                "per_page":  15,
+                "safesearch": "true",
+                "order":     "popular",
+            },
+            timeout=15,
+        )
+        if not resp.ok:
+            print(f"[pixabay] {resp.status_code}: {resp.text[:80]}")
+            return None
+
+        hits = resp.json().get("hits", [])
+        scored = []
+        for v in hits:
+            vid_id = v.get("id")
+            if not vid_id or vid_id in blocked_ids:
+                continue
+            videos = v.get("videos", {})
+            # Prefer medium (1280px), fallback to small (640px)
+            vf = videos.get("medium") or videos.get("small") or videos.get("large")
+            if not vf or not vf.get("url"):
+                continue
+            w   = vf.get("width", 0)
+            h   = vf.get("height", 0)
+            dur = float(vf.get("size", 0))  # not duration in px API
+            # Pixabay doesn't expose duration in search — probe width/height for portrait
+            is_portrait = h > w
+            url = vf["url"]
+            # Rough scoring: portrait bonus + duration range
+            score = 2.0
+            if prefer_portrait and is_portrait: score += 2.5
+            elif not prefer_portrait and not is_portrait: score += 2.5
+            if w >= 1280 or h >= 1280: score += 1.5
+            scored.append({"id": vid_id, "url": url, "score": round(score, 2),
+                           "duration": 5.0,  # unknown — use default
+                           "width": w, "height": h, "source": "pixabay"})
+
+        if not scored:
+            return None
+        scored.sort(key=lambda x: x["score"], reverse=True)
+        best = scored[0]
+        print(f"[pixabay] '{query}': score={best['score']} id={best['id']}")
+        return best
+    except Exception as e:
+        print(f"[pixabay] '{query}': {e}")
+        return None
+
+
+# ---------------------------------------------------------------------------
+# Unified multi-source asset fetch (Pexels → Pixabay fallback)
+# ---------------------------------------------------------------------------
+BROLL_MIN_SCORE = 3.0  # reject clips below this quality threshold
+
+def fetch_broll_for_slot(query: str, target_duration: float,
+                          prefer_portrait: bool = True,
+                          blocked_ids: set | None = None) -> dict | None:
+    """
+    Unified B-roll fetcher: Pexels first, Pixabay fallback.
+    Enforces BROLL_MIN_SCORE quality threshold — returns None if nothing good enough.
+    """
+    if blocked_ids is None:
+        blocked_ids = set()
+
+    # Source 1: Pexels (higher quality, better portrait selection)
+    candidate = fetch_pexels_for_slot(query, target_duration,
+                                       prefer_portrait, blocked_ids)
+    if candidate and candidate.get("score", 0) >= BROLL_MIN_SCORE:
+        candidate["source"] = "pexels"
+        return candidate
+
+    # Source 2: Pixabay (free fallback)
+    px = fetch_pixabay_for_slot(query, target_duration,
+                                  prefer_portrait, blocked_ids)
+    if px and px.get("score", 0) >= BROLL_MIN_SCORE * 0.7:  # slightly lower bar
+        return px
+
+    return None
+
+
+# ---------------------------------------------------------------------------
+# Entity extractor — improves search query specificity
+# ---------------------------------------------------------------------------
+def extract_entities_from_slot(slot: dict, clip_title: str, groq_key: str) -> dict:
+    """
+    Extract named entities from a transcript segment to improve B-roll specificity.
+    Returns: {brands: [], locations: [], products: [], people: [], topics: []}
+    Falls back to empty if Groq unavailable.
+    """
+    if not groq_key:
+        return {}
+    text = slot.get("text", "")[:300]
+    if len(text.split()) < 4:
+        return {}
+    try:
+        prompt = f"""Extract named entities from this spoken text for video B-roll search.
+
+Text: "{text}"
+Video topic: "{clip_title}"
+
+Return ONLY a JSON object. No markdown:
+{{"brands":["Apple","OpenAI"],"locations":["Tokyo","Silicon Valley"],"products":["iPhone","GPT-4"],"people":["Elon Musk"],"topics":["AI","startup funding"]}}
+
+Rules:
+- Only include entities actually mentioned in the text
+- Empty arrays if none found
+- Max 3 items per category
+- Keep raw names (no description)"""
+
+        raw = _groq_chat([{"role": "user", "content": prompt}],
+                          max_tokens=120, temperature=0.05)
+        if raw:
+            raw = re.sub(r"```(?:json)?|```", "", raw).strip()
+            m = re.search(r"\{[\s\S]*\}", raw)
+            if m:
+                return json.loads(m.group())
+    except Exception as e:
+        print(f"[entity-extract] {e}")
+    return {}
+
+
+def enhance_query_with_entities(base_query: str, entities: dict) -> str:
+    """
+    Prepend the most specific entity to a search query.
+    'business meeting' + {brands: ['Apple']} → 'Apple company headquarters'
+    """
+    if not entities:
+        return base_query
+    # Priority: locations > brands > products > topics
+    for key in ("locations", "brands", "products", "topics"):
+        items = entities.get(key, [])
+        if items:
+            entity = items[0]
+            # Don't duplicate if already in query
+            if entity.lower() not in base_query.lower():
+                return f"{entity} {base_query}"
+    return base_query
+
+
+# ---------------------------------------------------------------------------
+# Cinematic effects — Ken Burns, zoom, pan, crossfade
+# ---------------------------------------------------------------------------
+
+def apply_cinematic_effect(inp: str, out: str, effect: str,
+                            duration: float) -> bool:
+    """
+    Apply a cinematic motion effect to a B-roll clip using FFmpeg.
+    effect: 'ken_burns' | 'slow_zoom' | 'pan_right' | 'pan_left' |
+             'fade_in' | 'fade_out' | 'crossfade' | 'none'
+    Returns True on success, False on failure (caller uses original clip).
+    """
+    safe_dur = max(1.0, min(duration, 30.0))
+    w, h = 1080, 1920  # default portrait
+
+    # Probe actual dimensions
+    try:
+        r = subprocess.run(
+            [FFPROBE, "-v", "quiet", "-print_format", "json",
+             "-show_streams", inp],
+            capture_output=True, text=True, timeout=10,
+        )
+        for s in json.loads(r.stdout).get("streams", []):
+            if s.get("codec_type") == "video":
+                w = int(s.get("width", 1080))
+                h = int(s.get("height", 1920))
+                break
+    except Exception:
+        pass
+
+    vf_map = {
+        "ken_burns": (
+            f"scale={int(w*1.1)}:{int(h*1.1)},"
+            f"zoompan=z='min(zoom+0.0015,1.1)':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)'"
+            f":d={int(safe_dur*25)}:s={w}x{h}:fps=25"
+        ),
+        "slow_zoom": (
+            f"scale={int(w*1.2)}:{int(h*1.2)},"
+            f"zoompan=z='min(1+on*0.001,1.2)':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)'"
+            f":d={int(safe_dur*25)}:s={w}x{h}:fps=25"
+        ),
+        "pan_right": (
+            f"scale={int(w*1.15)}:{h},"
+            f"crop={w}:{h}:'min(on/{int(safe_dur*25)}*{int(w*0.15)},{int(w*0.15)})':0"
+        ),
+        "pan_left": (
+            f"scale={int(w*1.15)}:{h},"
+            f"crop={w}:{h}:'{int(w*0.15)}-min(on/{int(safe_dur*25)}*{int(w*0.15)},{int(w*0.15)})':0"
+        ),
+        "fade_in": f"fade=t=in:st=0:d=0.5",
+        "fade_out": f"fade=t=out:st={max(0, safe_dur-0.5)}:d=0.5",
+        "none": None,
+    }
+
+    vf = vf_map.get(effect)
+    if not vf:
+        return False  # 'none' or unknown effect — skip
+
+    try:
+        r = subprocess.run([
+            FFMPEG, "-y", "-i", inp,
+            "-vf", vf,
+            "-t", str(safe_dur),
+            "-c:v", "libx264", "-preset", "fast", "-crf", "22",
+            "-an", out,
+        ], capture_output=True, text=True, timeout=60)
+        if r.returncode == 0 and os.path.exists(out) and os.path.getsize(out) > 500:
+            return True
+        print(f"[cinematic/{effect}] ffmpeg error: {r.stderr[-150:]}")
+    except Exception as e:
+        print(f"[cinematic/{effect}] {e}")
+    return False
+
+
+def _pick_effect_for_slot(slot: dict) -> str:
+    """
+    Automatically select a cinematic effect based on narrative position + emotion.
+    Returns an effect string for apply_cinematic_effect().
+    """
+    position = slot.get("narrative_position", "middle")
+    emotion  = slot.get("emotion", "education")
+    visual   = slot.get("visual_category", "general")
+
+    # Opening / hook → slow zoom in for drama
+    if position in ("opening", "hook"):
+        return "slow_zoom"
+    # Closing / result → gentle Ken Burns
+    if position in ("closing", "result"):
+        return "ken_burns"
+    # Action / excitement → pan to add energy
+    if emotion in ("excitement", "shock") or visual == "action":
+        return "pan_right"
+    # Calm / inspirational → fade in
+    if emotion in ("inspiration", "story"):
+        return "fade_in"
+    # Default: subtle Ken Burns for organic feel
+    return "ken_burns"
+
+
+# ---------------------------------------------------------------------------
 # Legacy wrapper — backward-compatible, kept for any direct callers
 # ---------------------------------------------------------------------------
 def _ai_broll_keywords(title: str, transcript: str, groq_key: str) -> list:
@@ -2948,36 +3192,102 @@ def process_clip_job(job_id, video_id, upload_path, start, end, formats, user_id
         elif stream_url and stream_url.startswith("http"):
             job_update(job_id, "downloading", 10, "Downloading from YouTube CDN...")
             raw_video = os.path.join(job_dir, "raw.mp4")
-            try:
+
+            def _try_cdn_download(url: str, dest: str) -> tuple[bool, str]:
+                """Download a CDN URL. Returns (success, error_msg)."""
                 dl_headers = {
-                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0",
+                    "User-Agent": (
+                        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                        "AppleWebKit/537.36 (KHTML, like Gecko) "
+                        "Chrome/124.0.0.0 Safari/537.36"
+                    ),
                     "Accept": "*/*",
                     "Accept-Encoding": "identity",
+                    "Accept-Language": "en-US,en;q=0.9",
                     "Range": "bytes=0-",
                     "Referer": "https://www.youtube.com/",
                     "Origin": "https://www.youtube.com",
+                    "Sec-Fetch-Dest": "video",
+                    "Sec-Fetch-Mode": "no-cors",
+                    "Sec-Fetch-Site": "cross-site",
                 }
-                with requests.get(stream_url, headers=dl_headers, stream=True,
-                                  timeout=300, allow_redirects=True) as r2:
-                    r2.raise_for_status()
-                    total = int(r2.headers.get("content-length", 0))
-                    downloaded = 0
-                    with open(raw_video, "wb") as fv:
-                        for chunk in r2.iter_content(chunk_size=1024*1024):
-                            if chunk:
-                                fv.write(chunk)
-                                downloaded += len(chunk)
-                                if total > 0:
-                                    pct = min(28, int(downloaded/total*28))
-                                    job_update(job_id, "downloading", 10+pct,
-                                        f"Downloading {downloaded//1024//1024}MB/{total//1024//1024}MB...")
-                size = os.path.getsize(raw_video) if os.path.exists(raw_video) else 0
-                if size < 10000:
-                    raise Exception(f"File too small ({size}B) — URL may have expired")
-                job_update(job_id, "processing", 35, f"Download complete ({size//1024//1024}MB)...")
-                print(f"CDN download OK: {size//1024//1024}MB")
-            except Exception as dl_err:
-                raise Exception(f"CDN download failed: {dl_err}. Please use Upload tab.")
+                try:
+                    with requests.get(url, headers=dl_headers, stream=True,
+                                      timeout=300, allow_redirects=True) as r2:
+                        if r2.status_code in (403, 401, 410):
+                            return False, f"HTTP {r2.status_code} — URL expired"
+                        r2.raise_for_status()
+                        total = int(r2.headers.get("content-length", 0))
+                        downloaded = 0
+                        with open(dest, "wb") as fv:
+                            for chunk in r2.iter_content(chunk_size=1024 * 1024):
+                                if chunk:
+                                    fv.write(chunk)
+                                    downloaded += len(chunk)
+                                    if total > 0:
+                                        pct = min(28, int(downloaded / total * 28))
+                                        job_update(job_id, "downloading", 10 + pct,
+                                                   f"Downloading {downloaded//1024//1024}MB/"
+                                                   f"{total//1024//1024}MB...")
+                    size = os.path.getsize(dest) if os.path.exists(dest) else 0
+                    if size < 10_000:
+                        return False, f"File too small ({size}B) — likely expired"
+                    return True, ""
+                except Exception as exc:
+                    return False, str(exc)
+
+            ok, err = _try_cdn_download(stream_url, raw_video)
+
+            # ── CDN retry: re-fetch a fresh URL from YTStream RapidAPI ───────
+            if not ok:
+                print(f"[clip/{job_id}] CDN download failed ({err}), refreshing URL...")
+                RAPIDAPI_KEY = os.environ.get("RAPIDAPI_KEY", "")
+                refreshed_url = None
+                if RAPIDAPI_KEY and video_id:
+                    try:
+                        rr = requests.get(
+                            "https://ytstream-download-youtube-videos.p.rapidapi.com/dl",
+                            params={"id": video_id},
+                            headers={
+                                "X-RapidAPI-Key":  RAPIDAPI_KEY,
+                                "X-RapidAPI-Host": "ytstream-download-youtube-videos.p.rapidapi.com",
+                            },
+                            timeout=20,
+                        )
+                        if rr.ok:
+                            d2 = rr.json()
+                            fmts = d2.get("formats") or d2.get("links") or {}
+                            for q_key in ("720", "480", "360", "hd", "sd"):
+                                entry = fmts.get(q_key) or fmts.get(q_key + "p")
+                                if isinstance(entry, dict):
+                                    refreshed_url = entry.get("url") or entry.get("link")
+                                elif isinstance(entry, str) and entry.startswith("http"):
+                                    refreshed_url = entry
+                                if refreshed_url:
+                                    break
+                            if not refreshed_url:
+                                refreshed_url = d2.get("url") or d2.get("link")
+                    except Exception as re_err:
+                        print(f"[clip/{job_id}] URL refresh failed: {re_err}")
+
+                if refreshed_url and refreshed_url != stream_url:
+                    print(f"[clip/{job_id}] Retrying with fresh URL...")
+                    if os.path.exists(raw_video):
+                        os.remove(raw_video)
+                    ok2, err2 = _try_cdn_download(refreshed_url, raw_video)
+                    if not ok2:
+                        raise Exception(
+                            f"CDN download failed after URL refresh: {err2}. "
+                            "Please use the Upload tab instead."
+                        )
+                    print(f"CDN download OK (after refresh): {os.path.getsize(raw_video)//1024//1024}MB")
+                else:
+                    raise Exception(
+                        f"CDN download failed: {err}. "
+                        "Please use the Upload tab instead."
+                    )
+            else:
+                print(f"CDN download OK: {os.path.getsize(raw_video)//1024//1024}MB")
 
         elif video_id:
             job_update(job_id, "downloading", 5, "Downloading from YouTube...")
@@ -3372,6 +3682,7 @@ def editor_export():
     _upload_path   = gf("uploadPath", "")
     _editor_title  = gf("title", broll_kw or "")
     _editor_uid    = gf("user_id", "")
+    _cap_pos       = gf("caption_pos", "bottom")   # FIX: was undefined inside thread
 
     def run_editor_job():
         try:
@@ -3479,8 +3790,8 @@ def editor_export():
                         if os.path.exists(audio_path2) and os.path.getsize(audio_path2) > 1000:
                             segments = transcribe_with_whisper(audio_path2)
 
-            # ── Step 6: B-roll (semantic pipeline) ───────────────────────────
-            if broll and PEXELS_KEY:
+            # ── Step 6: B-roll (semantic pipeline v2) ────────────────────────
+            if broll and (PEXELS_KEY or PIXABAY_KEY):
                 job_update(job_id, "running", 55, "Analysing transcript for B-roll...")
 
                 # Decide whether we have Whisper word timestamps for semantic
@@ -3507,7 +3818,16 @@ def editor_export():
                             classified, clip_dur, broll_freq
                         )
 
-                        # ── Stages 5–7: per-slot query + scored fetch ─────────
+                        # Persist slots so /broll/replace can read them later
+                        try:
+                            slots_file = os.path.join(job_dir, "broll_slots.json")
+                            with open(slots_file, "w") as sf:
+                                json.dump(broll_slots, sf)
+                        except Exception:
+                            pass
+
+                        # ── Stages 5–7: per-slot query + entity extraction
+                        #    + multi-source scored fetch + quality gate ─────────
                         broll_slot_map: dict = {}   # {slot_index: local_path}
                         seen_pexels_ids: set  = set()
                         total_slots = len(broll_slots)
@@ -3518,16 +3838,34 @@ def editor_export():
                                        f"Finding B-roll {slot_i+1}/{total_slots}...")
 
                             # Per-slot Groq query
-                            query = build_broll_slot_query(
+                            base_query = build_broll_slot_query(
                                 slot, _editor_title, GROQ_KEY
                             )
-                            # Scored Pexels fetch
-                            candidate = fetch_pexels_for_slot(
+
+                            # Entity extraction for smarter queries
+                            entities = extract_entities_from_slot(
+                                slot, _editor_title, GROQ_KEY
+                            )
+                            query = enhance_query_with_entities(
+                                base_query, entities
+                            )
+
+                            # Unified multi-source fetch (Pexels → Pixabay)
+                            # with quality threshold enforcement
+                            candidate = fetch_broll_for_slot(
                                 query,
                                 target_duration=slot["target_duration"],
                                 prefer_portrait=True,
                                 blocked_ids=seen_pexels_ids,
                             )
+                            if not candidate:
+                                # Try shortened fallback query
+                                short_q = " ".join(base_query.split()[:2])
+                                candidate = fetch_broll_for_slot(
+                                    short_q, target_duration=slot["target_duration"],
+                                    prefer_portrait=True, blocked_ids=seen_pexels_ids,
+                                )
+
                             if candidate:
                                 bp = os.path.join(
                                     job_dir, f"broll_{slot_i}.mp4"
@@ -3537,8 +3875,23 @@ def editor_export():
                                     candidate["url"], bp,
                                     duration=slot["target_duration"],
                                 ):
+                                    # Apply cinematic effect
+                                    effect = _pick_effect_for_slot(slot)
+                                    if effect != "none":
+                                        eff_out = os.path.join(
+                                            job_dir, f"broll_{slot_i}_eff.mp4"
+                                        )
+                                        if apply_cinematic_effect(
+                                            bp, eff_out, effect,
+                                            slot["target_duration"]
+                                        ):
+                                            bp = eff_out
                                     broll_slot_map[slot_i] = bp
                                     seen_pexels_ids.add(candidate["id"])
+                                    print(f"[broll] slot {slot_i}: "
+                                          f"query='{query}' effect={effect} "
+                                          f"src={candidate.get('source','?')} "
+                                          f"score={candidate.get('score',0)}")
 
                         # ── Stage 8: transcript-aligned timeline ──────────────
                         if broll_slot_map:
@@ -3608,9 +3961,9 @@ def editor_export():
                     job_update(job_id, "running", 71, "Burning word-level karaoke captions...")
                     used_words = burn_word_captions(
                         current, _last_whisper_words, cap_out,
-                        clip_start=0.0, clip_end=(end_t - start_t),
+                        clip_start=0.0, clip_end=(end - start),   # FIX: was end_t/start_t
                         style=cap_style, size=cap_size,
-                        accent=accent_color, position=cap_pos,
+                        accent=accent_color, position=_cap_pos,   # FIX: was cap_pos (undefined)
                     )
                 if not used_words:
                     # Fallback to segment-level SRT
@@ -3835,40 +4188,76 @@ def broll_search():
     for orientation in ("portrait", "landscape"):
         if len(results) >= count:
             break
+        if PEXELS_KEY:
+            try:
+                resp = requests.get(
+                    "https://api.pexels.com/videos/search",
+                    headers={"Authorization": PEXELS_KEY},
+                    params={"query": query, "per_page": 10,
+                            "orientation": orientation,
+                            "min_duration": 3, "max_duration": 20},
+                    timeout=15,
+                )
+                if resp.ok:
+                    videos = resp.json().get("videos", [])
+                    for v in videos:
+                        vid_id = v.get("id")
+                        if not vid_id or vid_id in seen_ids:
+                            continue
+                        url = _best_file_url(v.get("video_files", []))
+                        if not url:
+                            continue
+                        score = score_pexels_candidate(v, duration, prefer_portrait=True)
+                        results.append({
+                            "id":       vid_id,
+                            "url":      url,
+                            "score":    score,
+                            "duration": float(v.get("duration", 0)),
+                            "width":    v.get("width", 0),
+                            "height":   v.get("height", 0),
+                            "query":    query,
+                            "source":   "pexels",
+                        })
+                        seen_ids.add(vid_id)
+                        if len(results) >= count:
+                            break
+            except Exception as e:
+                print(f"[broll-search] pexels {orientation}: {e}")
+
+    # Pixabay supplement if not enough results
+    if len(results) < count and PIXABAY_KEY:
         try:
-            resp = requests.get(
-                "https://api.pexels.com/videos/search",
-                headers={"Authorization": PEXELS_KEY},
-                params={"query": query, "per_page": 10,
-                        "orientation": orientation,
-                        "min_duration": 3, "max_duration": 20},
+            px_resp = requests.get(
+                "https://pixabay.com/api/videos/",
+                params={"key": PIXABAY_KEY, "q": query, "video_type": "film",
+                        "per_page": min(10, count * 2), "safesearch": "true"},
                 timeout=15,
             )
-            if not resp.ok:
-                continue
-            videos = resp.json().get("videos", [])
-            for v in videos:
-                vid_id = v.get("id")
-                if not vid_id or vid_id in seen_ids:
-                    continue
-                url = _best_file_url(v.get("video_files", []))
-                if not url:
-                    continue
-                score = score_pexels_candidate(v, duration, prefer_portrait=True)
-                results.append({
-                    "id":       vid_id,
-                    "url":      url,
-                    "score":    score,
-                    "duration": float(v.get("duration", 0)),
-                    "width":    v.get("width", 0),
-                    "height":   v.get("height", 0),
-                    "query":    query,
-                })
-                seen_ids.add(vid_id)
-                if len(results) >= count:
-                    break
+            if px_resp.ok:
+                for v in px_resp.json().get("hits", []):
+                    if len(results) >= count:
+                        break
+                    vid_id = v.get("id")
+                    if not vid_id or vid_id in seen_ids:
+                        continue
+                    vf = v.get("videos", {}).get("medium") or v.get("videos", {}).get("small")
+                    if not vf or not vf.get("url"):
+                        continue
+                    w, h = vf.get("width", 0), vf.get("height", 0)
+                    score = 3.0 + (2.5 if h > w else 0.5) + (1.5 if max(w, h) >= 1280 else 0)
+                    results.append({
+                        "id":       vid_id,
+                        "url":      vf["url"],
+                        "score":    round(score, 2),
+                        "duration": 5.0,
+                        "width":    w,
+                        "height":   h,
+                        "query":    query,
+                        "source":   "pixabay",
+                    })
+                    seen_ids.add(vid_id)
         except Exception as e:
-            print(f"[broll-search] {orientation}: {e}")
+            print(f"[broll-search] pixabay: {e}")
 
     # Sort by score descending
     results.sort(key=lambda x: x["score"], reverse=True)
@@ -3931,8 +4320,8 @@ def broll_replace():
         if not query:
             query = data.get("title", "cinematic footage")
 
-    # Fetch a new scored candidate (excluding the old one)
-    candidate = fetch_pexels_for_slot(
+    # Fetch a new scored candidate (excluding the old one) — multi-source
+    candidate = fetch_broll_for_slot(
         query, target_duration=duration,
         prefer_portrait=True, blocked_ids=blocked_ids,
     )
@@ -3945,6 +4334,21 @@ def broll_replace():
     ok = download_pexels_clip(candidate["url"], new_path, duration=duration)
     if not ok:
         return jsonify({"error": "Failed to download replacement clip"}), 502
+
+    # Apply cinematic effect using the stored slot metadata
+    slot_meta = {}
+    try:
+        stored_slots = json.load(open(os.path.join(job_dir, "broll_slots.json")))
+        if slot_index < len(stored_slots):
+            slot_meta = stored_slots[slot_index]
+    except Exception:
+        pass
+
+    effect = _pick_effect_for_slot(slot_meta) if slot_meta else "ken_burns"
+    if effect != "none":
+        eff_out = os.path.join(job_dir, f"broll_{slot_index}_v{int(time.time())}_eff.mp4")
+        if apply_cinematic_effect(new_path, eff_out, effect, duration):
+            new_path = eff_out
 
     # Update blocked IDs so next replacement is also unique
     blocked_ids.add(candidate["id"])
@@ -3960,6 +4364,8 @@ def broll_replace():
         "clip_url": f"{BACKEND_URL}/stream-clip/{job_id}/{os.path.basename(new_path).replace('.mp4','')}",
         "local_path": new_path,
         "score":    candidate["score"],
+        "source":   candidate.get("source", "pexels"),
+        "effect":   effect,
         "pexels_id": candidate["id"],
     })
 
